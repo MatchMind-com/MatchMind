@@ -74,3 +74,5 @@ export const LEAGUES = [
   'Primeira Liga',
   'Other',
 ]
+
+export type BetType = string
