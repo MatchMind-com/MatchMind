@@ -35,7 +35,7 @@ export default function AICoaching({ userId, bets }: AICoachingProps) {
     const recentBets = bets.slice(0, 20)
     const betHistory = recentBets.map((b) => ({
       date: b.match_date,
-      match: `${b.home_team} vs ${b.away_team}`,
+      match: b.match_name,
       betType: b.bet_type,
       odds: b.odds,
       stake: b.stake,
