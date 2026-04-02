@@ -11,6 +11,8 @@ const NAV = [
   { href: '/dashboard/bankroll', label: 'Bankroll', icon: '💰', exact: false },
   { href: '/dashboard/suggestions', label: 'AI Suggestions', icon: '🧠', exact: false },
   { href: '/dashboard/coach', label: 'Football Coach', icon: '⚽', exact: false },
+  { href: '/dashboard/predictions', label: 'AI Predictions', icon: '🔮', exact: false },
+  { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: '🏆', exact: false },
   { href: '/dashboard/billing', label: 'Billing', icon: '💳', exact: false },
 ]
 
