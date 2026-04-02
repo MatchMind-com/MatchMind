@@ -5,10 +5,9 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const API_KEY = process.env.API_FOOTBALL_KEY!
 const BASE = 'https://v3.football.api-sports.io'
 
-// Cache predictions for 6 hours
-export const revalidate = 21600
+// 30-minute cache now that we have 7,500 req/day
+export const revalidate = 1800
 
-// Returns the current football season year (e.g. April 2026 → 2025 for 2025/26 season)
 function getCurrentSeason(): number {
   const now = new Date()
   const month = now.getMonth() + 1
@@ -16,11 +15,17 @@ function getCurrentSeason(): number {
   return month >= 8 ? year : year - 1
 }
 
+function getDatePlusDays(days: number) {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return d.toISOString().split('T')[0]
+}
+
 async function apiFetch(path: string) {
   try {
     const res = await fetch(`${BASE}${path}`, {
       headers: { 'x-apisports-key': API_KEY },
-      next: { revalidate: 21600 },
+      next: { revalidate: 1800 },
     })
     if (!res.ok) return null
     const json = await res.json()
@@ -28,10 +33,30 @@ async function apiFetch(path: string) {
   } catch { return null }
 }
 
-function getDatePlusDays(days: number) {
-  const d = new Date()
-  d.setDate(d.getDate() + days)
-  return d.toISOString().split('T')[0]
+// Extract odds from Bet365 bookmaker response
+function extractOdds(bookmaker: any) {
+  if (!bookmaker) return null
+  const bets = bookmaker.bets || []
+
+  const mw = bets.find((b: any) => b.id === 1) // Match Winner (1X2)
+  const ou = bets.find((b: any) => b.id === 5) // Goals Over/Under
+  const btts = bets.find((b: any) => b.id === 8) // Both Teams Score
+
+  const home = parseFloat(mw?.values?.find((v: any) => v.value === 'Home')?.odd || '0')
+  const draw = parseFloat(mw?.values?.find((v: any) => v.value === 'Draw')?.odd || '0')
+  const away = parseFloat(mw?.values?.find((v: any) => v.value === 'Away')?.odd || '0')
+  const over25 = parseFloat(ou?.values?.find((v: any) => v.value === 'Over 2.5')?.odd || '0')
+  const bttsYes = parseFloat(btts?.values?.find((v: any) => v.value === 'Yes')?.odd || '0')
+
+  if (!home && !draw && !away) return null
+  return { home, draw, away, over25, btts: bttsYes }
+}
+
+// Expected Value: (AI_prob × decimal_odds) - 1, expressed as %
+// Positive = value bet (AI thinks outcome is more likely than market implies)
+function calcEV(aiPct: number, decimalOdds: number): number | null {
+  if (!decimalOdds || decimalOdds <= 1) return null
+  return Math.round(((aiPct / 100) * decimalOdds - 1) * 100)
 }
 
 const TOP_LEAGUES = [
@@ -53,53 +78,63 @@ export async function GET() {
     const today = new Date().toISOString().split('T')[0]
     const in3days = getDatePlusDays(3)
 
-    // Fetch fixtures from all top leagues in parallel
-    const fixtureGroups = await Promise.all(
+    // Fetch fixtures + Bet365 odds per league in parallel
+    const leagueResults = await Promise.all(
       TOP_LEAGUES.map(async (league) => {
-        const data = await apiFetch(
-          `/fixtures?league=${league.id}&season=${season}&from=${today}&to=${in3days}&status=NS`
-        )
-        return (data || []).slice(0, 2).map((f: Record<string, unknown>) => ({
+        const [fixtures, oddsData] = await Promise.all([
+          apiFetch(`/fixtures?league=${league.id}&season=${season}&from=${today}&to=${in3days}&status=NS`),
+          apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}&bookmaker=1`),
+        ])
+
+        // Build fixture_id → odds map
+        const oddsMap: Record<number, ReturnType<typeof extractOdds>> = {}
+        if (oddsData) {
+          for (const entry of oddsData) {
+            const fid = entry.fixture?.id
+            const bk = entry.bookmakers?.[0]
+            if (fid && bk) oddsMap[fid] = extractOdds(bk)
+          }
+        }
+
+        return (fixtures || []).slice(0, 2).map((f: any) => ({
           ...f,
           _leagueName: league.name,
           _leagueFlag: league.flag,
+          _odds: oddsMap[f.fixture?.id] ?? null,
         }))
       })
     )
 
-    const allFixtures = fixtureGroups.flat().slice(0, 20)
+    const allFixtures = leagueResults.flat().slice(0, 20)
 
     if (allFixtures.length === 0) {
       return NextResponse.json({ success: true, predictions: [], message: 'No upcoming fixtures found' })
     }
 
-    // Build fixture list for GPT
-    const fixtureList = allFixtures.map((f: Record<string, unknown>, i: number) => {
-      const fixture = f.fixture as Record<string, unknown>
-      const teams = f.teams as Record<string, unknown>
-      const home = teams?.home as Record<string, unknown>
-      const away = teams?.away as Record<string, unknown>
-      const leagueData = f.league as Record<string, unknown>
-      const dateStr = fixture?.date as string
-      const date = dateStr ? new Date(dateStr).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'TBD'
-      return `${i + 1}. ${home?.name} vs ${away?.name} | ${f._leagueName} | ${date}`
+    // Build prompt including real odds where available
+    const fixtureList = allFixtures.map((f: any, i: number) => {
+      const home = f.teams?.home?.name
+      const away = f.teams?.away?.name
+      const date = new Date(f.fixture?.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+      const o = f._odds
+      const oddsStr = o?.home ? ` | Bet365: H ${o.home} / D ${o.draw} / A ${o.away}` : ''
+      return `${i + 1}. ${home} vs ${away} | ${f._leagueName} | ${date}${oddsStr}`
     }).join('\n')
 
-    // Single GPT call for all predictions
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       response_format: { type: 'json_object' },
       messages: [{
         role: 'system',
-        content: 'You are an expert football analyst. Generate match predictions based on current form, league position, historical H2H, and tactical factors. Return valid JSON only.'
+        content: 'You are an expert football analyst. Generate precise match predictions based on current form, league position, H2H history, and tactical factors. Where Bet365 odds are shown, use them to understand market sentiment. Return valid JSON only.'
       }, {
         role: 'user',
-        content: `Generate AI predictions for these upcoming matches. Use your knowledge of current ${season}/${String(season + 1).slice(2)} season form, recent results, key injuries, and head-to-head records.
+        content: `Generate predictions for these ${season}/${String(season + 1).slice(2)} season matches. Use current form, injuries, suspensions, and H2H. Factor real odds into your confidence levels.
 
 Matches:
 ${fixtureList}
 
-Return JSON:
+Return JSON with this exact structure:
 {
   "predictions": [
     {
@@ -110,50 +145,84 @@ Return JSON:
       "over_2_5_pct": 65,
       "btts_pct": 55,
       "confidence": 8,
-      "recommended_bet": "Home Win or Draw",
-      "recommended_odds_range": "1.4-1.8",
-      "key_factors": ["Home team on 5-game winning run", "Away striker injured", "H2H favours home side 4-1 last 5"],
+      "recommended_bet": "Home Win",
+      "recommended_odds_range": "1.85-2.10",
+      "key_factors": ["5-game home winning run", "Away striker suspended", "H2H: home won 4 of last 5"],
       "risk_level": "Low"
     }
   ]
 }`
       }],
-      max_tokens: 2000,
+      max_tokens: 2500,
     })
 
     const gptData = JSON.parse(completion.choices[0]?.message?.content || '{"predictions":[]}')
-    const gptPredictions: Record<number, Record<string, unknown>> = {}
-    ;(gptData.predictions || []).forEach((p: Record<string, unknown>) => {
-      gptPredictions[p.index as number] = p
-    })
+    const gptMap: Record<number, any> = {}
+    ;(gptData.predictions || []).forEach((p: any) => { gptMap[p.index] = p })
 
-    // Merge fixtures with predictions
-    const predictions = allFixtures.map((f: Record<string, unknown>, i: number) => {
-      const fixture = f.fixture as Record<string, unknown>
-      const teams = f.teams as Record<string, unknown>
-      const home = teams?.home as Record<string, unknown>
-      const away = teams?.away as Record<string, unknown>
-      const dateStr = fixture?.date as string
-      const pred = gptPredictions[i + 1] || {}
+    // Merge: fixture data + AI predictions + real odds + EV scores
+    const predictions = allFixtures.map((f: any, i: number) => {
+      const pred = gptMap[i + 1] || {}
+      const o = f._odds
+
+      const homeWinPct = pred.home_win_pct ?? 40
+      const drawPct = pred.draw_pct ?? 25
+      const awayWinPct = pred.away_win_pct ?? 35
+      const over25Pct = pred.over_2_5_pct ?? 55
+      const bttsPct = pred.btts_pct ?? 50
+
+      // EV per market (null if odds not available)
+      const homeEV   = o?.home   ? calcEV(homeWinPct, o.home)   : null
+      const drawEV   = o?.draw   ? calcEV(drawPct, o.draw)       : null
+      const awayEV   = o?.away   ? calcEV(awayWinPct, o.away)   : null
+      const over25EV = o?.over25 ? calcEV(over25Pct, o.over25)  : null
+      const bttsEV   = o?.btts   ? calcEV(bttsPct, o.btts)      : null
+
+      // Rank value bets by EV (positive EV only)
+      const valueBets = [
+        { label: 'Home Win',  ev: homeEV,   odds: o?.home },
+        { label: 'Draw',      ev: drawEV,   odds: o?.draw },
+        { label: 'Away Win',  ev: awayEV,   odds: o?.away },
+        { label: 'Over 2.5',  ev: over25EV, odds: o?.over25 },
+        { label: 'BTTS',      ev: bttsEV,   odds: o?.btts },
+      ]
+        .filter(x => x.ev !== null && x.ev > 0)
+        .sort((a, b) => (b.ev ?? 0) - (a.ev ?? 0))
+
+      const bestValue = valueBets[0] ?? null
+
       return {
-        id: fixture?.id,
-        date: dateStr,
+        id: f.fixture?.id,
+        date: f.fixture?.date,
         league: f._leagueName,
         leagueFlag: f._leagueFlag,
-        home_team: home?.name,
-        home_logo: home?.logo,
-        away_team: away?.name,
-        away_logo: away?.logo,
-        home_win_pct: pred.home_win_pct ?? 40,
-        draw_pct: pred.draw_pct ?? 25,
-        away_win_pct: pred.away_win_pct ?? 35,
-        over_2_5_pct: pred.over_2_5_pct ?? 55,
-        btts_pct: pred.btts_pct ?? 50,
+        home_team: f.teams?.home?.name,
+        home_logo: f.teams?.home?.logo,
+        away_team: f.teams?.away?.name,
+        away_logo: f.teams?.away?.logo,
+        home_win_pct: homeWinPct,
+        draw_pct: drawPct,
+        away_win_pct: awayWinPct,
+        over_2_5_pct: over25Pct,
+        btts_pct: bttsPct,
         confidence: pred.confidence ?? 6,
         recommended_bet: pred.recommended_bet ?? 'No clear value',
         recommended_odds_range: pred.recommended_odds_range ?? '—',
         key_factors: pred.key_factors ?? [],
         risk_level: pred.risk_level ?? 'Medium',
+        // Real Bet365 odds
+        bookmaker: o ? {
+          home: o.home || null,
+          draw: o.draw || null,
+          away: o.away || null,
+          over25: o.over25 || null,
+          btts: o.btts || null,
+        } : null,
+        // Expected value per market
+        ev: { home: homeEV, draw: drawEV, away: awayEV, over25: over25EV, btts: bttsEV },
+        best_value: bestValue,
+        is_value_bet: bestValue !== null && (bestValue.ev ?? 0) >= 5,
+        value_score: bestValue?.ev ?? null,
       }
     })
 

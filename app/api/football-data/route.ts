@@ -20,7 +20,7 @@ function getDatePlusDays(days: number) {
 async function apiFetch(path: string) {
   const res = await fetch(`${BASE}${path}`, {
     headers: { 'x-apisports-key': API_KEY },
-    next: { revalidate: 300 }, // cache 5 min
+    next: { revalidate: 60 }, // cache 1 min (7,500 req/day plan)
   })
   if (!res.ok) throw new Error(`API-Football error: ${res.status}`)
   return res.json()

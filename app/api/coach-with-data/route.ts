@@ -24,7 +24,7 @@ async function apiFetch(path: string) {
   try {
     const res = await fetch(`${BASE}${path}`, {
       headers: { 'x-apisports-key': API_KEY },
-      next: { revalidate: 300 },
+      next: { revalidate: 60 },
     })
     if (!res.ok) return null
     const json = await res.json()
