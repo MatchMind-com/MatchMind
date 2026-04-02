@@ -112,6 +112,22 @@ export default function LiveFootballData({ onLeagueChange }: { onLeagueChange?: 
 }
 
 function FixturesView({ data, isLive, isResult }: { data: Fixture[]; isLive: boolean; isResult?: boolean }) {
+  const [selectedFixture, setSelectedFixture] = useState<number | null>(null)
+  const [events, setEvents] = useState<any[]>([])
+  const [eventsLoading, setEventsLoading] = useState(false)
+
+  async function loadEvents(fixtureId: number) {
+    if (selectedFixture === fixtureId) { setSelectedFixture(null); return }
+    setSelectedFixture(fixtureId)
+    setEventsLoading(true)
+    try {
+      const res = await fetch(`/api/football-data?type=events&fixture=${fixtureId}`)
+      const json = await res.json()
+      setEvents(json.data || [])
+    } catch { setEvents([]) }
+    setEventsLoading(false)
+  }
+
   return (
     <>
       {data.map((f) => {
@@ -119,30 +135,63 @@ function FixturesView({ data, isLive, isResult }: { data: Fixture[]; isLive: boo
         const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
         const dateStr = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
         const isLiveNow = ['1H', '2H', 'ET', 'HT', 'P'].includes(f.fixture.status.short)
+        const isSelected = selectedFixture === f.fixture.id
+        const canExpand = isLiveNow || isResult
 
         return (
-          <div key={f.fixture.id} className="flex items-center gap-2 py-2 border-b border-white/5 last:border-0">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-white font-medium truncate">{f.teams.home.name}</span>
-                {(isLive && isLiveNow) || isResult ? (
-                  <span className={`text-sm font-bold px-2 ${isResult ? 'text-emerald-400' : 'text-white'}`}>
-                    {f.goals.home ?? 0} - {f.goals.away ?? 0}
-                  </span>
-                ) : (
-                  <span className="text-xs text-gray-500">vs</span>
-                )}
-                <span className="text-xs text-white font-medium truncate text-right">{f.teams.away.name}</span>
+          <div key={f.fixture.id} className="border-b border-white/5 last:border-0">
+            <div
+              className={`flex items-center gap-2 py-2 ${canExpand ? 'cursor-pointer hover:bg-white/3 rounded' : ''}`}
+              onClick={() => canExpand && loadEvents(f.fixture.id)}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-white font-medium truncate">{f.teams.home.name}</span>
+                  {(isLive && isLiveNow) || isResult ? (
+                    <span className={`text-sm font-bold px-2 ${isResult ? 'text-emerald-400' : 'text-white'}`}>
+                      {f.goals.home ?? 0} - {f.goals.away ?? 0}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-500">vs</span>
+                  )}
+                  <span className="text-xs text-white font-medium truncate text-right">{f.teams.away.name}</span>
+                </div>
+                <div className="flex items-center justify-between mt-0.5">
+                  <span className="text-[10px] text-gray-500">{dateStr}</span>
+                  {isLive && isLiveNow && f.fixture.status.elapsed ? (
+                    <span className="text-[10px] text-red-400 font-bold animate-pulse">{f.fixture.status.elapsed}'</span>
+                  ) : (
+                    <span className="text-[10px] text-gray-500">{timeStr}</span>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center justify-between mt-0.5">
-                <span className="text-[10px] text-gray-500">{dateStr}</span>
-                {isLive && isLiveNow && f.fixture.status.elapsed ? (
-                  <span className="text-[10px] text-red-400 font-bold animate-pulse">{f.fixture.status.elapsed}'</span>
-                ) : (
-                  <span className="text-[10px] text-gray-500">{timeStr}</span>
-                )}
-              </div>
+              {canExpand && (
+                <span className="text-[10px] text-white/20">{isSelected ? '▲' : '▼'}</span>
+              )}
             </div>
+
+            {/* Live events feed */}
+            {isSelected && (
+              <div className="pb-2 px-1 space-y-1">
+                {eventsLoading ? (
+                  <p className="text-[10px] text-white/30 text-center py-2">Loading events…</p>
+                ) : events.length === 0 ? (
+                  <p className="text-[10px] text-white/20 text-center py-2">No events yet</p>
+                ) : (
+                  events.map((e: any, i: number) => {
+                    const icon = e.type === 'Goal' ? '⚽' : e.type === 'Card' ? (e.detail === 'Red Card' ? '🟥' : '🟨') : e.type === 'subst' ? '🔄' : '•'
+                    return (
+                      <div key={i} className="flex items-center gap-2 text-[10px]">
+                        <span className="text-white/30 w-6 text-right shrink-0">{e.time?.elapsed}'</span>
+                        <span>{icon}</span>
+                        <span className="text-white/60 truncate">{e.player?.name}</span>
+                        {e.assist?.name && <span className="text-white/30 truncate">({e.assist.name})</span>}
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            )}
           </div>
         )
       })}

@@ -81,9 +81,10 @@ export async function GET() {
     // Fetch fixtures + Bet365 odds per league in parallel
     const leagueResults = await Promise.all(
       TOP_LEAGUES.map(async (league) => {
-        const [fixtures, oddsData] = await Promise.all([
+        const [fixtures, oddsData, injuries] = await Promise.all([
           apiFetch(`/fixtures?league=${league.id}&season=${season}&from=${today}&to=${in3days}&status=NS`),
           apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}&bookmaker=1`),
+          apiFetch(`/injuries?league=${league.id}&season=${season}&date=${today}`),
         ])
 
         // Build fixture_id → odds map
@@ -96,11 +97,27 @@ export async function GET() {
           }
         }
 
+        // Build injury lookup: team_id -> injured player names
+        const injuryMap: Record<number, string[]> = {}
+        if (injuries) {
+          for (const inj of injuries) {
+            const teamId = inj.team?.id
+            const playerName = inj.player?.name
+            const reason = inj.player?.reason
+            if (teamId && playerName) {
+              if (!injuryMap[teamId]) injuryMap[teamId] = []
+              injuryMap[teamId].push(`${playerName}${reason ? ` (${reason})` : ''}`)
+            }
+          }
+        }
+
         return (fixtures || []).slice(0, 2).map((f: any) => ({
           ...f,
           _leagueName: league.name,
           _leagueFlag: league.flag,
           _odds: oddsMap[f.fixture?.id] ?? null,
+          _homeInjuries: injuryMap[f.teams?.home?.id] ?? [],
+          _awayInjuries: injuryMap[f.teams?.away?.id] ?? [],
         }))
       })
     )
@@ -118,7 +135,9 @@ export async function GET() {
       const date = new Date(f.fixture?.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
       const o = f._odds
       const oddsStr = o?.home ? ` | Bet365: H ${o.home} / D ${o.draw} / A ${o.away}` : ''
-      return `${i + 1}. ${home} vs ${away} | ${f._leagueName} | ${date}${oddsStr}`
+      const homeInj = f._homeInjuries?.length ? ` | ${home} injuries: ${f._homeInjuries.slice(0, 3).join(', ')}` : ''
+      const awayInj = f._awayInjuries?.length ? ` | ${away} injuries: ${f._awayInjuries.slice(0, 3).join(', ')}` : ''
+      return `${i + 1}. ${home} vs ${away} | ${f._leagueName} | ${date}${oddsStr}${homeInj}${awayInj}`
     }).join('\n')
 
     const completion = await openai.chat.completions.create({
@@ -159,6 +178,25 @@ Return JSON with this exact structure:
     const gptData = JSON.parse(completion.choices[0]?.message?.content || '{"predictions":[]}')
     const gptMap: Record<number, any> = {}
     ;(gptData.predictions || []).forEach((p: any) => { gptMap[p.index] = p })
+
+    // Fetch lineups for today's fixtures (only available ~1hr before kickoff)
+    const todayFixtureIds = allFixtures
+      .filter((f: any) => f.fixture?.date?.startsWith(today))
+      .map((f: any) => f.fixture?.id)
+      .filter(Boolean)
+      .slice(0, 6) // limit lineup calls
+
+    const lineupMap: Record<number, { home: string[]; away: string[] }> = {}
+    await Promise.all(
+      todayFixtureIds.map(async (fid: number) => {
+        const data = await apiFetch(`/fixtures/lineups?fixture=${fid}`)
+        if (data && data.length >= 2) {
+          const extract = (team: any) =>
+            (team.startXI || []).map((p: any) => `${p.player?.number ?? ''} ${p.player?.name ?? ''}`.trim()).filter(Boolean)
+          lineupMap[fid] = { home: extract(data[0]), away: extract(data[1]) }
+        }
+      })
+    )
 
     // Merge: fixture data + AI predictions + real odds + EV scores
     const predictions = allFixtures.map((f: any, i: number) => {
@@ -223,6 +261,11 @@ Return JSON with this exact structure:
         best_value: bestValue,
         is_value_bet: bestValue !== null && (bestValue.ev ?? 0) >= 5,
         value_score: bestValue?.ev ?? null,
+        // Injuries
+        home_injuries: f._homeInjuries ?? [],
+        away_injuries: f._awayInjuries ?? [],
+        // Lineups (if available)
+        lineups: lineupMap[f.fixture?.id] ?? null,
       }
     })
 

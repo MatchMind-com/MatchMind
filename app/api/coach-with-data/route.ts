@@ -57,13 +57,14 @@ export async function POST(req: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(15)
 
-  // Fetch rich football data in parallel (all cached 5 min)
-  const [fixtures, liveGames, standings, topScorers, recentResults] = await Promise.all([
+  // Fetch rich football data in parallel (all cached 60s)
+  const [fixtures, liveGames, standings, topScorers, recentResults, injuries] = await Promise.all([
     apiFetch(`/fixtures?league=${leagueId}&season=${season}&from=${today}&to=${getDatePlusDays(7)}`),
     apiFetch(`/fixtures?live=all`),
     apiFetch(`/standings?league=${leagueId}&season=${season}`),
     apiFetch(`/players/topscorers?league=${leagueId}&season=${season}`),
     apiFetch(`/fixtures?league=${leagueId}&season=${season}&from=${getDatePlusDays(-7)}&to=${getDatePlusDays(-1)}&status=FT`),
+    apiFetch(`/injuries?league=${leagueId}&season=${season}&date=${today}`),
   ])
 
   // Format upcoming fixtures (next 7 days, up to 15)
@@ -107,6 +108,21 @@ export async function POST(req: NextRequest) {
     `${p.player?.name} (${p.statistics?.[0]?.team?.name}) — ${p.statistics?.[0]?.goals?.total} goals`
   ).join('\n') || 'Top scorers unavailable'
 
+  // Format injury report (group by team)
+  const injuryByTeam: Record<string, string[]> = {}
+  injuries?.forEach((inj: any) => {
+    const team = inj.team?.name
+    const player = inj.player?.name
+    const reason = inj.player?.reason
+    if (team && player) {
+      if (!injuryByTeam[team]) injuryByTeam[team] = []
+      injuryByTeam[team].push(`${player}${reason ? ` (${reason})` : ''}`)
+    }
+  })
+  const injuryText = Object.entries(injuryByTeam).slice(0, 8)
+    .map(([team, players]) => `${team}: ${players.join(', ')}`)
+    .join('\n') || 'No injury data available'
+
   // Format user bet history
   const betsText = recentBets?.map((b: any) =>
     `${b.match_name} | ${b.bet_type} @ ${b.odds} | £${b.stake} | ${b.result || 'Pending'}${b.profit_loss ? ` | P/L: £${b.profit_loss}` : ''}`
@@ -132,6 +148,9 @@ ${standingsText}
 
 ⚽ TOP SCORERS:
 ${scorersText}
+
+🚑 INJURY REPORT (${leagueName}):
+${injuryText}
 
 === USER'S BETTING PROFILE ===
 Recent bets (last 15):

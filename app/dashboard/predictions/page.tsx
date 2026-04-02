@@ -36,6 +36,9 @@ interface Prediction {
   recommended_odds_range: string
   key_factors: string[]
   risk_level: string
+  home_injuries: string[]
+  away_injuries: string[]
+  lineups: { home: string[]; away: string[] } | null
   bookmaker: BookmakerOdds | null
   ev: { home: number | null; draw: number | null; away: number | null; over25: number | null; btts: number | null }
   best_value: ValueBet | null
@@ -368,6 +371,54 @@ export default function PredictionsPage() {
                           </ul>
                         </div>
                       )}
+
+                    {/* Injuries */}
+                    {(pred.home_injuries.length > 0 || pred.away_injuries.length > 0) && (
+                      <div>
+                        <p className="text-white/40 text-xs font-semibold uppercase tracking-wide mb-2">🚑 Injury Report</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-white/50 text-xs mb-1 font-medium">{pred.home_team}</p>
+                            {pred.home_injuries.length > 0
+                              ? pred.home_injuries.map((inj, i) => (
+                                  <p key={i} className="text-red-400 text-xs">• {inj}</p>
+                                ))
+                              : <p className="text-white/20 text-xs">No injuries reported</p>
+                            }
+                          </div>
+                          <div>
+                            <p className="text-white/50 text-xs mb-1 font-medium">{pred.away_team}</p>
+                            {pred.away_injuries.length > 0
+                              ? pred.away_injuries.map((inj, i) => (
+                                  <p key={i} className="text-red-400 text-xs">• {inj}</p>
+                                ))
+                              : <p className="text-white/20 text-xs">No injuries reported</p>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Lineups */}
+                    {pred.lineups && (
+                      <div>
+                        <p className="text-white/40 text-xs font-semibold uppercase tracking-wide mb-2">📋 Confirmed Lineups</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-white/50 text-xs mb-1 font-medium">{pred.home_team}</p>
+                            {pred.lineups.home.map((p, i) => (
+                              <p key={i} className="text-white/60 text-xs">• {p}</p>
+                            ))}
+                          </div>
+                          <div>
+                            <p className="text-white/50 text-xs mb-1 font-medium">{pred.away_team}</p>
+                            {pred.lineups.away.map((p, i) => (
+                              <p key={i} className="text-white/60 text-xs">• {p}</p>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     </div>
                   )}
                 </div>

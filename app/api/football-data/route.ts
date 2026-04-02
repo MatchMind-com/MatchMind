@@ -77,6 +77,27 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, data: data.response?.slice(0, 10) || [] })
     }
 
+    if (type === 'top_assists' && league) {
+      const data = await apiFetch(`/players/topassists?league=${league}&season=${season}`)
+      return NextResponse.json({ success: true, data: data.response?.slice(0, 10) || [] })
+    }
+
+    if (type === 'events' && fixture) {
+      // Goals, cards, subs for a live or finished match
+      const data = await apiFetch(`/fixtures/events?fixture=${fixture}`)
+      return NextResponse.json({ success: true, data: data.response || [] })
+    }
+
+    if (type === 'player_stats' && team) {
+      const data = await apiFetch(`/players?team=${team}&season=${season}&page=1`)
+      return NextResponse.json({ success: true, data: data.response?.slice(0, 20) || [] })
+    }
+
+    if (type === 'lineups' && fixture) {
+      const data = await apiFetch(`/fixtures/lineups?fixture=${fixture}`)
+      return NextResponse.json({ success: true, data: data.response || [] })
+    }
+
     if (type === 'fixture_stats' && fixture) {
       const data = await apiFetch(`/fixtures/statistics?fixture=${fixture}`)
       return NextResponse.json({ success: true, data: data.response || [] })
