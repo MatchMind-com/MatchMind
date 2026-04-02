@@ -2,11 +2,21 @@
 import { useState, useEffect } from 'react'
 
 const LEAGUES = [
-  { id: '39', name: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-  { id: '140', name: 'La Liga', flag: '🇪🇸' },
-  { id: '135', name: 'Serie A', flag: '🇮🇹' },
-  { id: '78', name: 'Bundesliga', flag: '🇩🇪' },
-  { id: '2', name: 'Champions League', flag: '🏆' },
+  { id: '39',  name: 'Premier League',      flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+  { id: '140', name: 'La Liga',             flag: '🇪🇸' },
+  { id: '135', name: 'Serie A',             flag: '🇮🇹' },
+  { id: '78',  name: 'Bundesliga',          flag: '🇩🇪' },
+  { id: '61',  name: 'Ligue 1',            flag: '🇫🇷' },
+  { id: '2',   name: 'Champions League',    flag: '🏆' },
+  { id: '3',   name: 'Europa League',       flag: '🥈' },
+  { id: '848', name: 'Conference League',   flag: '🥉' },
+  { id: '40',  name: 'Championship',        flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+  { id: '88',  name: 'Eredivisie',          flag: '🇳🇱' },
+  { id: '94',  name: 'Primeira Liga',       flag: '🇵🇹' },
+  { id: '203', name: 'Süper Lig',          flag: '🇹🇷' },
+  { id: '179', name: 'Scottish Prem',       flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿' },
+  { id: '144', name: 'Belgian Pro League',  flag: '🇧🇪' },
+  { id: '253', name: 'MLS',                 flag: '🇺🇸' },
 ]
 
 interface Fixture {
@@ -17,7 +27,7 @@ interface Fixture {
 }
 
 export default function LiveFootballData({ onLeagueChange }: { onLeagueChange?: (id: string) => void }) {
-  const [tab, setTab] = useState<'upcoming' | 'live' | 'standings'>('upcoming')
+  const [tab, setTab] = useState<'upcoming' | 'live' | 'results' | 'standings'>('upcoming')
   const [league, setLeague] = useState('39')
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
@@ -29,7 +39,7 @@ export default function LiveFootballData({ onLeagueChange }: { onLeagueChange?: 
   async function fetchData() {
     setLoading(true)
     try {
-      const type = tab === 'upcoming' ? 'fixtures' : tab === 'live' ? 'live' : 'standings'
+      const type = tab === 'upcoming' ? 'fixtures' : tab === 'live' ? 'live' : tab === 'results' ? 'results' : 'standings'
       const res = await fetch(`/api/football-data?type=${type}&league=${league}`)
       const json = await res.json()
       setData(json.data || [])
@@ -64,7 +74,7 @@ export default function LiveFootballData({ onLeagueChange }: { onLeagueChange?: 
 
       {/* Tab bar */}
       <div className="flex border-b border-white/10">
-        {(['upcoming', 'live', 'standings'] as const).map(t => (
+        {(['upcoming', 'live', 'results', 'standings'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -74,7 +84,7 @@ export default function LiveFootballData({ onLeagueChange }: { onLeagueChange?: 
                 : 'text-gray-500 hover:text-gray-300'
             }`}
           >
-            {t === 'live' ? '🔴 Live' : t === 'upcoming' ? '📅 Upcoming' : '📊 Table'}
+            {t === 'live' ? '🔴 Live' : t === 'upcoming' ? '📅 Upcoming' : t === 'results' ? '✅ Results' : '📊 Table'}
           </button>
         ))}
       </div>
@@ -87,10 +97,12 @@ export default function LiveFootballData({ onLeagueChange }: { onLeagueChange?: 
           </div>
         ) : data.length === 0 ? (
           <p className="text-gray-500 text-xs text-center py-6">
-            {tab === 'live' ? 'No live games right now' : 'No data available'}
+            {tab === 'live' ? 'No live games right now' : tab === 'results' ? 'No recent results' : 'No data available'}
           </p>
         ) : tab === 'standings' ? (
           <StandingsView data={data} />
+        ) : tab === 'results' ? (
+          <FixturesView data={data} isLive={false} isResult />
         ) : (
           <FixturesView data={data} isLive={tab === 'live'} />
         )}
@@ -99,7 +111,7 @@ export default function LiveFootballData({ onLeagueChange }: { onLeagueChange?: 
   )
 }
 
-function FixturesView({ data, isLive }: { data: Fixture[]; isLive: boolean }) {
+function FixturesView({ data, isLive, isResult }: { data: Fixture[]; isLive: boolean; isResult?: boolean }) {
   return (
     <>
       {data.map((f) => {
@@ -113,8 +125,8 @@ function FixturesView({ data, isLive }: { data: Fixture[]; isLive: boolean }) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-white font-medium truncate">{f.teams.home.name}</span>
-                {isLive && isLiveNow ? (
-                  <span className="text-sm font-bold text-white px-2">
+                {(isLive && isLiveNow) || isResult ? (
+                  <span className={`text-sm font-bold px-2 ${isResult ? 'text-emerald-400' : 'text-white'}`}>
                     {f.goals.home ?? 0} - {f.goals.away ?? 0}
                   </span>
                 ) : (

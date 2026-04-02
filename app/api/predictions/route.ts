@@ -8,6 +8,14 @@ const BASE = 'https://v3.football.api-sports.io'
 // Cache predictions for 6 hours
 export const revalidate = 21600
 
+// Returns the current football season year (e.g. April 2026 → 2025 for 2025/26 season)
+function getCurrentSeason(): number {
+  const now = new Date()
+  const month = now.getMonth() + 1
+  const year = now.getFullYear()
+  return month >= 8 ? year : year - 1
+}
+
 async function apiFetch(path: string) {
   try {
     const res = await fetch(`${BASE}${path}`, {
@@ -27,16 +35,21 @@ function getDatePlusDays(days: number) {
 }
 
 const TOP_LEAGUES = [
-  { id: 39, name: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-  { id: 140, name: 'La Liga', flag: '🇪🇸' },
-  { id: 135, name: 'Serie A', flag: '🇮🇹' },
-  { id: 78, name: 'Bundesliga', flag: '🇩🇪' },
-  { id: 61, name: 'Ligue 1', flag: '🇫🇷' },
-  { id: 2, name: 'Champions League', flag: '🏆' },
+  { id: 39,  name: 'Premier League',    flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+  { id: 140, name: 'La Liga',           flag: '🇪🇸' },
+  { id: 135, name: 'Serie A',           flag: '🇮🇹' },
+  { id: 78,  name: 'Bundesliga',        flag: '🇩🇪' },
+  { id: 61,  name: 'Ligue 1',          flag: '🇫🇷' },
+  { id: 2,   name: 'Champions League',  flag: '🏆' },
+  { id: 3,   name: 'Europa League',     flag: '🥈' },
+  { id: 848, name: 'Conference League', flag: '🥉' },
+  { id: 88,  name: 'Eredivisie',        flag: '🇳🇱' },
+  { id: 94,  name: 'Primeira Liga',     flag: '🇵🇹' },
 ]
 
 export async function GET() {
   try {
+    const season = getCurrentSeason()
     const today = new Date().toISOString().split('T')[0]
     const in3days = getDatePlusDays(3)
 
@@ -44,9 +57,9 @@ export async function GET() {
     const fixtureGroups = await Promise.all(
       TOP_LEAGUES.map(async (league) => {
         const data = await apiFetch(
-          `/fixtures?league=${league.id}&season=2024&from=${today}&to=${in3days}&status=NS`
+          `/fixtures?league=${league.id}&season=${season}&from=${today}&to=${in3days}&status=NS`
         )
-        return (data || []).slice(0, 3).map((f: Record<string, unknown>) => ({
+        return (data || []).slice(0, 2).map((f: Record<string, unknown>) => ({
           ...f,
           _leagueName: league.name,
           _leagueFlag: league.flag,
@@ -54,7 +67,7 @@ export async function GET() {
       })
     )
 
-    const allFixtures = fixtureGroups.flat().slice(0, 14)
+    const allFixtures = fixtureGroups.flat().slice(0, 20)
 
     if (allFixtures.length === 0) {
       return NextResponse.json({ success: true, predictions: [], message: 'No upcoming fixtures found' })
@@ -81,7 +94,7 @@ export async function GET() {
         content: 'You are an expert football analyst. Generate match predictions based on current form, league position, historical H2H, and tactical factors. Return valid JSON only.'
       }, {
         role: 'user',
-        content: `Generate AI predictions for these upcoming matches. Use your knowledge of current 2024/25 season form, recent results, key injuries, and head-to-head records.
+        content: `Generate AI predictions for these upcoming matches. Use your knowledge of current ${season}/${String(season + 1).slice(2)} season form, recent results, key injuries, and head-to-head records.
 
 Matches:
 ${fixtureList}
