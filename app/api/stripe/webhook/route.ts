@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-03-25.dahlia' })
+
+const supabaseAdmin = createAdmin(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
@@ -18,7 +24,8 @@ export async function POST(req: NextRequest) {
 
   const supabase = await createClient()
 
-  async function updateSubscription(subscription: Stripe.Subscription) {
+  // ── Platform subscription (BetIQ Pro) ──────────────────────────────────────
+  async function updatePlatformSubscription(subscription: Stripe.Subscription) {
     const userId = subscription.metadata?.supabase_user_id
     const tier = subscription.metadata?.tier || 'free'
     if (!userId) return
@@ -32,21 +39,64 @@ export async function POST(req: NextRequest) {
     }).eq('id', userId)
   }
 
+  // ── Tipster subscription ────────────────────────────────────────────────────
+  async function handleTipsterSubscription(subscription: Stripe.Subscription, status: 'active' | 'canceled') {
+    const { tipster_id, subscriber_id } = subscription.metadata || {}
+    if (!tipster_id || !subscriber_id) return
+
+    const { data: existing } = await supabaseAdmin
+      .from('tipster_subscriptions')
+      .select('id')
+      .eq('tipster_id', tipster_id)
+      .eq('subscriber_id', subscriber_id)
+      .single()
+
+    if (existing) {
+      await supabaseAdmin
+        .from('tipster_subscriptions')
+        .update({ status, stripe_subscription_id: subscription.id })
+        .eq('id', existing.id)
+    } else if (status === 'active') {
+      await supabaseAdmin.from('tipster_subscriptions').insert({
+        tipster_id,
+        subscriber_id,
+        stripe_subscription_id: subscription.id,
+        status: 'active',
+      })
+    }
+  }
+
+  // Determine if this subscription is a tipster sub (has tipster_id metadata)
+  function isTipsterSub(sub: Stripe.Subscription) {
+    return !!sub.metadata?.tipster_id
+  }
+
   switch (event.type) {
     case 'customer.subscription.created':
-    case 'customer.subscription.updated':
-      await updateSubscription(event.data.object as Stripe.Subscription)
+    case 'customer.subscription.updated': {
+      const sub = event.data.object as Stripe.Subscription
+      if (isTipsterSub(sub)) {
+        const isActive = ['active', 'trialing'].includes(sub.status)
+        await handleTipsterSubscription(sub, isActive ? 'active' : 'canceled')
+      } else {
+        await updatePlatformSubscription(sub)
+      }
       break
+    }
 
     case 'customer.subscription.deleted': {
       const sub = event.data.object as Stripe.Subscription
-      const userId = sub.metadata?.supabase_user_id
-      if (userId) {
-        await supabase.from('profiles').update({
-          subscription_tier: 'free',
-          subscription_status: 'canceled',
-          stripe_subscription_id: null,
-        }).eq('id', userId)
+      if (isTipsterSub(sub)) {
+        await handleTipsterSubscription(sub, 'canceled')
+      } else {
+        const userId = sub.metadata?.supabase_user_id
+        if (userId) {
+          await supabase.from('profiles').update({
+            subscription_tier: 'free',
+            subscription_status: 'canceled',
+            stripe_subscription_id: null,
+          }).eq('id', userId)
+        }
       }
       break
     }
@@ -55,7 +105,22 @@ export async function POST(req: NextRequest) {
       const invoice = event.data.object as Stripe.Invoice
       if ((invoice as any).subscription) {
         const sub = await stripe.subscriptions.retrieve((invoice as any).subscription as string)
-        await updateSubscription(sub)
+        if (!isTipsterSub(sub)) {
+          await updatePlatformSubscription(sub)
+        }
+      }
+      break
+    }
+
+    // Handle checkout.session.completed as backup for tipster subscriptions
+    case 'checkout.session.completed': {
+      const session = event.data.object as Stripe.Checkout.Session
+      const { tipster_id, subscriber_id } = session.metadata || {}
+      if (tipster_id && subscriber_id && session.subscription) {
+        const sub = await stripe.subscriptions.retrieve(session.subscription as string)
+        if (['active', 'trialing'].includes(sub.status)) {
+          await handleTipsterSubscription(sub, 'active')
+        }
       }
       break
     }
