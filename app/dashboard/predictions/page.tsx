@@ -108,12 +108,37 @@ function OddsChip({ label, odds, ev }: { label: string; odds: number | null; ev:
   )
 }
 
+interface AccaLeg {
+  home_team: string
+  away_team: string
+  league: string
+  leagueFlag: string
+  kick_off: string
+  bet_type: string
+  odds: number | null
+  ai_probability: number
+  ev_percent: number | null
+  reasoning: string
+  confidence: string
+}
+
+interface Acca {
+  legs: AccaLeg[]
+  combined_odds: number
+  combined_ev: number
+  reasoning: string
+  generated_at: string
+}
+
 export default function PredictionsPage() {
   const [predictions, setPredictions] = useState<Prediction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro' | 'elite'>('free')
   const [expanded, setExpanded] = useState<number | null>(null)
+  const [acca, setAcca] = useState<Acca | null>(null)
+  const [accaLoading, setAccaLoading] = useState(true)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -134,7 +159,25 @@ export default function PredictionsPage() {
       })
       .catch(() => setError('Failed to load predictions'))
       .finally(() => setLoading(false))
+
+    // Fetch today's AI acca
+    fetch('/api/acca')
+      .then(r => r.json())
+      .then(d => { if (d.success && d.acca) setAcca(d.acca) })
+      .catch(() => {})
+      .finally(() => setAccaLoading(false))
   }, [])
+
+  function copyAcca() {
+    if (!acca) return
+    const text = acca.legs.map((l, i) =>
+      `${i + 1}. ${l.home_team} vs ${l.away_team} — ${l.bet_type} @ ${l.odds}`
+    ).join('\n') + `\n\nCombined odds: ${acca.combined_odds} | Combined EV: +${acca.combined_ev}%\nBuilt by BetIQ AI`
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   const isPro = subscriptionTier === 'pro' || subscriptionTier === 'elite'
   const visiblePredictions = isPro ? predictions : predictions.slice(0, 3)
@@ -176,6 +219,92 @@ export default function PredictionsPage() {
         <div className="bg-white/5 border border-white/10 rounded-2xl p-10 text-center">
           <p className="text-4xl mb-3">🏖️</p>
           <p className="text-white/60">No upcoming fixtures in the next 3 days. Check back soon.</p>
+        </div>
+      )}
+
+      {/* 🎯 AI ACCA BUILDER */}
+      {isPro && (
+        <div className="mb-6">
+          {accaLoading ? (
+            <div className="bg-white/5 border border-white/8 rounded-2xl h-48 animate-pulse" />
+          ) : acca ? (
+            <div className="bg-gradient-to-br from-violet-600/15 to-indigo-600/8 border border-violet-500/30 rounded-2xl p-5">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-4 gap-2">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">🎯</span>
+                    <h2 className="text-white font-bold">Today&apos;s AI Accumulator</h2>
+                    <span className="text-[10px] font-black text-violet-300 bg-violet-500/15 border border-violet-500/30 px-2 py-0.5 rounded-full uppercase tracking-wide">New daily</span>
+                  </div>
+                  <p className="text-white/40 text-xs">{acca.legs.length} legs · All positive EV · From different leagues</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-violet-300 font-black text-2xl">@ {acca.combined_odds}</p>
+                  <p className="text-emerald-400 text-xs font-bold">Combined EV: +{acca.combined_ev}%</p>
+                </div>
+              </div>
+
+              {/* Legs */}
+              <div className="space-y-2 mb-4">
+                {acca.legs.map((leg, i) => (
+                  <div key={i} className="flex items-center gap-3 bg-white/5 border border-white/8 rounded-xl p-3">
+                    <div className="w-6 h-6 rounded-lg bg-violet-600/30 border border-violet-500/30 flex items-center justify-center text-xs text-violet-300 font-black shrink-0">{i + 1}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-xs font-bold truncate">{leg.home_team} vs {leg.away_team}</p>
+                      <p className="text-white/30 text-[10px]">{leg.leagueFlag} {leg.league}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-white text-xs font-bold">{leg.bet_type} @ {leg.odds?.toFixed(2)}</p>
+                      {leg.ev_percent !== null && (
+                        <p className="text-emerald-400 text-[10px] font-bold">EV: +{leg.ev_percent}%</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Reasoning */}
+              {acca.reasoning && (
+                <p className="text-white/40 text-xs mb-4 italic border-l-2 border-violet-500/30 pl-3">{acca.reasoning}</p>
+              )}
+
+              {/* Payout calc + copy */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="bg-white/5 border border-white/8 rounded-xl px-4 py-2 text-sm">
+                  <span className="text-white/40">£10 stake → </span>
+                  <span className="text-white font-black">£{(10 * acca.combined_odds).toFixed(2)}</span>
+                </div>
+                <button
+                  onClick={copyAcca}
+                  className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white font-bold px-4 py-2 rounded-xl text-sm transition-colors"
+                >
+                  {copied ? '✅ Copied!' : '📋 Copy Acca'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-[#13162b] border border-violet-500/15 rounded-2xl p-5 text-center">
+              <p className="text-3xl mb-2">🎯</p>
+              <p className="text-white font-bold mb-1">AI Accumulator</p>
+              <p className="text-white/40 text-xs">No fixtures with sufficient odds available today. Check back tomorrow.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isPro && (
+        <div className="mb-6 bg-gradient-to-r from-violet-600/10 to-indigo-600/5 border border-violet-500/20 rounded-2xl p-5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🎯</span>
+            <div>
+              <p className="text-white font-bold text-sm">AI Accumulator Builder</p>
+              <p className="text-white/40 text-xs">Daily AI-built accas with positive EV on every leg — Pro only</p>
+            </div>
+          </div>
+          <a href="/dashboard/billing" className="shrink-0 bg-violet-600 hover:bg-violet-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors">
+            Upgrade →
+          </a>
         </div>
       )}
 

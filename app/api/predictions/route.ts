@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const API_KEY = process.env.API_FOOTBALL_KEY!
 const BASE = 'https://v3.football.api-sports.io'
+
+const supabaseAdmin = createAdmin(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 // 30-minute cache now that we have 7,500 req/day
 export const revalidate = 1800
@@ -268,6 +274,36 @@ Return JSON with this exact structure:
         lineups: lineupMap[f.fixture?.id] ?? null,
       }
     })
+
+    // ── Save predictions to DB for track record ────────────────────────────
+    // Use upsert so refreshes don't create duplicates
+    try {
+      const records = predictions
+        .filter(p => p.best_value && p.id)
+        .map(p => ({
+          fixture_id: p.id,
+          home_team: p.home_team,
+          away_team: p.away_team,
+          league: p.league,
+          kick_off: p.date,
+          season,
+          bet_type: p.best_value!.label,
+          prediction: p.best_value!.label.toLowerCase().replace(/ /g, '_'),
+          ai_probability: p.home_win_pct, // best approximation
+          odds: p.best_value!.odds ?? null,
+          ev_percent: p.best_value!.ev ?? null,
+          is_value_bet: p.is_value_bet,
+        }))
+
+      if (records.length > 0) {
+        await supabaseAdmin
+          .from('prediction_records')
+          .upsert(records, { onConflict: 'fixture_id,prediction', ignoreDuplicates: true })
+      }
+    } catch (dbErr) {
+      // Don't fail the whole response if DB save fails
+      console.error('Failed to save predictions to DB:', dbErr)
+    }
 
     return NextResponse.json({ success: true, predictions })
   } catch (err) {

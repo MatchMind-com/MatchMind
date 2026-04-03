@@ -35,6 +35,7 @@ export default async function LandingPage() {
             <a href="#features" className="hover:text-white transition-colors">Features</a>
             <a href="#predictions" className="hover:text-white transition-colors">AI Predictions</a>
             <a href="#tipsters" className="hover:text-white transition-colors">Tipsters</a>
+            <Link href="/track-record" className="hover:text-white transition-colors text-emerald-400/70 hover:text-emerald-300">📊 Track Record</Link>
             <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
           </div>
           <div className="flex items-center gap-3">
