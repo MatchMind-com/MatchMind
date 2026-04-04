@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import EmailCapture from '@/components/landing/EmailCapture'
+import ActivityStrip from '@/components/landing/ActivityStrip'
 
 async function getLiveStats() {
   try {
@@ -14,12 +16,44 @@ async function getLiveStats() {
   }
 }
 
+async function getPublicPredictions() {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://footballbetai.vercel.app'}/api/public/predictions`, {
+      next: { revalidate: 300 },
+    })
+    if (!res.ok) throw new Error()
+    const data = await res.json()
+    return data.predictions as Array<{
+      id: string
+      home_team: string
+      away_team: string
+      league: string
+      bet_type: string
+      odds: number
+      ev_percent: number
+      ai_probability: number
+      kick_off: string
+    }>
+  } catch {
+    return []
+  }
+}
+
+// Fallback sample predictions used when DB is still empty
+const SAMPLE_PREDS = [
+  { home_team: 'Arsenal', away_team: 'Chelsea', league: 'Premier League', bet_type: 'Over 2.5 Goals', odds: 1.87, ev_percent: 18.4, ai_probability: 72, kick_off: '', id: 's1' },
+  { home_team: 'Barcelona', away_team: 'Atletico', league: 'La Liga', bet_type: 'BTTS — Yes', odds: 1.74, ev_percent: 11.2, ai_probability: 68, kick_off: '', id: 's2' },
+  { home_team: 'PSG', away_team: 'Lens', league: 'Ligue 1', bet_type: 'Over 2.5 Goals', odds: 1.78, ev_percent: 9.6, ai_probability: 65, kick_off: '', id: 's3' },
+]
+
 export default async function LandingPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (user) redirect('/dashboard')
 
-  const stats = await getLiveStats()
+  const [stats, livePreds] = await Promise.all([getLiveStats(), getPublicPredictions()])
+  const predictions = livePreds.length > 0 ? livePreds : SAMPLE_PREDS
+  const isLiveData = livePreds.length > 0
 
   return (
     <div className="min-h-screen bg-[#0B0B14] text-white overflow-x-hidden">
@@ -32,8 +66,8 @@ export default async function LandingPage() {
             <span className="text-white font-bold text-xl tracking-tight">Bet<span className="text-violet-400">IQ</span></span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-white/50">
-            <a href="#features" className="hover:text-white transition-colors">Features</a>
-            <a href="#predictions" className="hover:text-white transition-colors">AI Predictions</a>
+            <a href="#value-bets" className="hover:text-white transition-colors">Value Bets</a>
+            <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
             <a href="#tipsters" className="hover:text-white transition-colors">Tipsters</a>
             <Link href="/track-record" className="hover:text-white transition-colors text-emerald-400/70 hover:text-emerald-300">📊 Track Record</Link>
             <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
@@ -60,12 +94,15 @@ export default async function LandingPage() {
           <span className="text-white/20 hidden sm:block">·</span>
           <span className="text-white/60 hidden sm:block"><span className="text-white font-bold">{stats.leagues_covered}</span> leagues covered</span>
           <span className="text-white/20 hidden sm:block">·</span>
-          <span className="text-white/60 hidden sm:block"><span className="text-white font-bold">{stats.tipsters}</span> verified tipsters</span>
+          <span className="text-white/60 hidden sm:block">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block mr-1.5" />
+            <span className="text-white font-bold">{stats.users > 0 ? stats.users.toLocaleString() : '—'}</span> members
+          </span>
         </div>
       </div>
 
       {/* ── HERO ── */}
-      <section className="pt-44 pb-20 px-4 relative overflow-hidden">
+      <section className="pt-44 pb-16 px-4 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-violet-600/10 rounded-full blur-[140px] pointer-events-none" />
         <div className="absolute top-20 left-1/4 w-[300px] h-[300px] bg-indigo-600/8 rounded-full blur-[80px] pointer-events-none" />
         <div className="absolute top-40 right-1/4 w-[200px] h-[200px] bg-violet-400/5 rounded-full blur-[60px] pointer-events-none" />
@@ -85,17 +122,22 @@ export default async function LandingPage() {
           </h1>
 
           <p className="text-white/55 text-xl sm:text-2xl max-w-2xl mx-auto leading-relaxed mb-10">
-            Real-time AI value bets with expected value scoring, verified tipster picks,
-            and deep analytics — all in one platform.
+            Real-time AI finds value bets where the bookmaker has got the odds wrong.
+            Every pick shows the exact mathematical edge — no hunches, just data.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
             <Link href="/signup" className="w-full sm:w-auto bg-violet-600 hover:bg-violet-500 text-white font-bold px-8 py-4 rounded-2xl text-lg transition-all shadow-xl shadow-violet-500/30 hover:shadow-violet-500/50 hover:-translate-y-0.5">
               Start Free — No Card Needed →
             </Link>
-            <a href="#predictions" className="w-full sm:w-auto bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold px-8 py-4 rounded-2xl text-lg transition-all">
+            <a href="#value-bets" className="w-full sm:w-auto bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold px-8 py-4 rounded-2xl text-lg transition-all">
               See Today&apos;s Value Bets
             </a>
+          </div>
+
+          {/* Activity strip */}
+          <div className="flex justify-center mb-8">
+            <ActivityStrip />
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-white/35">
@@ -104,64 +146,10 @@ export default async function LandingPage() {
             <span className="flex items-center gap-1.5"><span className="text-emerald-400">✓</span> Real Bet365 odds, not estimates</span>
           </div>
         </div>
-
-        {/* ── HERO CARD PREVIEW ── */}
-        <div className="max-w-4xl mx-auto mt-16 relative">
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0B0B14] to-transparent z-10 pointer-events-none" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-[#12121F] border border-emerald-500/30 rounded-2xl p-5 relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-500/0 via-emerald-500/60 to-emerald-500/0" />
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-black text-emerald-400 tracking-widest uppercase bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">🔥 Value Bet</span>
-                <span className="text-emerald-400 font-black text-sm">+18.4% EV</span>
-              </div>
-              <p className="text-white font-bold mb-0.5">Arsenal vs Chelsea</p>
-              <p className="text-white/40 text-xs mb-3">Premier League · Today 17:30</p>
-              <div className="flex items-center gap-2">
-                <span className="bg-violet-600/20 text-violet-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-violet-500/20">Over 2.5 Goals</span>
-                <span className="text-white font-bold">@ 1.95</span>
-              </div>
-              <p className="text-white/30 text-xs mt-2">AI Confidence: 72% · Bet365</p>
-            </div>
-            <div className="bg-[#12121F] border border-violet-500/30 rounded-2xl p-5 relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500/0 via-violet-500/60 to-violet-500/0" />
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-black text-violet-300 tracking-widest uppercase bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-full">🎯 AI Acca</span>
-                <span className="text-violet-300 font-black text-sm">@ 6.40</span>
-              </div>
-              <div className="space-y-1.5 mb-3">
-                {['Man City Win', 'BTTS — Liverpool vs Real', 'Over 2.5 — PSG vs Lyon'].map(pick => (
-                  <div key={pick} className="flex items-center gap-2 text-xs text-white/60">
-                    <span className="text-violet-400">✓</span> {pick}
-                  </div>
-                ))}
-              </div>
-              <div className="bg-violet-500/10 border border-violet-500/20 rounded-xl px-3 py-2">
-                <p className="text-violet-300 text-xs font-bold">Combined EV: +12.1%</p>
-              </div>
-            </div>
-            <div className="bg-[#12121F] border border-amber-500/20 rounded-2xl p-5 relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500/0 via-amber-500/40 to-amber-500/0" />
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center font-black text-sm">M</div>
-                <div>
-                  <p className="text-white text-sm font-bold">MarkTheTipster</p>
-                  <p className="text-white/30 text-xs">Premier League Specialist</p>
-                </div>
-                <span className="ml-auto text-[10px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">#1 ROI</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-center mb-3">
-                <div><p className="text-emerald-400 font-bold text-sm">+31%</p><p className="text-white/30 text-[10px]">ROI</p></div>
-                <div><p className="text-white font-bold text-sm">68%</p><p className="text-white/30 text-[10px]">Win Rate</p></div>
-                <div><p className="text-white font-bold text-sm">142</p><p className="text-white/30 text-[10px]">Tips</p></div>
-              </div>
-              <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-center">
-                <p className="text-white/50 text-xs">£9.99/mo · 24 subscribers</p>
-              </div>
-            </div>
-          </div>
-        </div>
       </section>
+
+      {/* ── PHASE A: EMAIL CAPTURE ── */}
+      <EmailCapture />
 
       {/* ── LEAGUES TRUST BAR ── */}
       <section className="py-10 border-y border-white/5 bg-white/[0.02]">
@@ -177,82 +165,177 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── AI PREDICTIONS SECTION ── */}
-      <section id="predictions" className="py-24 px-4">
+      {/* ── PHASE B: LIVE VALUE BETS PREVIEW ── */}
+      <section id="value-bets" className="py-24 px-4">
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1.5 mb-6">
-                <span className="text-emerald-400 text-xs font-bold uppercase tracking-wide">🔮 AI Predictions</span>
-              </div>
-              <h2 className="text-4xl sm:text-5xl font-black mb-6 leading-tight">
-                Find bets with a{' '}
-                <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">real edge</span>
-                {' '}— before kickoff
-              </h2>
-              <p className="text-white/50 text-lg leading-relaxed mb-8">
-                Our AI analyses every fixture using live injury reports, team form, and confirmed lineups — then cross-references real Bet365 odds to find where the bookmaker has mispriced the market. Only bets with positive Expected Value (EV%) are surfaced.
-              </p>
-              <div className="space-y-4">
-                {[
-                  { icon: '📊', title: 'Expected Value scoring', desc: 'Every prediction shows EV%, so you know exactly how much edge you have over the bookmaker.' },
-                  { icon: '🏥', title: 'Injury & lineup aware', desc: 'Real-time injury reports and confirmed lineups feed directly into the AI model.' },
-                  { icon: '🔔', title: 'Value bets highlighted', desc: "The best bets of the day are surfaced automatically — no digging required." },
-                ].map(item => (
-                  <div key={item.title} className="flex gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 text-lg">{item.icon}</div>
-                    <div>
-                      <p className="text-white font-semibold text-sm mb-0.5">{item.title}</p>
-                      <p className="text-white/40 text-sm">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Link href="/signup" className="inline-block mt-8 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-3 rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/20">
-                See Today&apos;s Value Bets →
-              </Link>
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1.5 mb-6">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+              <span className="text-emerald-400 text-xs font-bold uppercase tracking-wide">
+                {isLiveData ? 'Live from the AI right now' : 'Sample picks — live data once signed up'}
+              </span>
             </div>
+            <h2 className="text-4xl sm:text-5xl font-black mb-4">
+              Today&apos;s value bets.{' '}
+              <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Right now.</span>
+            </h2>
+            <p className="text-white/45 text-xl max-w-2xl mx-auto">
+              The AI scans every fixture across 15 leagues and flags only bets where you have a real mathematical edge over the bookmaker.
+            </p>
+          </div>
 
-            <div className="space-y-3">
-              {[
-                { match: 'Liverpool vs Dortmund', league: 'Champions League', bet: 'Over 2.5 Goals', odds: '1.85', ev: '+14.2', confidence: 74, badge: '🔥 Top Pick' },
-                { match: 'Barcelona vs Atletico', league: 'La Liga', bet: 'BTTS — Yes', odds: '1.72', ev: '+9.8', confidence: 68, badge: null },
-                { match: 'Bayern vs Leverkusen', league: 'Bundesliga', bet: 'Bayern Win', odds: '1.55', ev: '+7.1', confidence: 71, badge: null },
-              ].map((p, i) => (
-                <div key={i} className={`bg-[#12121F] border rounded-2xl p-4 ${i === 0 ? 'border-emerald-500/30' : 'border-white/8'}`}>
-                  <div className="flex items-start justify-between mb-2">
+          <div className="space-y-3 max-w-2xl mx-auto mb-8">
+            {predictions.map((p, i) => (
+              <div key={p.id} className={`bg-[#12121F] border rounded-2xl p-5 relative overflow-hidden ${i === 0 ? 'border-emerald-500/30' : 'border-white/8'}`}>
+                {i === 0 && <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-500/0 via-emerald-500/60 to-emerald-500/0" />}
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-white font-bold text-sm">{p.home_team} vs {p.away_team}</p>
+                      {i === 0 && <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">🔥 Top Pick</span>}
+                    </div>
+                    <p className="text-white/30 text-xs">{p.league}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-emerald-400 font-black">+{p.ev_percent}%</p>
+                    <p className="text-white/30 text-[10px]">EV edge</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="bg-violet-600/20 text-violet-300 text-xs font-semibold px-2.5 py-1 rounded-lg border border-violet-500/20">{p.bet_type}</span>
+                  {/* Blurred odds — unlock prompt */}
+                  <div className="flex items-center gap-1.5 relative">
+                    <span className="text-white font-bold text-sm blur-sm select-none">@ {p.odds.toFixed(2)}</span>
+                    <span className="text-white/30 text-xs">🔒</span>
+                  </div>
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <div className="w-16 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                      <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-emerald-500" style={{ width: `${p.ai_probability}%` }} />
+                    </div>
+                    <span className="text-white/30 text-xs">{p.ai_probability}%</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="max-w-2xl mx-auto bg-gradient-to-r from-violet-600/10 to-indigo-600/5 border border-violet-500/20 rounded-2xl p-6 text-center">
+            <p className="text-white font-bold mb-1">Sign up free to unlock full odds + all {stats.value_bets_today} picks today</p>
+            <p className="text-white/40 text-sm mb-4">See exact odds, AI reasoning, and EV breakdown for every value bet — free account, no card needed.</p>
+            <Link href="/signup" className="inline-block bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-8 py-3 rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/20">
+              Unlock Today&apos;s Picks →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── PHASE C: EV EXPLAINER ── */}
+      <section id="how-it-works" className="py-24 px-4 bg-white/[0.015] border-y border-white/5">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 rounded-full px-3 py-1.5 mb-6">
+              <span className="text-violet-300 text-xs font-bold uppercase tracking-wide">📐 The Edge Explained</span>
+            </div>
+            <h2 className="text-4xl sm:text-5xl font-black mb-4">
+              What is a{' '}
+              <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">value bet</span>
+              ?
+            </h2>
+            <p className="text-white/45 text-xl max-w-2xl mx-auto">
+              The bookmaker is not always right. When their odds imply the wrong probability, that gap is your edge.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Visual example */}
+            <div className="bg-[#12121F] border border-white/8 rounded-2xl p-7">
+              <p className="text-white/40 text-xs uppercase tracking-widest font-bold mb-5">Real example: Over 2.5 Goals</p>
+
+              <div className="space-y-5">
+                {/* Bookmaker bar */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-white/60 text-sm font-medium">📚 Bookmaker implies</span>
+                    <span className="text-white font-bold text-sm">53% chance</span>
+                  </div>
+                  <div className="h-3 rounded-full bg-white/10 overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-white/30 to-white/20" style={{ width: '53%' }} />
+                  </div>
+                  <p className="text-white/30 text-xs mt-1.5">Odds of 1.88 → implied 53% probability</p>
+                </div>
+
+                {/* AI bar */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-white/60 text-sm font-medium">🤖 AI calculates</span>
+                    <span className="text-emerald-400 font-bold text-sm">68% chance</span>
+                  </div>
+                  <div className="h-3 rounded-full bg-emerald-500/15 overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400" style={{ width: '68%' }} />
+                  </div>
+                  <p className="text-white/30 text-xs mt-1.5">Based on injuries, form, H2H, and lineup data</p>
+                </div>
+
+                {/* The gap */}
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="text-white font-bold text-sm">{p.match}</p>
-                        {p.badge && <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">{p.badge}</span>}
-                      </div>
-                      <p className="text-white/30 text-xs">{p.league}</p>
+                      <p className="text-emerald-300 font-bold text-sm">The gap = your edge</p>
+                      <p className="text-white/40 text-xs mt-0.5">68% − 53% = 15% probability edge</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-emerald-400 font-black">{p.ev}%</p>
-                      <p className="text-white/30 text-[10px]">EV</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="bg-violet-600/20 text-violet-300 text-xs font-semibold px-2.5 py-1 rounded-lg border border-violet-500/20">{p.bet}</span>
-                    <span className="text-white font-bold text-sm">@ {p.odds}</span>
-                    <div className="ml-auto flex items-center gap-1.5">
-                      <div className="w-16 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                        <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-emerald-500" style={{ width: `${p.confidence}%` }} />
-                      </div>
-                      <span className="text-white/30 text-xs">{p.confidence}%</span>
+                      <p className="text-emerald-400 font-black text-2xl">+22%</p>
+                      <p className="text-white/30 text-xs">Expected Value</p>
                     </div>
                   </div>
                 </div>
-              ))}
-              <p className="text-white/20 text-xs text-center pt-1">Sample predictions — sign up to see today&apos;s live picks</p>
+
+                <p className="text-white/25 text-xs text-center">EV formula: (AI probability × decimal odds) − 1</p>
+              </div>
+            </div>
+
+            {/* Explanation */}
+            <div>
+              <div className="space-y-6">
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-lg shrink-0">📚</div>
+                  <div>
+                    <p className="text-white font-semibold mb-1">Bookmakers price from volume, not truth</p>
+                    <p className="text-white/40 text-sm leading-relaxed">Bookmakers set odds based on where public money flows — not pure probability. Popular teams are often over-priced. Lesser-known bets are often mispriced.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-lg shrink-0">🤖</div>
+                  <div>
+                    <p className="text-white font-semibold mb-1">AI calculates true probability</p>
+                    <p className="text-white/40 text-sm leading-relaxed">Our model analyses real injury reports, confirmed lineups, recent form, head-to-head history, and more to calculate what the true odds should be.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-lg shrink-0">⚡</div>
+                  <div>
+                    <p className="text-white font-semibold mb-1">You only see the bets where you have an edge</p>
+                    <p className="text-white/40 text-sm leading-relaxed">Every pick is filtered to positive Expected Value only. No noise, no guesses — just the bets where the maths says you have a statistical advantage.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-lg shrink-0">📊</div>
+                  <div>
+                    <p className="text-white font-semibold mb-1">Long run: edge beats luck</p>
+                    <p className="text-white/40 text-sm leading-relaxed">Individual bets can lose. But backing positive EV bets consistently means the maths compounds in your favour over hundreds of bets — like a casino, but working for you.</p>
+                  </div>
+                </div>
+              </div>
+              <Link href="/signup" className="inline-block mt-8 bg-violet-600 hover:bg-violet-500 text-white font-bold px-6 py-3 rounded-xl text-sm transition-all shadow-lg shadow-violet-500/20">
+                Start Betting With an Edge →
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
       {/* ── AI ACCA BUILDER ── */}
-      <section className="py-24 px-4 bg-white/[0.015] border-y border-white/5">
+      <section className="py-24 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="order-2 lg:order-1">
@@ -329,86 +412,99 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── TIPSTER MARKETPLACE ── */}
-      <section id="tipsters" className="py-24 px-4">
+      {/* ── PHASE D: TIPSTER SECTION — Early Mover Pitch ── */}
+      <section id="tipsters" className="py-24 px-4 bg-white/[0.015] border-y border-white/5">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-full px-3 py-1.5 mb-6">
-              <span className="text-amber-300 text-xs font-bold uppercase tracking-wide">🛒 Tipster Marketplace</span>
+              <span className="text-amber-300 text-xs font-bold uppercase tracking-wide">🛒 Tipster Marketplace — Launching</span>
             </div>
             <h2 className="text-4xl sm:text-5xl font-black mb-4">
-              Follow verified tipsters.{' '}
-              <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">Or become one.</span>
+              Verified tipsters.{' '}
+              <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">Transparent results.</span>
             </h2>
             <p className="text-white/40 text-xl max-w-2xl mx-auto">
-              Every tipster&apos;s record is auto-verified against live match results. No fake screenshots — just transparent performance tracked by our system.
+              Every tipster&apos;s record is auto-verified against live match results — no fake screenshots, no cherry-picking. Just real performance tracked by our system.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
-            {[
-              { name: 'MarkTheTipster', spec: 'Premier League Goals', roi: '+31.4%', winRate: '68%', tips: 142, subs: 24, price: '£9.99', badge: '🏆 #1 ROI' },
-              { name: 'AccaKing', spec: 'Champions League', roi: '+22.8%', winRate: '61%', tips: 89, subs: 17, price: '£7.99', badge: null },
-              { name: 'ValueVince', spec: 'Asian Handicap', roi: '+18.2%', winRate: '57%', tips: 203, subs: 31, price: '£12.99', badge: null },
-            ].map((t, i) => (
-              <div key={i} className={`bg-[#12121F] border rounded-2xl p-5 ${i === 0 ? 'border-amber-500/30' : 'border-white/8'}`}>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg ${
-                    i === 0 ? 'bg-gradient-to-br from-amber-500 to-orange-600' :
-                    i === 1 ? 'bg-gradient-to-br from-violet-600 to-indigo-600' :
-                    'bg-gradient-to-br from-emerald-600 to-teal-600'
-                  }`}>{t.name[0]}</div>
+          {/* Early mover banner */}
+          <div className="bg-gradient-to-br from-amber-500/10 via-orange-600/5 to-transparent border border-amber-500/25 rounded-2xl p-8 mb-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+              <div>
+                <div className="inline-flex items-center gap-2 bg-amber-500/15 border border-amber-500/25 rounded-full px-3 py-1.5 mb-4">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  <span className="text-amber-300 text-xs font-bold">Founding Tipster Spots — Limited</span>
+                </div>
+                <h3 className="text-white font-black text-2xl mb-3">
+                  Be one of the first 10 verified tipsters.
+                </h3>
+                <p className="text-white/50 text-sm leading-relaxed mb-5">
+                  The marketplace is building now. First 10 tipsters who register get featured placement at the top of the leaderboard, priority onboarding support, and 3 months at 0% commission — you keep 100% of subscriber revenue while you build your following.
+                </p>
+                <div className="flex flex-wrap gap-3 mb-6">
+                  {['🏆 Featured placement', '💰 0% commission x3 months', '⚡ Priority onboarding', '📢 Founding badge'].map(perk => (
+                    <span key={perk} className="bg-white/5 border border-white/10 text-white/70 text-xs font-medium px-3 py-1.5 rounded-full">{perk}</span>
+                  ))}
+                </div>
+                <Link href="/signup" className="inline-block bg-amber-500 hover:bg-amber-400 text-black font-bold px-6 py-3 rounded-xl text-sm transition-all shadow-lg shadow-amber-500/25">
+                  Register as Founding Tipster →
+                </Link>
+              </div>
+              <div className="space-y-4">
+                <div className="bg-[#12121F] border border-white/8 rounded-2xl p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center font-black text-lg">📢</div>
+                    <div>
+                      <p className="text-white font-bold text-sm">How it works</p>
+                      <p className="text-white/30 text-xs">Set up in under 5 minutes</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      { step: '1', text: 'Register as a tipster and set your monthly price' },
+                      { step: '2', text: 'Post verified picks — our system auto-checks every result' },
+                      { step: '3', text: 'Subscribers pay monthly · you earn 80% of every £' },
+                    ].map(s => (
+                      <div key={s.step} className="flex gap-3 items-start">
+                        <div className="w-6 h-6 rounded-lg bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-xs text-violet-300 font-bold shrink-0">{s.step}</div>
+                        <p className="text-white/50 text-sm leading-relaxed">{s.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Real user count */}
+                <div className="bg-[#12121F] border border-emerald-500/20 rounded-2xl p-5 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-lg shrink-0">👥</div>
                   <div>
-                    <p className="text-white font-bold text-sm">{t.name}</p>
-                    <p className="text-white/30 text-xs">{t.spec}</p>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-white font-bold text-sm">
+                        {stats.users > 0 ? `${stats.users.toLocaleString()} bettors` : 'Growing fast'}
+                        {' '}already on BetIQ
+                      </p>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    </div>
+                    <p className="text-white/40 text-xs">
+                      {stats.tipsters > 0 ? `${stats.tipsters} tipsters active · ` : ''}Each one building a verified record from day one.
+                    </p>
                   </div>
-                  {t.badge && <span className="ml-auto text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold">{t.badge}</span>}
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center mb-4">
-                  <div className="bg-white/5 rounded-xl p-2">
-                    <p className="text-emerald-400 font-bold text-sm">{t.roi}</p>
-                    <p className="text-white/30 text-[10px]">ROI</p>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-2">
-                    <p className="text-white font-bold text-sm">{t.winRate}</p>
-                    <p className="text-white/30 text-[10px]">Win Rate</p>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-2">
-                    <p className="text-white font-bold text-sm">{t.tips}</p>
-                    <p className="text-white/30 text-[10px]">Tips</p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-xs text-white/40">
-                  <span>{t.subs} subscribers</span>
-                  <span className="text-white font-bold">{t.price}/mo</span>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="bg-gradient-to-br from-violet-600/10 to-indigo-600/5 border border-violet-500/20 rounded-2xl p-6">
-              <p className="text-2xl mb-3">📢</p>
-              <h3 className="text-white font-bold text-lg mb-2">Become a tipster. Earn from your edge.</h3>
-              <p className="text-white/40 text-sm mb-4">Set your monthly price, post verified tips, and earn 80% of subscription revenue. Your track record is publicly verified — the better you perform, the more you earn.</p>
-              <Link href="/signup" className="inline-block bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors">
-                Register as Tipster →
-              </Link>
-            </div>
-            <div className="bg-gradient-to-br from-amber-500/10 to-orange-600/5 border border-amber-500/20 rounded-2xl p-6">
-              <p className="text-2xl mb-3">🔍</p>
-              <h3 className="text-white font-bold text-lg mb-2">Only follow tipsters with a verified record.</h3>
-              <p className="text-white/40 text-sm mb-4">Every result is checked against live match data and automatically marked win/loss/void. No editing history. No cherry-picking. Full transparency on every tipster.</p>
-              <Link href="/signup" className="inline-block bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-300 font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors">
-                Browse Marketplace →
-              </Link>
-            </div>
+          {/* Browse CTA */}
+          <div className="text-center">
+            <Link href="/signup" className="inline-block bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-colors">
+              Browse Marketplace →
+            </Link>
           </div>
         </div>
       </section>
 
       {/* ── ALL FEATURES ── */}
-      <section id="features" className="py-24 px-4 border-t border-white/5 bg-white/[0.015]">
+      <section id="features" className="py-24 px-4 border-t border-white/5">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-4xl sm:text-5xl font-black mb-4">Every tool a serious bettor needs</h2>
@@ -441,7 +537,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── PRICING ── */}
-      <section className="py-24 px-4" id="pricing">
+      <section className="py-24 px-4 bg-white/[0.015] border-t border-white/5" id="pricing">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-4xl sm:text-5xl font-black mb-4">Start free. Upgrade when it pays for itself.</h2>
@@ -586,6 +682,7 @@ export default async function LandingPage() {
           </p>
           <div className="flex items-center gap-5 text-white/30 text-sm">
             <a href="#pricing" className="hover:text-white/60 transition-colors">Pricing</a>
+            <Link href="/track-record" className="hover:text-white/60 transition-colors">Track Record</Link>
             <Link href="/login" className="hover:text-white/60 transition-colors">Sign In</Link>
             <Link href="/signup" className="hover:text-white/60 transition-colors">Sign Up</Link>
           </div>
