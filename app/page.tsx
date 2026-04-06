@@ -1,9 +1,19 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import EmailCapture from '@/components/landing/EmailCapture'
 import ActivityStrip from '@/components/landing/ActivityStrip'
 import EarningsCalculator from '@/components/landing/EarningsCalculator'
+
+export const metadata: Metadata = {
+  title: 'BetIQ — AI Football Betting Coach & Value Bet Finder',
+  description: 'BetIQ uses AI to find value bets, analyse your betting performance, and coach you to better returns. Free AI football tips every day — no card needed.',
+  openGraph: {
+    title: 'BetIQ — AI Football Betting Coach & Value Bet Finder',
+    description: 'AI-powered value bets, EV analysis, and a personal football betting coach. Free to start.',
+  },
+}
 
 async function getLiveStats() {
   try {

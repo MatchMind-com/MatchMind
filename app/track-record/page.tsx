@@ -1,4 +1,14 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
+
+export const metadata: Metadata = {
+  title: 'AI Prediction Track Record — Verified Results',
+  description: 'Every BetIQ AI prediction is logged before kickoff and auto-verified against official results. No cherry-picking, no edited history — full transparency on win rate and ROI.',
+  openGraph: {
+    title: 'BetIQ AI Prediction Track Record — Verified Results',
+    description: 'Transparent, auto-verified AI football predictions. See win rate, ROI, and every pick — logged before kickoff.',
+  },
+}
 
 async function getTrackRecord() {
   try {
