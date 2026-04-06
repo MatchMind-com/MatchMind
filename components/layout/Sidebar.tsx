@@ -16,6 +16,7 @@ const NAV = [
   { href: '/dashboard/marketplace', label: 'Marketplace', icon: '🛒', exact: false },
   { href: '/dashboard/my-tipster', label: 'My Tipster', icon: '📢', exact: false },
   { href: '/dashboard/billing', label: 'Billing', icon: '💳', exact: false },
+  { href: '/dashboard/settings', label: 'Settings', icon: '⚙️', exact: false },
 ]
 
 export default function Sidebar({ email }: { email: string }) {
