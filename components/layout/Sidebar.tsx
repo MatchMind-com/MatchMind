@@ -15,6 +15,7 @@ const NAV = [
   { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: '🏆', exact: false },
   { href: '/dashboard/marketplace', label: 'Marketplace', icon: '🛒', exact: false },
   { href: '/dashboard/my-tipster', label: 'My Tipster', icon: '📢', exact: false },
+  { href: '/dashboard/referral', label: 'Refer a Friend', icon: '🎁', exact: false },
   { href: '/dashboard/billing', label: 'Billing', icon: '💳', exact: false },
   { href: '/dashboard/settings', label: 'Settings', icon: '⚙️', exact: false },
 ]
