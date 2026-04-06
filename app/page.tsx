@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import EmailCapture from '@/components/landing/EmailCapture'
 import ActivityStrip from '@/components/landing/ActivityStrip'
+import EarningsCalculator from '@/components/landing/EarningsCalculator'
 
 async function getLiveStats() {
   try {
@@ -229,8 +230,146 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* ── APP SCREENSHOT SHOWCASE ── */}
+      <section id="app-preview" className="py-24 px-4 bg-white/[0.015] border-y border-white/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 rounded-full px-3 py-1.5 mb-6">
+              <span className="text-violet-300 text-xs font-bold uppercase tracking-wide">📱 Inside the App</span>
+            </div>
+            <h2 className="text-4xl sm:text-5xl font-black mb-4">Everything in one dashboard</h2>
+            <p className="text-white/40 text-lg max-w-xl mx-auto">No spreadsheets. No juggling five tabs. Every tool a serious bettor needs, right here.</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            {/* Feature 1: AI Football Coach */}
+            <div className="bg-[#12121F] border border-violet-500/20 rounded-2xl p-5 flex flex-col">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-base shrink-0">🤖</div>
+                <div>
+                  <p className="text-white font-semibold text-sm">AI Football Coach</p>
+                  <p className="text-white/30 text-xs">GPT-4o · Live data</p>
+                </div>
+              </div>
+              {/* Mock chat UI */}
+              <div className="flex-1 bg-[#0B0B14] rounded-xl p-3 space-y-3 mb-4">
+                <div className="flex gap-2">
+                  <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] shrink-0 mt-0.5">👤</div>
+                  <div className="bg-white/8 rounded-xl rounded-tl-none px-3 py-2 text-xs text-white/70 max-w-[80%]">
+                    Is Arsenal a good bet tonight?
+                  </div>
+                </div>
+                <div className="flex gap-2 flex-row-reverse">
+                  <div className="w-5 h-5 rounded-full bg-violet-600/30 flex items-center justify-center text-[10px] shrink-0 mt-0.5">B</div>
+                  <div className="bg-violet-600/20 border border-violet-500/20 rounded-xl rounded-tr-none px-3 py-2 text-xs text-white/80 max-w-[80%]">
+                    Arsenal have scored 2+ in 8 of their last 10 home games. Saliba is back, Chelsea missing Mount. AI puts Over 2.5 at <span className="text-emerald-400 font-bold">+18.4% EV</span> — that&apos;s a strong edge.
+                  </div>
+                </div>
+              </div>
+              <p className="text-white/30 text-xs">Ask anything about any match, any league</p>
+            </div>
+
+            {/* Feature 2: Statistics Dashboard */}
+            <div className="bg-[#12121F] border border-emerald-500/20 rounded-2xl p-5 flex flex-col">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-base shrink-0">📊</div>
+                <div>
+                  <p className="text-white font-semibold text-sm">Statistics Dashboard</p>
+                  <p className="text-white/30 text-xs">Your full betting record</p>
+                </div>
+              </div>
+              {/* Mock stats */}
+              <div className="flex-1 space-y-2 mb-4">
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: 'Win Rate', value: '64%', color: 'text-emerald-400' },
+                    { label: 'ROI', value: '+18.6%', color: 'text-emerald-400' },
+                    { label: 'Total P&L', value: '+£184', color: 'text-emerald-400' },
+                    { label: 'Bets', value: '54', color: 'text-white' },
+                  ].map(s => (
+                    <div key={s.label} className="bg-[#0B0B14] rounded-xl p-3 text-center">
+                      <p className={`text-lg font-black ${s.color}`}>{s.value}</p>
+                      <p className="text-white/30 text-[10px] mt-0.5">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+                {/* Mini chart bars */}
+                <div className="bg-[#0B0B14] rounded-xl p-3">
+                  <p className="text-white/30 text-[10px] mb-2">P&L over time</p>
+                  <div className="flex items-end gap-1 h-10">
+                    {[-10, 8, 4, 18, 12, 29, 22, 38, 34, 47].map((v, i) => (
+                      <div
+                        key={i}
+                        className={`flex-1 rounded-sm ${v >= 0 ? 'bg-emerald-500/60' : 'bg-red-500/60'}`}
+                        style={{ height: `${Math.abs(v) / 47 * 100}%`, minHeight: 2 }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <p className="text-white/30 text-xs">Win rate, ROI, P&L by league and bet type</p>
+            </div>
+
+            {/* Feature 3: Value Bet Card (full detail) */}
+            <div className="bg-[#12121F] border border-amber-500/20 rounded-2xl p-5 flex flex-col">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-amber-600/20 border border-amber-500/30 flex items-center justify-center text-base shrink-0">🔮</div>
+                <div>
+                  <p className="text-white font-semibold text-sm">AI Predictions</p>
+                  <p className="text-white/30 text-xs">Daily value bet cards</p>
+                </div>
+              </div>
+              {/* Mock value bet card */}
+              <div className="flex-1 bg-[#0B0B14] rounded-xl p-4 mb-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <p className="text-white font-bold text-xs">Arsenal vs Chelsea</p>
+                    <p className="text-white/30 text-[10px]">Premier League · Sat 3pm</p>
+                  </div>
+                  <span className="text-emerald-400 font-black text-sm">+18.4%</span>
+                </div>
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-violet-300 text-xs font-semibold bg-violet-600/20 px-2 py-0.5 rounded-lg border border-violet-500/20">Over 2.5 Goals</span>
+                    <span className="text-white font-bold text-sm">@ 1.87</span>
+                  </div>
+                  <div className="space-y-1">
+                    {[
+                      { label: 'AI probability', value: '72%', bar: 72, color: 'bg-emerald-500' },
+                      { label: 'Bookmaker', value: '53%', bar: 53, color: 'bg-white/20' },
+                    ].map(r => (
+                      <div key={r.label}>
+                        <div className="flex justify-between text-[10px] text-white/40 mb-0.5">
+                          <span>{r.label}</span><span>{r.value}</span>
+                        </div>
+                        <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${r.color}`} style={{ width: `${r.bar}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {['Saliba back', 'Chelsea no Mount', '8/10 home O2.5'].map(t => (
+                    <span key={t} className="text-[9px] bg-white/5 text-white/40 px-1.5 py-0.5 rounded-md">{t}</span>
+                  ))}
+                </div>
+              </div>
+              <p className="text-white/30 text-xs">Odds, EV%, AI probability, and reasoning for every pick</p>
+            </div>
+          </div>
+
+          <div className="text-center mt-10">
+            <Link href="/signup" className="inline-block bg-violet-600 hover:bg-violet-500 text-white font-bold px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-violet-500/25">
+              Try the Dashboard Free →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ── PHASE C: EV EXPLAINER ── */}
-      <section id="how-it-works" className="py-24 px-4 bg-white/[0.015] border-y border-white/5">
+      <section id="how-it-works" className="py-24 px-4 border-y border-white/5">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 rounded-full px-3 py-1.5 mb-6">
@@ -335,7 +474,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── AI ACCA BUILDER ── */}
-      <section className="py-24 px-4">
+      <section className="py-24 px-4 bg-white/[0.015] border-b border-white/5">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="order-2 lg:order-1">
@@ -413,7 +552,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── PHASE D: TIPSTER SECTION — Early Mover Pitch ── */}
-      <section id="tipsters" className="py-24 px-4 bg-white/[0.015] border-y border-white/5">
+      <section id="tipsters" className="py-24 px-4 bg-white/[0.015] border-b border-white/5">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-full px-3 py-1.5 mb-6">
@@ -494,8 +633,34 @@ export default async function LandingPage() {
             </div>
           </div>
 
+          {/* Earnings calculator */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div>
+              <h3 className="text-white font-black text-2xl mb-3">Calculate your earnings</h3>
+              <p className="text-white/50 text-sm leading-relaxed mb-4">
+                Set your price. Grow your subscriber base. Keep 80%. Here&apos;s what that looks like in practice.
+              </p>
+              <div className="space-y-3">
+                {[
+                  { subs: 10, price: 9.99, monthly: '£80', note: 'Side income from day one' },
+                  { subs: 50, price: 9.99, monthly: '£400', note: 'Meaningful monthly revenue' },
+                  { subs: 200, price: 14.99, monthly: '£2,399', note: 'Full-time potential' },
+                ].map(ex => (
+                  <div key={ex.subs} className="flex items-center gap-4 bg-white/[0.03] border border-white/8 rounded-xl px-4 py-3">
+                    <div className="flex-1">
+                      <p className="text-white/60 text-xs">{ex.subs} subs × £{ex.price}</p>
+                      <p className="text-white/30 text-[10px] mt-0.5">{ex.note}</p>
+                    </div>
+                    <p className="text-emerald-400 font-black text-lg">{ex.monthly}<span className="text-white/30 text-xs font-normal">/mo</span></p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <EarningsCalculator />
+          </div>
+
           {/* Browse CTA */}
-          <div className="text-center">
+          <div className="text-center mt-10">
             <Link href="/signup" className="inline-block bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-colors">
               Browse Marketplace →
             </Link>

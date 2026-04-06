@@ -26,6 +26,87 @@ interface CheckResultItem {
   confidence: string
 }
 
+function OnboardingChecklist({ bets }: { bets: BetSlip[] }) {
+  const hasBet = bets.length > 0
+  const hasSettled = bets.some(b => b.result === 'win' || b.result === 'loss')
+  const hasAnalysis = hasSettled && bets.length >= 2
+
+  const steps = [
+    {
+      num: 1,
+      label: 'Add your first bet',
+      desc: 'Log a match you\'re thinking about placing',
+      done: hasBet,
+      icon: '📝',
+    },
+    {
+      num: 2,
+      label: 'Mark it won or lost',
+      desc: 'After the match, update the result',
+      done: hasSettled,
+      icon: '✅',
+    },
+    {
+      num: 3,
+      label: 'Get your AI analysis',
+      desc: 'See your win rate, ROI, and AI coaching',
+      done: hasAnalysis,
+      icon: '🤖',
+    },
+  ]
+
+  const completed = steps.filter(s => s.done).length
+
+  if (completed === steps.length) return null
+
+  return (
+    <div className="bg-gradient-to-br from-violet-600/10 to-indigo-600/5 border border-violet-500/20 rounded-2xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="text-white font-semibold text-sm">🚀 Get started in 3 steps</p>
+          <p className="text-white/40 text-xs mt-0.5">Your dashboard unlocks as you go</p>
+        </div>
+        <div className="text-right">
+          <p className="text-violet-300 font-black text-lg">{completed}/3</p>
+          <p className="text-white/30 text-xs">complete</p>
+        </div>
+      </div>
+      {/* Progress bar */}
+      <div className="w-full h-1.5 bg-white/5 rounded-full mb-4 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 transition-all duration-700"
+          style={{ width: `${(completed / steps.length) * 100}%` }}
+        />
+      </div>
+      <div className="space-y-2.5">
+        {steps.map(step => (
+          <div
+            key={step.num}
+            className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all ${
+              step.done
+                ? 'bg-emerald-500/8 border border-emerald-500/15'
+                : 'bg-white/[0.03] border border-white/8'
+            }`}
+          >
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm shrink-0 font-bold transition-all ${
+              step.done
+                ? 'bg-emerald-500/20 text-emerald-400'
+                : 'bg-white/5 text-white/30'
+            }`}>
+              {step.done ? '✓' : step.num}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-semibold ${step.done ? 'text-emerald-300 line-through decoration-emerald-500/30' : 'text-white'}`}>{step.label}</p>
+              <p className="text-white/30 text-xs mt-0.5">{step.desc}</p>
+            </div>
+            <span className="text-lg shrink-0">{step.icon}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function CommandCenter({ userId, email, initialBets }: Props) {
   const supabase = createClient()
   const [bets, setBets] = useState<BetSlip[]>(initialBets)
@@ -109,6 +190,9 @@ export default function CommandCenter({ userId, email, initialBets }: Props) {
           </button>
         )}
       </div>
+
+      {/* Onboarding checklist — shown until all 3 steps are done */}
+      <OnboardingChecklist bets={bets} />
 
       {/* Auto-check feedback */}
       {checkFeedback && (

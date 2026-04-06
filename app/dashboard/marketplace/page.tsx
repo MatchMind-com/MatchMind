@@ -16,7 +16,29 @@ interface Tipster {
   total_profit: number
   avg_odds: number
   subscribers: number
+  is_demo?: boolean
 }
+
+const DEMO_TIPSTERS: Tipster[] = [
+  {
+    id: 'demo1', display_name: 'ValueKing_88', speciality: 'Premier League Value Bets',
+    bio: '6 years tracking value bets in the PL. Focus on under-priced away wins and Asian handicap edges. +24% ROI over 142 tips.',
+    monthly_price: 12.99, total_tips: 142, wins: 87, losses: 55, win_rate: 61,
+    roi: 24.3, total_profit: 38.4, avg_odds: 2.1, subscribers: 47, is_demo: true,
+  },
+  {
+    id: 'demo2', display_name: 'AccaHunter', speciality: 'BTTS & Over Goals',
+    bio: 'Specialising in BTTS and over 2.5 across Europe. Consistent +EV selections based on xG data and team form.',
+    monthly_price: 9.99, total_tips: 98, wins: 58, losses: 40, win_rate: 59,
+    roi: 18.7, total_profit: 22.1, avg_odds: 1.82, subscribers: 31, is_demo: true,
+  },
+  {
+    id: 'demo3', display_name: 'EVEdge_Pro', speciality: 'Multi-League EV Finder',
+    bio: 'Pure expected value methodology across 8 leagues. Every tip has a documented edge over bookmaker odds.',
+    monthly_price: 14.99, total_tips: 210, wins: 118, losses: 92, win_rate: 56,
+    roi: 14.2, total_profit: 48.7, avg_odds: 1.95, subscribers: 83, is_demo: true,
+  },
+]
 
 function StatPill({ label, value, positive }: { label: string; value: string; positive?: boolean }) {
   return (
@@ -28,14 +50,13 @@ function StatPill({ label, value, positive }: { label: string; value: string; po
 }
 
 function RoiBadge({ roi }: { roi: number }) {
-  const isPositive = roi >= 0
   return (
     <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
       roi >= 15 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' :
       roi >= 0  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
                   'bg-red-500/10 text-red-400 border-red-500/20'
     }`}>
-      {isPositive ? '+' : ''}{roi}% ROI
+      {roi >= 0 ? '+' : ''}{roi}% ROI
     </span>
   )
 }
@@ -48,9 +69,15 @@ export default function MarketplacePage() {
   useEffect(() => {
     fetch('/api/tipsters')
       .then(r => r.json())
-      .then(d => setTipsters(d.tipsters || []))
+      .then(d => {
+        const real = d.tipsters || []
+        setTipsters(real.length > 0 ? real : DEMO_TIPSTERS)
+      })
+      .catch(() => setTipsters(DEMO_TIPSTERS))
       .finally(() => setLoading(false))
   }, [])
+
+  const isShowingDemo = tipsters.length > 0 && tipsters[0]?.is_demo
 
   const sorted = [...tipsters].sort((a, b) => {
     if (filter === 'roi') return b.roi - a.roi
@@ -62,8 +89,7 @@ export default function MarketplacePage() {
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xl">🛒</div>
           <div>
@@ -71,70 +97,48 @@ export default function MarketplacePage() {
             <p className="text-white/40 text-sm">Subscribe to verified tipsters with proven track records</p>
           </div>
         </div>
-        <Link
-          href="/dashboard/become-tipster"
-          className="bg-violet-600 hover:bg-violet-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-colors"
-        >
+        <Link href="/dashboard/become-tipster" className="bg-violet-600 hover:bg-violet-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-colors">
           + Become a Tipster
         </Link>
       </div>
 
-      {/* Sort filters */}
+      {!loading && isShowingDemo && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 mb-6 flex items-start gap-3">
+          <span className="text-lg mt-0.5">🌱</span>
+          <div>
+            <p className="text-amber-300 font-semibold text-sm">Marketplace launching — example tipsters shown</p>
+            <p className="text-white/40 text-xs mt-0.5">
+              Real tipsters are joining. Want to be one of the first? Set up your profile and start earning from your picks.
+            </p>
+            <Link href="/dashboard/become-tipster" className="inline-block mt-2 text-xs text-amber-400 hover:text-amber-300 underline underline-offset-2 transition-colors">
+              Become a tipster →
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
-        {[
-          { key: 'roi', label: '📈 Best ROI' },
-          { key: 'winrate', label: '🎯 Win Rate' },
-          { key: 'tips', label: '📊 Most Tips' },
-          { key: 'price', label: '💰 Lowest Price' },
-        ].map(f => (
-          <button
-            key={f.key}
-            onClick={() => setFilter(f.key as any)}
-            className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
-              filter === f.key
-                ? 'bg-violet-600/30 text-violet-300 border-violet-500/50'
-                : 'bg-white/5 text-white/50 border-white/10 hover:text-white'
-            }`}
-          >
-            {f.label}
+        {([['roi','📈 Best ROI'],['winrate','🎯 Win Rate'],['tips','📊 Most Tips'],['price','💰 Lowest Price']] as const).map(([key, label]) => (
+          <button key={key} onClick={() => setFilter(key)}
+            className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${filter === key ? 'bg-violet-600/30 text-violet-300 border-violet-500/50' : 'bg-white/5 text-white/50 border-white/10 hover:text-white'}`}>
+            {label}
           </button>
         ))}
       </div>
 
-      {/* Loading */}
       {loading && (
         <div className="grid gap-4 md:grid-cols-2">
-          {[1,2,3,4].map(i => (
-            <div key={i} className="bg-white/5 rounded-2xl h-48 animate-pulse border border-white/5" />
-          ))}
+          {[1,2,3,4].map(i => <div key={i} className="bg-white/5 rounded-2xl h-48 animate-pulse border border-white/5" />)}
         </div>
       )}
 
-      {/* Empty state */}
-      {!loading && tipsters.length === 0 && (
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-12 text-center">
-          <p className="text-4xl mb-3">🏆</p>
-          <p className="text-white font-bold text-lg mb-2">No tipsters yet</p>
-          <p className="text-white/40 text-sm mb-6">Be the first to share your picks and build a following</p>
-          <Link href="/dashboard/become-tipster" className="bg-violet-600 hover:bg-violet-500 text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors">
-            Become the First Tipster
-          </Link>
-        </div>
-      )}
-
-      {/* Tipster cards */}
       {!loading && sorted.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2">
           {sorted.map((tipster, i) => (
-            <Link
-              key={tipster.id}
-              href={`/dashboard/tipsters/${tipster.id}`}
-              className="group bg-[#13162b] border border-white/8 rounded-2xl p-5 hover:border-violet-500/40 transition-all hover:bg-[#15183a]"
-            >
-              {/* Top row */}
+            <div key={tipster.id}
+              className={`group bg-[#13162b] border border-white/8 rounded-2xl p-5 transition-all ${!tipster.is_demo ? 'hover:border-violet-500/40 hover:bg-[#15183a] cursor-pointer' : ''}`}>
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  {/* Avatar */}
                   <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-violet-500/20">
                     {tipster.display_name[0].toUpperCase()}
                   </div>
@@ -142,27 +146,20 @@ export default function MarketplacePage() {
                     <div className="flex items-center gap-2">
                       <p className="text-white font-bold">{tipster.display_name}</p>
                       {i === 0 && <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full font-semibold">#1</span>}
+                      {tipster.is_demo && <span className="text-[10px] text-white/25 border border-white/10 rounded px-1 font-normal">demo</span>}
                     </div>
                     {tipster.speciality && <p className="text-white/40 text-xs">{tipster.speciality}</p>}
                   </div>
                 </div>
                 <RoiBadge roi={tipster.roi} />
               </div>
-
-              {/* Bio */}
-              {tipster.bio && (
-                <p className="text-white/50 text-xs mb-4 line-clamp-2">{tipster.bio}</p>
-              )}
-
-              {/* Stats */}
+              {tipster.bio && <p className="text-white/50 text-xs mb-4 line-clamp-2">{tipster.bio}</p>}
               <div className="grid grid-cols-4 gap-3 mb-4 bg-white/3 rounded-xl p-3">
                 <StatPill label="Win Rate" value={`${tipster.win_rate}%`} positive={tipster.win_rate >= 50} />
                 <StatPill label="Tips" value={String(tipster.total_tips)} />
                 <StatPill label="Avg Odds" value={tipster.avg_odds > 0 ? tipster.avg_odds.toFixed(2) : '—'} />
                 <StatPill label="Profit" value={`${tipster.total_profit >= 0 ? '+' : ''}${tipster.total_profit}u`} positive={tipster.total_profit >= 0} />
               </div>
-
-              {/* Footer */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-white/30 text-xs">
                   <span>👥</span>
@@ -170,19 +167,23 @@ export default function MarketplacePage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-white font-bold text-sm">£{tipster.monthly_price}/mo</span>
-                  <span className="bg-violet-600/20 text-violet-300 border border-violet-500/30 text-xs font-semibold px-3 py-1 rounded-lg group-hover:bg-violet-600/40 transition-colors">
-                    Subscribe →
-                  </span>
+                  {!tipster.is_demo ? (
+                    <span className="bg-violet-600/20 text-violet-300 border border-violet-500/30 text-xs font-semibold px-3 py-1 rounded-lg group-hover:bg-violet-600/40 transition-colors">
+                      Subscribe →
+                    </span>
+                  ) : (
+                    <Link href="/dashboard/become-tipster" className="bg-violet-600/10 text-violet-400/60 border border-violet-500/20 text-xs font-semibold px-3 py-1 rounded-lg">
+                      Be like this →
+                    </Link>
+                  )}
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}
 
-      <p className="text-center text-white/20 text-xs mt-8">
-        Platform fee of 20% applies. Tips are for educational purposes. Always bet responsibly.
-      </p>
+      <p className="text-center text-white/20 text-xs mt-8">Platform fee of 20% applies. Tips are for educational purposes. Always bet responsibly.</p>
     </div>
   )
 }
