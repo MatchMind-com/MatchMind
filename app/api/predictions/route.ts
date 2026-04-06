@@ -11,7 +11,6 @@ const supabaseAdmin = createAdmin(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// 30-minute cache now that we have 7,500 req/day
 export const revalidate = 1800
 
 function getCurrentSeason(): number {
@@ -39,30 +38,69 @@ async function apiFetch(path: string) {
   } catch { return null }
 }
 
-// Extract odds from Bet365 bookmaker response
 function extractOdds(bookmaker: any) {
   if (!bookmaker) return null
   const bets = bookmaker.bets || []
 
-  const mw = bets.find((b: any) => b.id === 1) // Match Winner (1X2)
-  const ou = bets.find((b: any) => b.id === 5) // Goals Over/Under
-  const btts = bets.find((b: any) => b.id === 8) // Both Teams Score
+  const mw   = bets.find((b: any) => b.id === 1)  // Match Winner 1X2
+  const ou   = bets.find((b: any) => b.id === 5)  // Goals Over/Under
+  const btts = bets.find((b: any) => b.id === 8)  // Both Teams Score
+  const dc   = bets.find((b: any) => b.id === 12) // Double Chance
 
-  const home = parseFloat(mw?.values?.find((v: any) => v.value === 'Home')?.odd || '0')
-  const draw = parseFloat(mw?.values?.find((v: any) => v.value === 'Draw')?.odd || '0')
-  const away = parseFloat(mw?.values?.find((v: any) => v.value === 'Away')?.odd || '0')
-  const over25 = parseFloat(ou?.values?.find((v: any) => v.value === 'Over 2.5')?.odd || '0')
-  const bttsYes = parseFloat(btts?.values?.find((v: any) => v.value === 'Yes')?.odd || '0')
+  const home   = parseFloat(mw?.values?.find((v: any) => v.value === 'Home')?.odd   || '0')
+  const draw   = parseFloat(mw?.values?.find((v: any) => v.value === 'Draw')?.odd   || '0')
+  const away   = parseFloat(mw?.values?.find((v: any) => v.value === 'Away')?.odd   || '0')
+  const over25 = parseFloat(ou?.values?.find((v: any) => v.value === 'Over 2.5')?.odd  || '0')
+  const under25= parseFloat(ou?.values?.find((v: any) => v.value === 'Under 2.5')?.odd || '0')
+  const bttsYes= parseFloat(btts?.values?.find((v: any) => v.value === 'Yes')?.odd  || '0')
+  const bttsNo = parseFloat(btts?.values?.find((v: any) => v.value === 'No')?.odd   || '0')
+  const dcHome = parseFloat(dc?.values?.find((v: any) => v.value === 'Home/Draw')?.odd || '0')
+  const dcAway = parseFloat(dc?.values?.find((v: any) => v.value === 'Draw/Away')?.odd || '0')
 
   if (!home && !draw && !away) return null
-  return { home, draw, away, over25, btts: bttsYes }
+  return { home, draw, away, over25, under25, bttsYes, bttsNo, dcHome, dcAway }
 }
 
-// Expected Value: (AI_prob × decimal_odds) - 1, expressed as %
-// Positive = value bet (AI thinks outcome is more likely than market implies)
 function calcEV(aiPct: number, decimalOdds: number): number | null {
   if (!decimalOdds || decimalOdds <= 1) return null
   return Math.round(((aiPct / 100) * decimalOdds - 1) * 100)
+}
+
+// Map bet label → correct AI probability field
+function getProbabilityForBet(label: string, pred: any): number {
+  switch (label) {
+    case 'Home Win':      return pred.home_win_pct ?? 40
+    case 'Draw':          return pred.draw_pct ?? 25
+    case 'Away Win':      return pred.away_win_pct ?? 35
+    case 'Over 2.5':      return pred.over_2_5_pct ?? 50
+    case 'Under 2.5':     return 100 - (pred.over_2_5_pct ?? 50)
+    case 'BTTS':          return pred.btts_pct ?? 45
+    case 'BTTS — No':     return 100 - (pred.btts_pct ?? 45)
+    case 'Home/Draw DC':  return (pred.home_win_pct ?? 40) + (pred.draw_pct ?? 25)
+    case 'Away/Draw DC':  return (pred.away_win_pct ?? 35) + (pred.draw_pct ?? 25)
+    default:              return 50
+  }
+}
+
+// Diversity filter: pick top N value bets with no more than maxPerType of same type
+function applyDiversityFilter(
+  allBets: Array<{ match: string; label: string; ev: number; odds: number; aiProb: number; fixtureId: number; leagueName: string }>,
+  maxPerType = 3,
+  maxTotal = 10
+) {
+  const sorted = [...allBets].sort((a, b) => b.ev - a.ev)
+  const typeCounts: Record<string, number> = {}
+  const selected: typeof allBets = []
+
+  for (const bet of sorted) {
+    if (selected.length >= maxTotal) break
+    const count = typeCounts[bet.label] ?? 0
+    if (count >= maxPerType) continue
+    typeCounts[bet.label] = count + 1
+    selected.push(bet)
+  }
+
+  return selected
 }
 
 const TOP_LEAGUES = [
@@ -70,7 +108,7 @@ const TOP_LEAGUES = [
   { id: 140, name: 'La Liga',           flag: '🇪🇸' },
   { id: 135, name: 'Serie A',           flag: '🇮🇹' },
   { id: 78,  name: 'Bundesliga',        flag: '🇩🇪' },
-  { id: 61,  name: 'Ligue 1',          flag: '🇫🇷' },
+  { id: 61,  name: 'Ligue 1',           flag: '🇫🇷' },
   { id: 2,   name: 'Champions League',  flag: '🏆' },
   { id: 3,   name: 'Europa League',     flag: '🥈' },
   { id: 848, name: 'Conference League', flag: '🥉' },
@@ -84,7 +122,6 @@ export async function GET() {
     const today = new Date().toISOString().split('T')[0]
     const in3days = getDatePlusDays(3)
 
-    // Fetch fixtures + Bet365 odds per league in parallel
     const leagueResults = await Promise.all(
       TOP_LEAGUES.map(async (league) => {
         const [fixtures, oddsData, injuries] = await Promise.all([
@@ -93,7 +130,6 @@ export async function GET() {
           apiFetch(`/injuries?league=${league.id}&season=${season}&date=${today}`),
         ])
 
-        // Build fixture_id → odds map
         const oddsMap: Record<number, ReturnType<typeof extractOdds>> = {}
         if (oddsData) {
           for (const entry of oddsData) {
@@ -103,7 +139,6 @@ export async function GET() {
           }
         }
 
-        // Build injury lookup: team_id -> injured player names
         const injuryMap: Record<number, string[]> = {}
         if (injuries) {
           for (const inj of injuries) {
@@ -134,13 +169,12 @@ export async function GET() {
       return NextResponse.json({ success: true, predictions: [], message: 'No upcoming fixtures found' })
     }
 
-    // Build prompt including real odds where available
     const fixtureList = allFixtures.map((f: any, i: number) => {
       const home = f.teams?.home?.name
       const away = f.teams?.away?.name
       const date = new Date(f.fixture?.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
       const o = f._odds
-      const oddsStr = o?.home ? ` | Bet365: H ${o.home} / D ${o.draw} / A ${o.away}` : ''
+      const oddsStr = o?.home ? ` | Bet365: H ${o.home} / D ${o.draw} / A ${o.away} / O2.5 ${o.over25} / BTTS ${o.bttsYes}` : ''
       const homeInj = f._homeInjuries?.length ? ` | ${home} injuries: ${f._homeInjuries.slice(0, 3).join(', ')}` : ''
       const awayInj = f._awayInjuries?.length ? ` | ${away} injuries: ${f._awayInjuries.slice(0, 3).join(', ')}` : ''
       return `${i + 1}. ${home} vs ${away} | ${f._leagueName} | ${date}${oddsStr}${homeInj}${awayInj}`
@@ -151,10 +185,16 @@ export async function GET() {
       response_format: { type: 'json_object' },
       messages: [{
         role: 'system',
-        content: 'You are an expert football analyst. Generate precise match predictions based on current form, league position, H2H history, and tactical factors. Where Bet365 odds are shown, use them to understand market sentiment. Return valid JSON only.'
+        content: `You are an expert football analyst. Generate precise match predictions using current form, league position, H2H history, injuries, and tactical factors.
+
+CRITICAL DIVERSITY RULE: You MUST vary your recommended_bet types. Do NOT recommend "Over 2.5" for more than 3 matches. Spread picks across: Home Win, Away Win, Draw, Over 2.5, Under 2.5, BTTS, Double Chance. Only recommend Over 2.5 if you have very high confidence (over_2_5_pct ≥ 68%) AND the bookmaker odds are at least 1.75+.
+
+When Bet365 odds are shown, use them to cross-check your probability estimates. If the bookmaker prices something at 1.50 (implying 67%), your AI probability for that market should be close unless you have very specific insider factors to justify a big deviation.
+
+Return valid JSON only.`
       }, {
         role: 'user',
-        content: `Generate predictions for these ${season}/${String(season + 1).slice(2)} season matches. Use current form, injuries, suspensions, and H2H. Factor real odds into your confidence levels.
+        content: `Generate diverse predictions for these ${season}/${String(season + 1).slice(2)} season matches. Vary your recommended bet types — mix match results, goals, and BTTS picks.
 
 Matches:
 ${fixtureList}
@@ -167,8 +207,8 @@ Return JSON with this exact structure:
       "home_win_pct": 55,
       "draw_pct": 25,
       "away_win_pct": 20,
-      "over_2_5_pct": 65,
-      "btts_pct": 55,
+      "over_2_5_pct": 58,
+      "btts_pct": 52,
       "confidence": 8,
       "recommended_bet": "Home Win",
       "recommended_odds_range": "1.85-2.10",
@@ -185,12 +225,11 @@ Return JSON with this exact structure:
     const gptMap: Record<number, any> = {}
     ;(gptData.predictions || []).forEach((p: any) => { gptMap[p.index] = p })
 
-    // Fetch lineups for today's fixtures (only available ~1hr before kickoff)
     const todayFixtureIds = allFixtures
       .filter((f: any) => f.fixture?.date?.startsWith(today))
       .map((f: any) => f.fixture?.id)
       .filter(Boolean)
-      .slice(0, 6) // limit lineup calls
+      .slice(0, 6)
 
     const lineupMap: Record<number, { home: string[]; away: string[] }> = {}
     await Promise.all(
@@ -204,36 +243,74 @@ Return JSON with this exact structure:
       })
     )
 
-    // Merge: fixture data + AI predictions + real odds + EV scores
+    // Build all candidate value bets for diversity filtering (DB save)
+    const allCandidateValueBets: Array<{
+      match: string; label: string; ev: number; odds: number; aiProb: number
+      fixtureId: number; leagueName: string; kickOff: string
+      homeTeam: string; awayTeam: string; betType: string; prediction: string
+    }> = []
+
     const predictions = allFixtures.map((f: any, i: number) => {
       const pred = gptMap[i + 1] || {}
       const o = f._odds
 
       const homeWinPct = pred.home_win_pct ?? 40
-      const drawPct = pred.draw_pct ?? 25
+      const drawPct    = pred.draw_pct    ?? 25
       const awayWinPct = pred.away_win_pct ?? 35
-      const over25Pct = pred.over_2_5_pct ?? 55
-      const bttsPct = pred.btts_pct ?? 50
+      const over25Pct  = pred.over_2_5_pct ?? 55
+      const under25Pct = 100 - over25Pct
+      const bttsPct    = pred.btts_pct    ?? 50
+      const bttsNoPct  = 100 - bttsPct
+      const dcHomePct  = homeWinPct + drawPct
+      const dcAwayPct  = awayWinPct + drawPct
 
-      // EV per market (null if odds not available)
-      const homeEV   = o?.home   ? calcEV(homeWinPct, o.home)   : null
-      const drawEV   = o?.draw   ? calcEV(drawPct, o.draw)       : null
-      const awayEV   = o?.away   ? calcEV(awayWinPct, o.away)   : null
-      const over25EV = o?.over25 ? calcEV(over25Pct, o.over25)  : null
-      const bttsEV   = o?.btts   ? calcEV(bttsPct, o.btts)      : null
+      const homeEV    = o?.home    ? calcEV(homeWinPct,  o.home)    : null
+      const drawEV    = o?.draw    ? calcEV(drawPct,     o.draw)    : null
+      const awayEV    = o?.away    ? calcEV(awayWinPct,  o.away)    : null
+      const over25EV  = o?.over25  ? calcEV(over25Pct,   o.over25)  : null
+      const under25EV = o?.under25 ? calcEV(under25Pct,  o.under25) : null
+      const bttsEV    = o?.bttsYes ? calcEV(bttsPct,     o.bttsYes) : null
+      const bttsNoEV  = o?.bttsNo  ? calcEV(bttsNoPct,   o.bttsNo)  : null
+      const dcHomeEV  = o?.dcHome  ? calcEV(dcHomePct,   o.dcHome)  : null
+      const dcAwayEV  = o?.dcAway  ? calcEV(dcAwayPct,   o.dcAway)  : null
 
-      // Rank value bets by EV (positive EV only)
       const valueBets = [
-        { label: 'Home Win',  ev: homeEV,   odds: o?.home },
-        { label: 'Draw',      ev: drawEV,   odds: o?.draw },
-        { label: 'Away Win',  ev: awayEV,   odds: o?.away },
-        { label: 'Over 2.5',  ev: over25EV, odds: o?.over25 },
-        { label: 'BTTS',      ev: bttsEV,   odds: o?.btts },
+        { label: 'Home Win',      ev: homeEV,    odds: o?.home,    aiProb: homeWinPct,  betType: 'Match Result',   prediction: 'home_win' },
+        { label: 'Draw',          ev: drawEV,    odds: o?.draw,    aiProb: drawPct,     betType: 'Match Result',   prediction: 'draw' },
+        { label: 'Away Win',      ev: awayEV,    odds: o?.away,    aiProb: awayWinPct,  betType: 'Match Result',   prediction: 'away_win' },
+        { label: 'Over 2.5',      ev: over25EV,  odds: o?.over25,  aiProb: over25Pct,   betType: 'Over / Under',   prediction: 'over_2_5' },
+        { label: 'Under 2.5',     ev: under25EV, odds: o?.under25, aiProb: under25Pct,  betType: 'Over / Under',   prediction: 'under_2_5' },
+        { label: 'BTTS',          ev: bttsEV,    odds: o?.bttsYes, aiProb: bttsPct,     betType: 'Both Teams Score', prediction: 'btts_yes' },
+        { label: 'BTTS — No',     ev: bttsNoEV,  odds: o?.bttsNo,  aiProb: bttsNoPct,   betType: 'Both Teams Score', prediction: 'btts_no' },
+        { label: 'Home/Draw DC',  ev: dcHomeEV,  odds: o?.dcHome,  aiProb: dcHomePct,   betType: 'Double Chance',  prediction: 'home_draw' },
+        { label: 'Away/Draw DC',  ev: dcAwayEV,  odds: o?.dcAway,  aiProb: dcAwayPct,   betType: 'Double Chance',  prediction: 'away_draw' },
       ]
-        .filter(x => x.ev !== null && x.ev > 0)
+        .filter(x => x.ev !== null && x.ev > 5 && x.odds && x.odds >= 1.30 && x.odds <= 3.5)
         .sort((a, b) => (b.ev ?? 0) - (a.ev ?? 0))
 
       const bestValue = valueBets[0] ?? null
+
+      // Collect candidates for DB diversity filter
+      if (f.fixture?.id && f.fixture?.date?.startsWith(today)) {
+        for (const vb of valueBets.slice(0, 2)) {
+          if (vb.ev !== null && vb.ev >= 8 && vb.odds) {
+            allCandidateValueBets.push({
+              match: `${f.teams?.home?.name} vs ${f.teams?.away?.name}`,
+              label: vb.label,
+              ev: vb.ev,
+              odds: vb.odds,
+              aiProb: vb.aiProb,
+              fixtureId: f.fixture.id,
+              leagueName: f._leagueName,
+              kickOff: f.fixture.date,
+              homeTeam: f.teams?.home?.name,
+              awayTeam: f.teams?.away?.name,
+              betType: vb.betType,
+              prediction: vb.prediction,
+            })
+          }
+        }
+      }
 
       return {
         id: f.fixture?.id,
@@ -254,46 +331,44 @@ Return JSON with this exact structure:
         recommended_odds_range: pred.recommended_odds_range ?? '—',
         key_factors: pred.key_factors ?? [],
         risk_level: pred.risk_level ?? 'Medium',
-        // Real Bet365 odds
         bookmaker: o ? {
           home: o.home || null,
           draw: o.draw || null,
           away: o.away || null,
           over25: o.over25 || null,
-          btts: o.btts || null,
+          under25: o.under25 || null,
+          btts: o.bttsYes || null,
+          bttsNo: o.bttsNo || null,
         } : null,
-        // Expected value per market
-        ev: { home: homeEV, draw: drawEV, away: awayEV, over25: over25EV, btts: bttsEV },
-        best_value: bestValue,
-        is_value_bet: bestValue !== null && (bestValue.ev ?? 0) >= 5,
+        ev: { home: homeEV, draw: drawEV, away: awayEV, over25: over25EV, under25: under25EV, btts: bttsEV },
+        best_value: bestValue ? { label: bestValue.label, ev: bestValue.ev, odds: bestValue.odds } : null,
+        is_value_bet: bestValue !== null && (bestValue.ev ?? 0) >= 10,
         value_score: bestValue?.ev ?? null,
-        // Injuries
         home_injuries: f._homeInjuries ?? [],
         away_injuries: f._awayInjuries ?? [],
-        // Lineups (if available)
         lineups: lineupMap[f.fixture?.id] ?? null,
       }
     })
 
-    // ── Save predictions to DB for track record ────────────────────────────
-    // Use upsert so refreshes don't create duplicates
+    // ── Save to DB with diversity filter ────────────────────────────────────
     try {
-      const records = predictions
-        .filter(p => p.best_value && p.id)
-        .map(p => ({
-          fixture_id: p.id,
-          home_team: p.home_team,
-          away_team: p.away_team,
-          league: p.league,
-          kick_off: p.date,
-          season,
-          bet_type: p.best_value!.label,
-          prediction: p.best_value!.label.toLowerCase().replace(/ /g, '_'),
-          ai_probability: p.home_win_pct, // best approximation
-          odds: p.best_value!.odds ?? null,
-          ev_percent: p.best_value!.ev ?? null,
-          is_value_bet: p.is_value_bet,
-        }))
+      // Apply diversity: max 3 of same bet type per day, top 10 total
+      const diversePicks = applyDiversityFilter(allCandidateValueBets, 3, 10)
+
+      const records = diversePicks.map(pick => ({
+        fixture_id: pick.fixtureId,
+        home_team: pick.homeTeam,
+        away_team: pick.awayTeam,
+        league: pick.leagueName,
+        kick_off: pick.kickOff,
+        season,
+        bet_type: pick.betType,
+        prediction: pick.prediction,
+        ai_probability: Math.round(pick.aiProb),  // ✅ Correct probability for selected bet type
+        odds: pick.odds,
+        ev_percent: pick.ev,
+        is_value_bet: pick.ev >= 10,
+      }))
 
       if (records.length > 0) {
         await supabaseAdmin
@@ -301,7 +376,6 @@ Return JSON with this exact structure:
           .upsert(records, { onConflict: 'fixture_id,prediction', ignoreDuplicates: true })
       }
     } catch (dbErr) {
-      // Don't fail the whole response if DB save fails
       console.error('Failed to save predictions to DB:', dbErr)
     }
 
