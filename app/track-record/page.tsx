@@ -141,9 +141,23 @@ export default async function TrackRecordPage() {
           ))}
         </div>
 
+        {/* Statistical significance warning */}
+        {hasRealData && stats.total < 30 && (
+          <div className="mb-6 bg-amber-500/8 border border-amber-500/20 rounded-2xl p-4 flex items-start gap-3 text-sm">
+            <span className="text-xl mt-0.5">⚠️</span>
+            <div>
+              <p className="text-amber-300 font-semibold">Early data — interpret with care</p>
+              <p className="text-white/40 text-xs mt-0.5">
+                Only {stats.total} predictions verified so far. Win rate and ROI figures become meaningful after ~30 picks.
+                Results will stabilise as more matches are tracked.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Value bets performance highlight */}
         {stats.valueBets?.total > 0 && (
-          <div className="bg-gradient-to-r from-emerald-600/15 to-teal-600/10 border border-emerald-500/30 rounded-2xl p-5 mb-6">
+          <div className={`bg-gradient-to-r ${stats.valueBets.roi >= 0 ? 'from-emerald-600/15 to-teal-600/10 border-emerald-500/30' : 'from-red-600/10 to-orange-600/5 border-red-500/20'} border rounded-2xl p-5 mb-6`}>
             <div className="flex items-center gap-3 mb-3">
               <span className="text-2xl">🔥</span>
               <div>
@@ -153,15 +167,15 @@ export default async function TrackRecordPage() {
             </div>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-emerald-400 text-xl font-black">{stats.valueBets.winRate}%</p>
+                <p className={`text-xl font-black ${stats.valueBets.winRate >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>{stats.valueBets.winRate}%</p>
                 <p className="text-white/30 text-xs">Win Rate</p>
               </div>
               <div>
-                <p className="text-emerald-400 text-xl font-black">{stats.valueBets.roi >= 0 ? '+' : ''}{stats.valueBets.roi}%</p>
+                <p className={`text-xl font-black ${stats.valueBets.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{stats.valueBets.roi >= 0 ? '+' : ''}{stats.valueBets.roi}%</p>
                 <p className="text-white/30 text-xs">ROI</p>
               </div>
               <div>
-                <p className="text-emerald-400 text-xl font-black">{stats.valueBets.total}</p>
+                <p className="text-white text-xl font-black">{stats.valueBets.total}</p>
                 <p className="text-white/30 text-xs">Tips</p>
               </div>
             </div>
