@@ -6,10 +6,10 @@
     },
     {
       "path": "/api/cron/check-predictions",
-      "schedule": "0 8 * * *"
+      "schedule": "0 20 * * *"
     },
     {
-      "path": "/api/cron/daily-value-bets",
+      "path": "/api/cron/onboarding-emails",
       "schedule": "0 9 * * *"
     }
   ]
