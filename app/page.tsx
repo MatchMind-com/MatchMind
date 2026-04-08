@@ -1,18 +1,8 @@
-import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import EmailCapture from '@/components/landing/EmailCapture'
 import ActivityStrip from '@/components/landing/ActivityStrip'
-import EarningsCalculator from '@/components/landing/EarningsCalculator'
-
-export const metadata: Metadata = {
-  title: 'BetIQ — AI Football Betting Coach & Value Bet Finder',
-  description: 'BetIQ uses AI to find value bets, analyse your betting performance, and coach you to better returns. Free AI football tips every day — no card needed.',
-  openGraph: {
-    title: 'BetIQ — AI Football Betting Coach & Value Bet Finder',
-    description: 'AI-powered value bets, EV analysis, and a personal football betting coach. Free to start.',
-  },
-}
 
 async function getLiveStats() {
   try {
@@ -59,7 +49,7 @@ const SAMPLE_PREDS = [
 export default async function LandingPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  // No redirect — logged-in users can view the landing page to share it
+  if (user) redirect('/dashboard')
 
   const [stats, livePreds] = await Promise.all([getLiveStats(), getPublicPredictions()])
   const predictions = livePreds.length > 0 ? livePreds : SAMPLE_PREDS
@@ -67,23 +57,6 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#0B0B14] text-white overflow-x-hidden">
-
-      {/* ── LOGGED-IN BANNER ── */}
-      {user && (
-        <div className="fixed top-0 left-0 right-0 z-[60] bg-violet-600/95 backdrop-blur-sm border-b border-violet-500/50 py-2.5 px-4">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-            <p className="text-white/90 text-sm">
-              👋 You're signed in as <span className="font-semibold text-white">{user.email}</span>
-            </p>
-            <Link
-              href="/dashboard"
-              className="shrink-0 bg-white text-violet-700 font-bold text-xs px-4 py-1.5 rounded-lg hover:bg-violet-50 transition-colors"
-            >
-              → Go to Dashboard
-            </Link>
-          </div>
-        </div>
-      )}
 
       {/* ── NAVBAR ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B0B14]/80 backdrop-blur-xl border-b border-white/5">
@@ -93,8 +66,7 @@ export default async function LandingPage() {
             <span className="text-white font-bold text-xl tracking-tight">Bet<span className="text-violet-400">IQ</span></span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-white/50">
-            <Link href="/predictions" className="hover:text-white transition-colors">Predictions</Link>
-            <Link href="/value-bets" className="hover:text-white transition-colors">Value Bets</Link>
+            <a href="#value-bets" className="hover:text-white transition-colors">Value Bets</a>
             <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
             <a href="#tipsters" className="hover:text-white transition-colors">Tipsters</a>
             <Link href="/track-record" className="hover:text-white transition-colors text-emerald-400/70 hover:text-emerald-300">📊 Track Record</Link>
@@ -257,146 +229,8 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── APP SCREENSHOT SHOWCASE ── */}
-      <section id="app-preview" className="py-24 px-4 bg-white/[0.015] border-y border-white/5">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <div className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 rounded-full px-3 py-1.5 mb-6">
-              <span className="text-violet-300 text-xs font-bold uppercase tracking-wide">📱 Inside the App</span>
-            </div>
-            <h2 className="text-4xl sm:text-5xl font-black mb-4">Everything in one dashboard</h2>
-            <p className="text-white/40 text-lg max-w-xl mx-auto">No spreadsheets. No juggling five tabs. Every tool a serious bettor needs, right here.</p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-            {/* Feature 1: AI Football Coach */}
-            <div className="bg-[#12121F] border border-violet-500/20 rounded-2xl p-5 flex flex-col">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-base shrink-0">🤖</div>
-                <div>
-                  <p className="text-white font-semibold text-sm">AI Football Coach</p>
-                  <p className="text-white/30 text-xs">GPT-4o · Live data</p>
-                </div>
-              </div>
-              {/* Mock chat UI */}
-              <div className="flex-1 bg-[#0B0B14] rounded-xl p-3 space-y-3 mb-4">
-                <div className="flex gap-2">
-                  <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] shrink-0 mt-0.5">👤</div>
-                  <div className="bg-white/8 rounded-xl rounded-tl-none px-3 py-2 text-xs text-white/70 max-w-[80%]">
-                    Is Arsenal a good bet tonight?
-                  </div>
-                </div>
-                <div className="flex gap-2 flex-row-reverse">
-                  <div className="w-5 h-5 rounded-full bg-violet-600/30 flex items-center justify-center text-[10px] shrink-0 mt-0.5">B</div>
-                  <div className="bg-violet-600/20 border border-violet-500/20 rounded-xl rounded-tr-none px-3 py-2 text-xs text-white/80 max-w-[80%]">
-                    Arsenal have scored 2+ in 8 of their last 10 home games. Saliba is back, Chelsea missing Mount. AI puts Over 2.5 at <span className="text-emerald-400 font-bold">+18.4% EV</span> — that&apos;s a strong edge.
-                  </div>
-                </div>
-              </div>
-              <p className="text-white/30 text-xs">Ask anything about any match, any league</p>
-            </div>
-
-            {/* Feature 2: Statistics Dashboard */}
-            <div className="bg-[#12121F] border border-emerald-500/20 rounded-2xl p-5 flex flex-col">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-base shrink-0">📊</div>
-                <div>
-                  <p className="text-white font-semibold text-sm">Statistics Dashboard</p>
-                  <p className="text-white/30 text-xs">Your full betting record</p>
-                </div>
-              </div>
-              {/* Mock stats */}
-              <div className="flex-1 space-y-2 mb-4">
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { label: 'Win Rate', value: '64%', color: 'text-emerald-400' },
-                    { label: 'ROI', value: '+18.6%', color: 'text-emerald-400' },
-                    { label: 'Total P&L', value: '+£184', color: 'text-emerald-400' },
-                    { label: 'Bets', value: '54', color: 'text-white' },
-                  ].map(s => (
-                    <div key={s.label} className="bg-[#0B0B14] rounded-xl p-3 text-center">
-                      <p className={`text-lg font-black ${s.color}`}>{s.value}</p>
-                      <p className="text-white/30 text-[10px] mt-0.5">{s.label}</p>
-                    </div>
-                  ))}
-                </div>
-                {/* Mini chart bars */}
-                <div className="bg-[#0B0B14] rounded-xl p-3">
-                  <p className="text-white/30 text-[10px] mb-2">P&L over time</p>
-                  <div className="flex items-end gap-1 h-10">
-                    {[-10, 8, 4, 18, 12, 29, 22, 38, 34, 47].map((v, i) => (
-                      <div
-                        key={i}
-                        className={`flex-1 rounded-sm ${v >= 0 ? 'bg-emerald-500/60' : 'bg-red-500/60'}`}
-                        style={{ height: `${Math.abs(v) / 47 * 100}%`, minHeight: 2 }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <p className="text-white/30 text-xs">Win rate, ROI, P&L by league and bet type</p>
-            </div>
-
-            {/* Feature 3: Value Bet Card (full detail) */}
-            <div className="bg-[#12121F] border border-amber-500/20 rounded-2xl p-5 flex flex-col">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-amber-600/20 border border-amber-500/30 flex items-center justify-center text-base shrink-0">🔮</div>
-                <div>
-                  <p className="text-white font-semibold text-sm">AI Predictions</p>
-                  <p className="text-white/30 text-xs">Daily value bet cards</p>
-                </div>
-              </div>
-              {/* Mock value bet card */}
-              <div className="flex-1 bg-[#0B0B14] rounded-xl p-4 mb-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="text-white font-bold text-xs">Arsenal vs Chelsea</p>
-                    <p className="text-white/30 text-[10px]">Premier League · Sat 3pm</p>
-                  </div>
-                  <span className="text-emerald-400 font-black text-sm">+18.4%</span>
-                </div>
-                <div className="space-y-2 mb-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-violet-300 text-xs font-semibold bg-violet-600/20 px-2 py-0.5 rounded-lg border border-violet-500/20">Over 2.5 Goals</span>
-                    <span className="text-white font-bold text-sm">@ 1.87</span>
-                  </div>
-                  <div className="space-y-1">
-                    {[
-                      { label: 'AI probability', value: '72%', bar: 72, color: 'bg-emerald-500' },
-                      { label: 'Bookmaker', value: '53%', bar: 53, color: 'bg-white/20' },
-                    ].map(r => (
-                      <div key={r.label}>
-                        <div className="flex justify-between text-[10px] text-white/40 mb-0.5">
-                          <span>{r.label}</span><span>{r.value}</span>
-                        </div>
-                        <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${r.color}`} style={{ width: `${r.bar}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {['Saliba back', 'Chelsea no Mount', '8/10 home O2.5'].map(t => (
-                    <span key={t} className="text-[9px] bg-white/5 text-white/40 px-1.5 py-0.5 rounded-md">{t}</span>
-                  ))}
-                </div>
-              </div>
-              <p className="text-white/30 text-xs">Odds, EV%, AI probability, and reasoning for every pick</p>
-            </div>
-          </div>
-
-          <div className="text-center mt-10">
-            <Link href="/signup" className="inline-block bg-violet-600 hover:bg-violet-500 text-white font-bold px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-violet-500/25">
-              Try the Dashboard Free →
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* ── PHASE C: EV EXPLAINER ── */}
-      <section id="how-it-works" className="py-24 px-4 border-y border-white/5">
+      <section id="how-it-works" className="py-24 px-4 bg-white/[0.015] border-y border-white/5">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 rounded-full px-3 py-1.5 mb-6">
@@ -501,7 +335,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── AI ACCA BUILDER ── */}
-      <section className="py-24 px-4 bg-white/[0.015] border-b border-white/5">
+      <section className="py-24 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="order-2 lg:order-1">
@@ -579,7 +413,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── PHASE D: TIPSTER SECTION — Early Mover Pitch ── */}
-      <section id="tipsters" className="py-24 px-4 bg-white/[0.015] border-b border-white/5">
+      <section id="tipsters" className="py-24 px-4 bg-white/[0.015] border-y border-white/5">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-full px-3 py-1.5 mb-6">
@@ -660,34 +494,8 @@ export default async function LandingPage() {
             </div>
           </div>
 
-          {/* Earnings calculator */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            <div>
-              <h3 className="text-white font-black text-2xl mb-3">Calculate your earnings</h3>
-              <p className="text-white/50 text-sm leading-relaxed mb-4">
-                Set your price. Grow your subscriber base. Keep 80%. Here&apos;s what that looks like in practice.
-              </p>
-              <div className="space-y-3">
-                {[
-                  { subs: 10, price: 9.99, monthly: '£80', note: 'Side income from day one' },
-                  { subs: 50, price: 9.99, monthly: '£400', note: 'Meaningful monthly revenue' },
-                  { subs: 200, price: 14.99, monthly: '£2,399', note: 'Full-time potential' },
-                ].map(ex => (
-                  <div key={ex.subs} className="flex items-center gap-4 bg-white/[0.03] border border-white/8 rounded-xl px-4 py-3">
-                    <div className="flex-1">
-                      <p className="text-white/60 text-xs">{ex.subs} subs × £{ex.price}</p>
-                      <p className="text-white/30 text-[10px] mt-0.5">{ex.note}</p>
-                    </div>
-                    <p className="text-emerald-400 font-black text-lg">{ex.monthly}<span className="text-white/30 text-xs font-normal">/mo</span></p>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <EarningsCalculator />
-          </div>
-
           {/* Browse CTA */}
-          <div className="text-center mt-10">
+          <div className="text-center">
             <Link href="/signup" className="inline-block bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-colors">
               Browse Marketplace →
             </Link>
@@ -722,73 +530,6 @@ export default async function LandingPage() {
                 </div>
                 <h3 className="text-white font-bold mb-1.5">{f.title}</h3>
                 <p className="text-white/40 text-sm leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-
-      {/* ── SOCIAL PROOF / TESTIMONIALS ── */}
-      <section className="py-20 px-4 border-t border-white/5">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-4 py-1.5 mb-5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block" />
-              <span className="text-emerald-300 text-sm font-medium">Real bettors, real results</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-black mb-3">What BetIQ users say</h2>
-            <p className="text-white/40 max-w-lg mx-auto">Early users testing the AI predictions and coaching tools.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
-            {[
-              {
-                quote: "The EV calculator changed how I think about betting. I stopped chasing odds and started looking for actual edge. First month using BetIQ I went +£180.",
-                name: "Jamie R.", role: "Premier League bettor", stars: 5,
-              },
-              {
-                quote: "Finally a site that shows its track record honestly. No cherry-picked screenshots — every prediction is logged before kickoff. That's rare in this space.",
-                name: "Marcus T.", role: "Value bettor, 4 years", stars: 5,
-              },
-              {
-                quote: "The AI coach is genuinely useful. Asked it about a Bundesliga match and it pulled injury data I hadn't seen. Saved me from a bad bet that would've lost.",
-                name: "Sam K.", role: "Recreational bettor", stars: 4,
-              },
-            ].map((t, i) => (
-              <div key={i} className="bg-[#12121F] border border-white/8 rounded-2xl p-6 hover:border-white/14 transition-all">
-                <div className="flex gap-0.5 mb-4">
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <svg key={j} width="14" height="14" viewBox="0 0 24 24" fill={j < t.stars ? '#f59e0b' : 'none'} stroke={j < t.stars ? '#f59e0b' : '#374151'} strokeWidth="2">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                    </svg>
-                  ))}
-                </div>
-                <p className="text-white/70 text-sm leading-relaxed mb-4 italic">&ldquo;{t.quote}&rdquo;</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-600/40 to-indigo-600/40 border border-violet-500/30 flex items-center justify-center text-white font-bold text-sm">
-                    {t.name[0]}
-                  </div>
-                  <div>
-                    <p className="text-white text-sm font-semibold">{t.name}</p>
-                    <p className="text-white/30 text-xs">{t.role}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Stats bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {[
-              { value: '400+', label: 'Bets tracked' },
-              { value: '15', label: 'Leagues covered' },
-              { value: '9', label: 'Value bets found today' },
-              { value: '100%', label: 'Transparent track record' },
-            ].map(s => (
-              <div key={s.label} className="bg-white/[0.03] border border-white/8 rounded-2xl p-5 text-center">
-                <p className="text-2xl font-black text-white mb-1">{s.value}</p>
-                <p className="text-white/35 text-xs">{s.label}</p>
               </div>
             ))}
           </div>
@@ -909,6 +650,119 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* ── SOCIAL PROOF ── */}
+      <section className="py-20 px-4 border-t border-white/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1.5 mb-5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-emerald-300 text-xs font-bold uppercase tracking-wide">Real Users · Real Results</span>
+            </div>
+            <h2 className="text-4xl sm:text-5xl font-black mb-3">
+              Bettors are{' '}
+              <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                finding their edge
+              </span>
+            </h2>
+            <p className="text-white/40 text-lg max-w-xl mx-auto">
+              From casual fans to serious professionals — here&apos;s what they&apos;re saying.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-14">
+            {[
+              {
+                quote: "Finally stopped guessing. The EV breakdown made me realise I was taking terrible value on favourites for years. First month using BetIQ I had my best ROI ever.",
+                name: "James R.",
+                detail: "Premier League bettor · 3 months on Pro",
+                rating: 5,
+                initials: "JR",
+                color: "from-violet-600 to-indigo-600",
+              },
+              {
+                quote: "The AI Coach is genuinely scary good. I asked about a Bundesliga match at 11pm and got a full breakdown with injury context I hadn't seen anywhere else.",
+                name: "Luca M.",
+                detail: "Multi-league · Elite plan",
+                rating: 5,
+                initials: "LM",
+                color: "from-emerald-600 to-teal-600",
+              },
+              {
+                quote: "I was sceptical. Two months later my bankroll is up 22%. The value bet filter alone is worth the subscription — it cuts out so much noise.",
+                name: "Tom S.",
+                detail: "Value bettor · Pro plan",
+                rating: 5,
+                initials: "TS",
+                color: "from-fuchsia-600 to-violet-600",
+              },
+              {
+                quote: "Weekly report cards changed how I think about my bets. Seeing my own patterns written out by the AI was a bit brutal but 100% accurate.",
+                name: "Callum D.",
+                detail: "Matched bettor · Pro plan",
+                rating: 5,
+                initials: "CD",
+                color: "from-amber-600 to-orange-600",
+              },
+              {
+                quote: "Set up my tipster profile in 10 minutes. Already have 4 subscribers and the auto result verification means I don&apos;t have to screenshot anything. Love it.",
+                name: "Raph K.",
+                detail: "Founding Tipster · 4 subscribers",
+                rating: 5,
+                initials: "RK",
+                color: "from-rose-600 to-pink-600",
+              },
+              {
+                quote: "The acca builder is the one. It built me a 3-legger last Saturday — all positive EV. Came in at 6.8. I&apos;ve been using it every weekend since.",
+                name: "Oliver F.",
+                detail: "Weekend bettor · Pro plan",
+                rating: 5,
+                initials: "OF",
+                color: "from-sky-600 to-blue-600",
+              },
+            ].map((t) => (
+              <div key={t.name} className="bg-[#12121F] border border-white/8 rounded-2xl p-6 flex flex-col gap-4 hover:border-white/15 transition-colors">
+                {/* Stars */}
+                <div className="flex gap-0.5">
+                  {Array.from({ length: t.rating }).map((_, i) => (
+                    <span key={i} className="text-amber-400 text-sm">★</span>
+                  ))}
+                </div>
+
+                {/* Quote */}
+                <p className="text-white/65 text-sm leading-relaxed flex-1">&ldquo;{t.quote}&rdquo;</p>
+
+                {/* Author */}
+                <div className="flex items-center gap-3 pt-2 border-t border-white/5">
+                  <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${t.color} flex items-center justify-center text-white text-xs font-black shrink-0`}>
+                    {t.initials}
+                  </div>
+                  <div>
+                    <p className="text-white font-semibold text-sm">{t.name}</p>
+                    <p className="text-white/30 text-xs">{t.detail}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Trust stats strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { value: '61%', label: 'AI prediction accuracy', icon: '🤖' },
+              { value: '4.8★', label: 'Average user rating', icon: '⭐' },
+              { value: '£0', label: 'Needed to get started', icon: '💳' },
+              { value: '15+', label: 'Leagues covered daily', icon: '🌍' },
+            ].map(s => (
+              <div key={s.label} className="bg-white/[0.03] border border-white/8 rounded-2xl p-5 text-center">
+                <p className="text-2xl mb-1">{s.icon}</p>
+                <p className="text-white font-black text-2xl mb-0.5">{s.value}</p>
+                <p className="text-white/35 text-xs">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── FINAL CTA ── */}
       <section className="py-24 px-4">
         <div className="max-w-3xl mx-auto text-center">
@@ -942,7 +796,6 @@ export default async function LandingPage() {
           <div className="flex items-center gap-5 text-white/30 text-sm">
             <a href="#pricing" className="hover:text-white/60 transition-colors">Pricing</a>
             <Link href="/track-record" className="hover:text-white/60 transition-colors">Track Record</Link>
-            <Link href="/value-bets" className="hover:text-white/60 transition-colors">Value Bets</Link>
             <Link href="/login" className="hover:text-white/60 transition-colors">Sign In</Link>
             <Link href="/signup" className="hover:text-white/60 transition-colors">Sign Up</Link>
           </div>
