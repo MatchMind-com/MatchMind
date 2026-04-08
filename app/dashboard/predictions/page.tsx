@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { effectiveTier } from '@/lib/trial'
 
 interface BookmakerOdds {
   home: number | null
@@ -94,6 +95,19 @@ function EVBadge({ ev }: { ev: number }) {
   )
 }
 
+/** Maps a recommended_bet label to the real bookmaker odds field */
+function getLiveOddsForBet(rec: string, bk: BookmakerOdds | null): number | null {
+  if (!bk) return null
+  const r = rec.toLowerCase()
+  if (r.includes('home win') || r === 'home') return bk.home
+  if (r.includes('away win') || r === 'away') return bk.away
+  if (r === 'draw') return bk.draw
+  if (r.includes('over 2.5') || r.includes('over2.5')) return bk.over25
+  if (r.includes('under 2.5') || r.includes('under2.5')) return null // btts no not in interface — fall back
+  if (r.includes('btts') && !r.includes('no')) return bk.btts
+  return null
+}
+
 function OddsChip({ label, odds, ev }: { label: string; odds: number | null; ev: number | null }) {
   if (!odds) return null
   const isValue = ev !== null && ev > 0
@@ -144,9 +158,12 @@ export default function PredictionsPage() {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        supabase.from('profiles').select('subscription_tier').eq('user_id', user.id).single()
+        supabase.from('profiles').select('subscription_tier, created_at').eq('user_id', user.id).single()
           .then(({ data }) => {
-            if (data?.subscription_tier) setSubscriptionTier(data.subscription_tier as 'free' | 'pro' | 'elite')
+            if (data) {
+              const tier = effectiveTier(data.subscription_tier, data.created_at)
+              setSubscriptionTier(tier)
+            }
           })
       }
     })
@@ -448,8 +465,20 @@ export default function PredictionsPage() {
                         <p className="text-white font-bold">{pred.recommended_bet}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-white/40 text-xs">Est. odds</p>
-                        <p className={`font-bold ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-violet-300'}`}>{pred.recommended_odds_range}</p>
+                        {(() => {
+                          const liveOdds = getLiveOddsForBet(pred.recommended_bet, pred.bookmaker)
+                          return liveOdds ? (
+                            <>
+                              <p className="text-white/40 text-xs">Bet365 odds</p>
+                              <p className={`font-bold text-lg ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-violet-300'}`}>@ {liveOdds.toFixed(2)}</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-white/40 text-xs">Est. odds</p>
+                              <p className={`font-bold ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-violet-300'}`}>{pred.recommended_odds_range}</p>
+                            </>
+                          )
+                        })()}
                       </div>
                     </div>
 

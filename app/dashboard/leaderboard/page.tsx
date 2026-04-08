@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { effectiveTier } from '@/lib/trial'
 
 interface LeaderboardEntry {
   rank: number
@@ -58,9 +59,12 @@ export default function LeaderboardPage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         setCurrentUserId(user.id)
-        supabase.from('profiles').select('subscription_tier').eq('user_id', user.id).single()
+        supabase.from('profiles').select('subscription_tier, created_at').eq('user_id', user.id).single()
           .then(({ data }) => {
-            if (data?.subscription_tier) setSubscriptionTier(data.subscription_tier as 'free' | 'pro' | 'elite')
+            if (data) {
+              const tier = effectiveTier(data.subscription_tier, data.created_at)
+              setSubscriptionTier(tier)
+            }
           })
       }
     })

@@ -40,8 +40,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect authenticated users away from auth pages
-  if (user && (pathname === '/login' || pathname === '/signup' || pathname === '/')) {
+  // Redirect authenticated users away from auth pages (NOT from '/' — logged-in users can still view landing page)
+  if (user && (pathname === '/login' || pathname === '/signup')) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 

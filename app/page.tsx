@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import EmailCapture from '@/components/landing/EmailCapture'
 import ActivityStrip from '@/components/landing/ActivityStrip'
@@ -60,7 +59,7 @@ const SAMPLE_PREDS = [
 export default async function LandingPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (user) redirect('/dashboard')
+  // No redirect — logged-in users can view the landing page to share it
 
   const [stats, livePreds] = await Promise.all([getLiveStats(), getPublicPredictions()])
   const predictions = livePreds.length > 0 ? livePreds : SAMPLE_PREDS
@@ -68,6 +67,23 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#0B0B14] text-white overflow-x-hidden">
+
+      {/* ── LOGGED-IN BANNER ── */}
+      {user && (
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-violet-600/95 backdrop-blur-sm border-b border-violet-500/50 py-2.5 px-4">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <p className="text-white/90 text-sm">
+              👋 You're signed in as <span className="font-semibold text-white">{user.email}</span>
+            </p>
+            <Link
+              href="/dashboard"
+              className="shrink-0 bg-white text-violet-700 font-bold text-xs px-4 py-1.5 rounded-lg hover:bg-violet-50 transition-colors"
+            >
+              → Go to Dashboard
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* ── NAVBAR ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B0B14]/80 backdrop-blur-xl border-b border-white/5">
@@ -77,6 +93,7 @@ export default async function LandingPage() {
             <span className="text-white font-bold text-xl tracking-tight">Bet<span className="text-violet-400">IQ</span></span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-white/50">
+            <Link href="/predictions" className="hover:text-white transition-colors">Predictions</Link>
             <Link href="/value-bets" className="hover:text-white transition-colors">Value Bets</Link>
             <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
             <a href="#tipsters" className="hover:text-white transition-colors">Tipsters</a>

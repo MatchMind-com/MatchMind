@@ -82,20 +82,23 @@ function getProbabilityForBet(label: string, pred: any): number {
   }
 }
 
-// Diversity filter: pick top N value bets with no more than maxPerType of same type
+// Diversity filter: pick top N value bets with per-label caps
+// perLabelCaps: specific cap per label (e.g. {'Over 2.5': 1}), defaultCap used for everything else
 function applyDiversityFilter(
   allBets: Array<{ match: string; label: string; ev: number; odds: number; aiProb: number; fixtureId: number; leagueName: string }>,
-  maxPerType = 3,
+  perLabelCaps: Record<string, number> | number = 2,
   maxTotal = 10
 ) {
   const sorted = [...allBets].sort((a, b) => b.ev - a.ev)
   const typeCounts: Record<string, number> = {}
   const selected: typeof allBets = []
+  const defaultCap = typeof perLabelCaps === 'number' ? perLabelCaps : 2
 
   for (const bet of sorted) {
     if (selected.length >= maxTotal) break
+    const cap = typeof perLabelCaps === 'object' ? (perLabelCaps[bet.label] ?? defaultCap) : defaultCap
     const count = typeCounts[bet.label] ?? 0
-    if (count >= maxPerType) continue
+    if (count >= cap) continue
     typeCounts[bet.label] = count + 1
     selected.push(bet)
   }
@@ -187,9 +190,11 @@ export async function GET() {
         role: 'system',
         content: `You are an expert football analyst. Generate precise match predictions using current form, league position, H2H history, injuries, and tactical factors.
 
-CRITICAL DIVERSITY RULE: You MUST vary your recommended_bet types. Do NOT recommend "Over 2.5" for more than 3 matches. Spread picks across: Home Win, Away Win, Draw, Over 2.5, Under 2.5, BTTS, Double Chance. Only recommend Over 2.5 if you have very high confidence (over_2_5_pct ≥ 68%) AND the bookmaker odds are at least 1.75+.
+CRITICAL DIVERSITY RULE: You MUST vary your recommended_bet types. Spread picks across: Home Win, Away Win, Draw, Under 2.5, BTTS, Double Chance. Prefer these over Over 2.5.
 
-When Bet365 odds are shown, use them to cross-check your probability estimates. If the bookmaker prices something at 1.50 (implying 67%), your AI probability for that market should be close unless you have very specific insider factors to justify a big deviation.
+OVER 2.5 WARNING: Historical data shows Over 2.5 bets on this platform have a 22% win rate (2 wins from 9 picks). This market is extremely hard to call. ONLY recommend Over 2.5 if over_2_5_pct ≥ 72% AND bookmaker odds ≥ 1.90. Maximum 1 Over 2.5 recommendation per session. When in doubt, pick Under 2.5, BTTS, or a Match Result instead.
+
+When Bet365 odds are shown, use them to cross-check your probability estimates. If the bookmaker prices something at 1.50 (implying 67%), your AI probability for that market should be close unless you have very specific factors to justify a big deviation.
 
 Return valid JSON only.`
       }, {
@@ -257,7 +262,8 @@ Return JSON with this exact structure:
       const homeWinPct = pred.home_win_pct ?? 40
       const drawPct    = pred.draw_pct    ?? 25
       const awayWinPct = pred.away_win_pct ?? 35
-      const over25Pct  = pred.over_2_5_pct ?? 55
+      // Default 45 (not 55): when GPT gives no value, bias toward Under not Over
+      const over25Pct  = pred.over_2_5_pct ?? 45
       const under25Pct = 100 - over25Pct
       const bttsPct    = pred.btts_pct    ?? 50
       const bttsNoPct  = 100 - bttsPct
@@ -285,7 +291,10 @@ Return JSON with this exact structure:
         { label: 'Home/Draw DC',  ev: dcHomeEV,  odds: o?.dcHome,  aiProb: dcHomePct,   betType: 'Double Chance',  prediction: 'home_draw' },
         { label: 'Away/Draw DC',  ev: dcAwayEV,  odds: o?.dcAway,  aiProb: dcAwayPct,   betType: 'Double Chance',  prediction: 'away_draw' },
       ]
-        .filter(x => x.ev !== null && x.ev > 5 && x.odds && x.odds >= 1.30 && x.odds <= 3.5)
+        // Over 2.5 requires higher EV bar (22%) given historical 22% win rate on this market
+        .filter(x => x.ev !== null && x.odds && x.odds >= 1.30 && x.odds <= 3.5
+          && (x.label === 'Over 2.5' ? (x.ev ?? 0) >= 22 : (x.ev ?? 0) > 5)
+        )
         .sort((a, b) => (b.ev ?? 0) - (a.ev ?? 0))
 
       const bestValue = valueBets[0] ?? null
@@ -353,8 +362,8 @@ Return JSON with this exact structure:
 
     // ── Save to DB with diversity filter ────────────────────────────────────
     try {
-      // Apply diversity: max 3 of same bet type per day, top 10 total
-      const diversePicks = applyDiversityFilter(allCandidateValueBets, 3, 10)
+      // Apply diversity: Over 2.5 max 1/day (historically 22% win rate), all others max 2
+      const diversePicks = applyDiversityFilter(allCandidateValueBets, { 'Over 2.5': 1 }, 10)
 
       const records = diversePicks.map(pick => ({
         fixture_id: pick.fixtureId,

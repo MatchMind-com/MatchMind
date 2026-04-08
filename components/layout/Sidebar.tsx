@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
-const NAV = [
+const CORE_NAV = [
   { href: '/dashboard', label: 'Command Center', icon: '🏠', exact: true },
   { href: '/dashboard/statistics', label: 'Statistics', icon: '📊', exact: false },
   { href: '/dashboard/bankroll', label: 'Bankroll', icon: '💰', exact: false },
@@ -15,6 +15,9 @@ const NAV = [
   { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: '🏆', exact: false },
   { href: '/dashboard/marketplace', label: 'Marketplace', icon: '🛒', exact: false },
   { href: '/dashboard/my-tipster', label: 'My Tipster', icon: '📢', exact: false },
+]
+
+const ACCOUNT_NAV = [
   { href: '/dashboard/referral', label: 'Refer a Friend', icon: '🎁', exact: false },
   { href: '/dashboard/billing', label: 'Billing', icon: '💳', exact: false },
   { href: '/dashboard/settings', label: 'Settings', icon: '⚙️', exact: false },
@@ -70,33 +73,72 @@ export default function Sidebar({ email }: { email: string }) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          {NAV.map(item => {
-            const isActive = item.exact
-              ? pathname === item.href
-              : pathname.startsWith(item.href)
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
-                  ${isActive
-                    ? 'bg-violet-600/20 text-violet-300 border border-violet-500/30 shadow-sm'
-                    : 'text-white/50 hover:text-white hover:bg-white/5'
-                  }`}
-              >
-                <span className="text-base">{item.icon}</span>
-                {item.label}
-                {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-violet-400" />}
-              </Link>
-            )
-          })}
+        <nav className="flex-1 p-3 overflow-y-auto">
+          {/* Core features */}
+          <div className="space-y-0.5 mb-2">
+            {CORE_NAV.map(item => {
+              const isActive = item.exact
+                ? pathname === item.href
+                : pathname.startsWith(item.href)
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
+                    ${isActive
+                      ? 'bg-violet-600/20 text-violet-300 border border-violet-500/30 shadow-sm'
+                      : 'text-white/50 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                  <span className="text-base">{item.icon}</span>
+                  {item.label}
+                  {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-violet-400" />}
+                </Link>
+              )
+            })}
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-white/[0.06] my-2 pt-2">
+            <p className="text-white/20 text-[10px] font-semibold uppercase tracking-widest px-4 mb-1.5">Account</p>
+            <div className="space-y-0.5">
+              {ACCOUNT_NAV.map(item => {
+                const isActive = pathname.startsWith(item.href)
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
+                      ${isActive
+                        ? 'bg-violet-600/20 text-violet-300 border border-violet-500/30 shadow-sm'
+                        : 'text-white/50 hover:text-white hover:bg-white/5'
+                      }`}
+                  >
+                    <span className="text-base">{item.icon}</span>
+                    {item.label}
+                    {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-violet-400" />}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
         </nav>
 
         {/* Footer */}
         <div className="p-3 border-t border-white/10 space-y-1">
-          <div className="px-4 py-2">
+          {/* Share BetIQ */}
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-violet-400/70 hover:text-violet-300 hover:bg-violet-500/8 transition-all"
+          >
+            <span>🔗</span>
+            Share BetIQ
+          </a>
+          <div className="px-4 py-1">
             <p className="text-white/25 text-xs truncate">{email}</p>
           </div>
           <button
