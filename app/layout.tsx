@@ -25,6 +25,16 @@ export const metadata: Metadata = {
     description: 'Track your football bets, get AI value bet predictions with EV analysis, and improve your returns.',
   },
   robots: { index: true, follow: true },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'BetIQ',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'theme-color': '#7c3aed',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

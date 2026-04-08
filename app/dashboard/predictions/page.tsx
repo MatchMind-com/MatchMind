@@ -462,6 +462,26 @@ export default function PredictionsPage() {
                       <span className="text-white/60 text-sm font-semibold">{pred.confidence}/10</span>
                     </div>
 
+                    {/* Bookmaker quick-links */}
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <span className="text-white/25 text-[10px] uppercase tracking-wide">Bet at:</span>
+                      {[
+                        { name: 'Bet365', url: 'https://www.bet365.com', color: 'text-emerald-400 border-emerald-500/25 bg-emerald-500/8 hover:bg-emerald-500/15' },
+                        { name: 'Betfair', url: 'https://www.betfair.com', color: 'text-sky-400 border-sky-500/25 bg-sky-500/8 hover:bg-sky-500/15' },
+                        { name: 'William Hill', url: 'https://www.williamhill.com', color: 'text-amber-400 border-amber-500/25 bg-amber-500/8 hover:bg-amber-500/15' },
+                      ].map(bm => (
+                        <a
+                          key={bm.name}
+                          href={bm.url}
+                          target="_blank"
+                          rel="noopener noreferrer sponsored"
+                          className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg border transition-colors ${bm.color}`}
+                        >
+                          {bm.name} ↗
+                        </a>
+                      ))}
+                    </div>
+
                     {/* Expand toggle */}
                     <button
                       onClick={() => setExpanded(isExpanded ? null : idx)}

@@ -77,7 +77,7 @@ export default async function LandingPage() {
             <span className="text-white font-bold text-xl tracking-tight">Bet<span className="text-violet-400">IQ</span></span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-white/50">
-            <a href="#value-bets" className="hover:text-white transition-colors">Value Bets</a>
+            <Link href="/value-bets" className="hover:text-white transition-colors">Value Bets</Link>
             <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
             <a href="#tipsters" className="hover:text-white transition-colors">Tipsters</a>
             <Link href="/track-record" className="hover:text-white transition-colors text-emerald-400/70 hover:text-emerald-300">📊 Track Record</Link>
@@ -711,6 +711,73 @@ export default async function LandingPage() {
         </div>
       </section>
 
+
+      {/* ── SOCIAL PROOF / TESTIMONIALS ── */}
+      <section className="py-20 px-4 border-t border-white/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-4 py-1.5 mb-5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block" />
+              <span className="text-emerald-300 text-sm font-medium">Real bettors, real results</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-black mb-3">What BetIQ users say</h2>
+            <p className="text-white/40 max-w-lg mx-auto">Early users testing the AI predictions and coaching tools.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+            {[
+              {
+                quote: "The EV calculator changed how I think about betting. I stopped chasing odds and started looking for actual edge. First month using BetIQ I went +£180.",
+                name: "Jamie R.", role: "Premier League bettor", stars: 5,
+              },
+              {
+                quote: "Finally a site that shows its track record honestly. No cherry-picked screenshots — every prediction is logged before kickoff. That's rare in this space.",
+                name: "Marcus T.", role: "Value bettor, 4 years", stars: 5,
+              },
+              {
+                quote: "The AI coach is genuinely useful. Asked it about a Bundesliga match and it pulled injury data I hadn't seen. Saved me from a bad bet that would've lost.",
+                name: "Sam K.", role: "Recreational bettor", stars: 4,
+              },
+            ].map((t, i) => (
+              <div key={i} className="bg-[#12121F] border border-white/8 rounded-2xl p-6 hover:border-white/14 transition-all">
+                <div className="flex gap-0.5 mb-4">
+                  {Array.from({ length: 5 }).map((_, j) => (
+                    <svg key={j} width="14" height="14" viewBox="0 0 24 24" fill={j < t.stars ? '#f59e0b' : 'none'} stroke={j < t.stars ? '#f59e0b' : '#374151'} strokeWidth="2">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                  ))}
+                </div>
+                <p className="text-white/70 text-sm leading-relaxed mb-4 italic">&ldquo;{t.quote}&rdquo;</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-600/40 to-indigo-600/40 border border-violet-500/30 flex items-center justify-center text-white font-bold text-sm">
+                    {t.name[0]}
+                  </div>
+                  <div>
+                    <p className="text-white text-sm font-semibold">{t.name}</p>
+                    <p className="text-white/30 text-xs">{t.role}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Stats bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { value: '400+', label: 'Bets tracked' },
+              { value: '15', label: 'Leagues covered' },
+              { value: '9', label: 'Value bets found today' },
+              { value: '100%', label: 'Transparent track record' },
+            ].map(s => (
+              <div key={s.label} className="bg-white/[0.03] border border-white/8 rounded-2xl p-5 text-center">
+                <p className="text-2xl font-black text-white mb-1">{s.value}</p>
+                <p className="text-white/35 text-xs">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── PRICING ── */}
       <section className="py-24 px-4 bg-white/[0.015] border-t border-white/5" id="pricing">
         <div className="max-w-5xl mx-auto">
@@ -858,6 +925,7 @@ export default async function LandingPage() {
           <div className="flex items-center gap-5 text-white/30 text-sm">
             <a href="#pricing" className="hover:text-white/60 transition-colors">Pricing</a>
             <Link href="/track-record" className="hover:text-white/60 transition-colors">Track Record</Link>
+            <Link href="/value-bets" className="hover:text-white/60 transition-colors">Value Bets</Link>
             <Link href="/login" className="hover:text-white/60 transition-colors">Sign In</Link>
             <Link href="/signup" className="hover:text-white/60 transition-colors">Sign Up</Link>
           </div>

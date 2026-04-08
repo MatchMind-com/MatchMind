@@ -293,7 +293,8 @@ Return JSON with this exact structure:
       // Collect candidates for DB diversity filter
       if (f.fixture?.id && f.fixture?.date?.startsWith(today)) {
         for (const vb of valueBets.slice(0, 2)) {
-          if (vb.ev !== null && vb.ev >= 8 && vb.odds) {
+          // EV cap at 50%: above this usually means the AI is wildly miscalibrated
+          if (vb.ev !== null && vb.ev >= 12 && vb.ev <= 50 && vb.odds) {
             allCandidateValueBets.push({
               match: `${f.teams?.home?.name} vs ${f.teams?.away?.name}`,
               label: vb.label,
@@ -342,7 +343,7 @@ Return JSON with this exact structure:
         } : null,
         ev: { home: homeEV, draw: drawEV, away: awayEV, over25: over25EV, under25: under25EV, btts: bttsEV },
         best_value: bestValue ? { label: bestValue.label, ev: bestValue.ev, odds: bestValue.odds } : null,
-        is_value_bet: bestValue !== null && (bestValue.ev ?? 0) >= 10,
+        is_value_bet: bestValue !== null && (bestValue.ev ?? 0) >= 15 && (bestValue.ev ?? 0) <= 50,
         value_score: bestValue?.ev ?? null,
         home_injuries: f._homeInjuries ?? [],
         away_injuries: f._awayInjuries ?? [],
@@ -367,7 +368,7 @@ Return JSON with this exact structure:
         ai_probability: Math.round(pick.aiProb),  // ✅ Correct probability for selected bet type
         odds: pick.odds,
         ev_percent: pick.ev,
-        is_value_bet: pick.ev >= 10,
+        is_value_bet: pick.ev >= 15 && pick.ev <= 50,
       }))
 
       if (records.length > 0) {

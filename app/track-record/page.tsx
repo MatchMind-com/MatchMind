@@ -274,7 +274,7 @@ export default async function TrackRecordPage() {
                     </div>
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
                       <ResultBadge result={r.result} />
-                      {r.is_value_bet && (
+                      {r.is_value_bet && r.ev_percent >= 15 && (
                         <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">🔥 Value</span>
                       )}
                     </div>
@@ -282,7 +282,14 @@ export default async function TrackRecordPage() {
                   <div className="flex items-center gap-3 mt-2">
                     <span className="bg-violet-600/20 text-violet-300 text-xs font-semibold px-2 py-0.5 rounded-lg border border-violet-500/20">{r.bet_type}</span>
                     {r.odds && <span className="text-white text-xs font-bold">@ {r.odds}</span>}
-                    {r.ev_percent && <span className="text-emerald-400 text-xs font-bold">EV: +{r.ev_percent}%</span>}
+                    {r.ev_percent && (
+                      <span className="text-emerald-400 text-xs font-bold group relative cursor-help">
+                        EV: +{r.ev_percent}%
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-52 bg-[#1e1e35] border border-white/15 rounded-xl p-3 text-white/70 text-[10px] font-normal leading-relaxed z-10 pointer-events-none shadow-xl">
+                          <strong className="text-white">Expected Value:</strong> how much profit per £1 staked over time. +{r.ev_percent}% means this bet is statistically worth £{(r.ev_percent / 100).toFixed(2)} per £1 — the bookmaker underpriced it. EV is a long-run metric; individual bets can still lose.
+                        </span>
+                      </span>
+                    )}
                     {r.profit_loss !== null && r.profit_loss !== undefined && (
                       <span className={`text-xs font-bold ml-auto ${r.profit_loss >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                         {r.profit_loss >= 0 ? '+' : ''}{r.profit_loss}u
