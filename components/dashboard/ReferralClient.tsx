@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 
-const APP_URL = 'https://footballbetai.vercel.app'
+const APP_URL = 'https://matchmindcom.com'
 
 interface Props {
   referralCode: string
@@ -27,7 +27,7 @@ export default function ReferralClient({ referralCode, referralCount, subscripti
   }
 
   async function copyMessage() {
-    const msg = `I've been using BetIQ — an AI betting coach that helps me track bets, find value, and get AI analysis on my performance. Really useful if you're serious about improving. Try it free: ${referralUrl}`
+    const msg = `I've been using MatchMind — an AI betting coach that helps me track bets, find value, and get AI analysis on my performance. Really useful if you're serious about improving. Try it free: ${referralUrl}`
     await navigator.clipboard.writeText(msg)
     setCopiedMsg(true)
     setTimeout(() => setCopiedMsg(false), 2000)
@@ -51,7 +51,7 @@ export default function ReferralClient({ referralCode, referralCount, subscripti
       <div className="grid grid-cols-3 gap-3 mb-6">
         {[
           { icon: '🔗', step: '1', title: 'Share your link', desc: 'Send your unique invite link to friends' },
-          { icon: '✅', step: '2', title: 'They sign up', desc: 'Friend creates a free BetIQ account' },
+          { icon: '✅', step: '2', title: 'They sign up', desc: 'Friend creates a free MatchMind account' },
           { icon: '🎁', step: '3', title: 'You both win', desc: 'You get Pro time, they get 7 days Pro free' },
         ].map(s => (
           <div key={s.step} className="bg-white/[0.03] border border-white/8 rounded-2xl p-4 text-center">
@@ -120,7 +120,7 @@ export default function ReferralClient({ referralCode, referralCount, subscripti
       {/* Share buttons */}
       <div className="grid grid-cols-2 gap-3">
         <a
-          href={`https://wa.me/?text=${encodeURIComponent(`Check out BetIQ — AI betting coach, free to start: ${referralUrl}`)}`}
+          href={`https://wa.me/?text=${encodeURIComponent(`Check out MatchMind — AI betting coach, free to start: ${referralUrl}`)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/25 text-[#25D366] font-semibold text-sm py-3 rounded-xl transition-colors"
@@ -129,7 +129,7 @@ export default function ReferralClient({ referralCode, referralCount, subscripti
           WhatsApp
         </a>
         <a
-          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Loving BetIQ for tracking my bets + getting AI value picks. Free to start 👇`)}&url=${encodeURIComponent(referralUrl)}`}
+          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Loving MatchMind for tracking my bets + getting AI value picks. Free to start 👇`)}&url=${encodeURIComponent(referralUrl)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 bg-black/30 hover:bg-black/50 border border-white/15 text-white font-semibold text-sm py-3 rounded-xl transition-colors"

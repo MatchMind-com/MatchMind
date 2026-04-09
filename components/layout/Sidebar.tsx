@@ -128,7 +128,7 @@ export default function Sidebar({ email }: { email: string }) {
 
         {/* Footer */}
         <div className="p-3 border-t border-white/10 space-y-1">
-          {/* Share BetIQ */}
+          {/* Share MatchMind */}
           <a
             href="/"
             target="_blank"
@@ -136,7 +136,7 @@ export default function Sidebar({ email }: { email: string }) {
             className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-violet-400/70 hover:text-violet-300 hover:bg-violet-500/8 transition-all"
           >
             <span>🔗</span>
-            Share BetIQ
+            Share MatchMind
           </a>
           <div className="px-4 py-1">
             <p className="text-white/25 text-xs truncate">{email}</p>

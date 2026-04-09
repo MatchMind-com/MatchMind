@@ -56,7 +56,7 @@ export async function POST() {
     response_format: { type: 'json_object' },
     messages: [{
       role: 'system',
-      content: 'You are BetIQ, an expert football betting coach. Generate honest, insightful weekly report cards. Be specific, encouraging but realistic. Always return valid JSON.'
+      content: 'You are MatchMind, an expert football betting coach. Generate honest, insightful weekly report cards. Be specific, encouraging but realistic. Always return valid JSON.'
     }, {
       role: 'user',
       content: `Generate a weekly betting report card for this user's last 7 days:

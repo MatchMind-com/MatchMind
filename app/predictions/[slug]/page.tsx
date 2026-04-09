@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://footballbetai.vercel.app'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 
 const supabaseAdmin = createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -54,13 +54,13 @@ async function getMatchData(slug: string) {
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const data = await getMatchData(params.slug)
   if (!data) {
-    return { title: 'Match Prediction | BetIQ' }
+    return { title: 'Match Prediction | MatchMind' }
   }
   const { match } = data
   const kickOff = new Date(match.kick_off)
   const dateStr = kickOff.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
   const title = `${match.home_team} vs ${match.away_team} Prediction ${dateStr} — AI Tips & Odds`
-  const description = `BetIQ AI prediction for ${match.home_team} vs ${match.away_team} on ${dateStr}. ${match.league}. AI probability analysis, Expected Value picks, and best bet recommendation.`
+  const description = `MatchMind AI prediction for ${match.home_team} vs ${match.away_team} on ${dateStr}. ${match.league}. AI probability analysis, Expected Value picks, and best bet recommendation.`
 
   return {
     title,
@@ -69,7 +69,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       title,
       description,
       url: `${APP_URL}/predictions/${params.slug}`,
-      siteName: 'BetIQ',
+      siteName: 'MatchMind',
     },
     twitter: {
       card: 'summary_large_image',

@@ -42,7 +42,7 @@ export function buildWeeklyReportEmail(opts: {
   const gc = gradeColor(grade)
   const pnlStr = stats.pnl >= 0 ? `+£${stats.pnl.toFixed(2)}` : `-£${Math.abs(stats.pnl).toFixed(2)}`
 
-  const subject = `⚽ Your BetIQ Weekly Report — ${grade} | ${weekLabel}`
+  const subject = `⚽ Your MatchMind Weekly Report — ${grade} | ${weekLabel}`
 
   const upgradeSection = isFree ? `
     <tr>
@@ -69,7 +69,7 @@ export function buildWeeklyReportEmail(opts: {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BetIQ Weekly Report</title>
+  <title>MatchMind Weekly Report</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #0a0d1a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0d1a; padding: 32px 16px;">
@@ -80,7 +80,7 @@ export function buildWeeklyReportEmail(opts: {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #0d1440 0%, #1a2060 100%); padding: 32px 24px; text-align: center; border-bottom: 1px solid #1e2540;">
-              <p style="margin: 0 0 4px; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.5); letter-spacing: 3px; text-transform: uppercase;">BetIQ</p>
+              <p style="margin: 0 0 4px; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.5); letter-spacing: 3px; text-transform: uppercase;">MatchMind</p>
               <h1 style="margin: 0 0 4px; font-size: 26px; font-weight: 800; color: #ffffff;">Weekly Performance Report</h1>
               <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.55);">${weekLabel}</p>
             </td>
@@ -180,9 +180,9 @@ export function buildWeeklyReportEmail(opts: {
           <!-- Footer -->
           <tr>
             <td style="padding: 20px 24px; text-align: center; border-top: 1px solid #1e2540;">
-              <p style="margin: 0 0 4px; font-size: 12px; color: rgba(255,255,255,0.3);">BetIQ — AI Betting Coach ⚽</p>
+              <p style="margin: 0 0 4px; font-size: 12px; color: rgba(255,255,255,0.3);">MatchMind — AI Betting Coach ⚽</p>
               <p style="margin: 0; font-size: 11px; color: rgba(255,255,255,0.2);">
-                You received this because you have an account at footballbetai.vercel.app.<br/>
+                You received this because you have an account at matchmindcom.com.<br/>
                 <a href="${appUrl}/settings" style="color: rgba(255,255,255,0.3); text-decoration: underline;">Manage email preferences</a>
               </p>
             </td>

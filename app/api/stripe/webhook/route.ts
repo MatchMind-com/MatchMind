@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   const supabase = await createClient()
 
-  // ── Platform subscription (BetIQ Pro) ──────────────────────────────────────
+  // ── Platform subscription (MatchMind Pro) ──────────────────────────────────────
   async function updatePlatformSubscription(subscription: Stripe.Subscription) {
     const userId = subscription.metadata?.supabase_user_id
     const tier = subscription.metadata?.tier || 'free'

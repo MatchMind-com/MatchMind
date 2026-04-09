@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Already subscribed' }, { status: 400 })
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://footballbetai.vercel.app'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 
   // Create Stripe Checkout session for tipster subscription
   // We create a one-time price on the fly (or use a product per tipster)
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     unit_amount: Math.round(tipster.monthly_price * 100),
     recurring: { interval: 'month' },
     product_data: {
-      name: `${tipster.display_name} — BetIQ Tipster`,
+      name: `${tipster.display_name} — MatchMind Tipster`,
       metadata: { tipster_id },
     },
   })

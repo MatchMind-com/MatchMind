@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
 
-const STORAGE_KEY = 'betiq_exit_popup_last_shown'
+const STORAGE_KEY = 'matchmind_exit_popup_last_shown'
 const COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
 interface ExitIntentPopupProps {
@@ -64,7 +64,7 @@ export default function ExitIntentPopup({ subscriptionTier }: ExitIntentPopupPro
 
   const handleCopyCode = async () => {
     try {
-      await navigator.clipboard.writeText('BETIQ20')
+      await navigator.clipboard.writeText('MATCHMIND20')
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
@@ -137,7 +137,7 @@ export default function ExitIntentPopup({ subscriptionTier }: ExitIntentPopupPro
           >
             <div className="text-left">
               <div className="text-xs text-slate-500 mb-0.5">Your discount code</div>
-              <div className="text-xl font-black text-violet-400 tracking-widest font-mono">BETIQ20</div>
+              <div className="text-xl font-black text-violet-400 tracking-widest font-mono">MATCHMIND20</div>
             </div>
             <button className="bg-violet-600/20 hover:bg-violet-600/40 border border-violet-500/30 text-violet-400 text-xs font-bold px-3 py-2 rounded-xl transition-all">
               {copied ? '✓ Copied!' : 'Copy'}
@@ -146,7 +146,7 @@ export default function ExitIntentPopup({ subscriptionTier }: ExitIntentPopupPro
 
           {/* CTA */}
           <a
-            href="/api/stripe/create-checkout?plan=pro&coupon=BETIQ20"
+            href="/api/stripe/create-checkout?plan=pro&coupon=MATCHMIND20"
             className="block w-full text-center bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-violet-500/25 mb-3"
           >
             Claim 20% Off → Start Free Trial

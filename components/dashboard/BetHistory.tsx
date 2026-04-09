@@ -15,7 +15,7 @@ function exportToCSV(bets: BetSlip[]) {
   const csv = [headers,...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n')
   const blob = new Blob([csv],{type:'text/csv'})
   const url = URL.createObjectURL(blob)
-  const a = document.createElement('a'); a.href=url; a.download=`betiq-${new Date().toISOString().split('T')[0]}.csv`; a.click(); URL.revokeObjectURL(url)
+  const a = document.createElement('a'); a.href=url; a.download=`matchmind-${new Date().toISOString().split('T')[0]}.csv`; a.click(); URL.revokeObjectURL(url)
 }
 
 function ShareModal({ bet, onClose }: { bet: BetSlip; onClose: () => void }) {
@@ -24,7 +24,7 @@ function ShareModal({ bet, onClose }: { bet: BetSlip; onClose: () => void }) {
   const isWin = bet.result === 'win'
   const pnlStr = `${pl >= 0 ? '+' : ''}£${Math.abs(pl).toFixed(2)}`
 
-  const shareText = `${isWin ? '🔥 Won' : '✅'} ${bet.match_name}\n${bet.selection} @ ${Number(bet.odds).toFixed(2)}\n${bet.bet_type} · Stake £${Number(bet.stake).toFixed(2)} · P&L ${pnlStr}\n\nTracked with BetIQ — AI Betting Coach 📊\nfootballbetai.vercel.app`
+  const shareText = `${isWin ? '🔥 Won' : '✅'} ${bet.match_name}\n${bet.selection} @ ${Number(bet.odds).toFixed(2)}\n${bet.bet_type} · Stake £${Number(bet.stake).toFixed(2)} · P&L ${pnlStr}\n\nTracked with MatchMind — AI Betting Coach 📊\nmatchmindcom.com`
 
   async function copyText() {
     await navigator.clipboard.writeText(shareText)
@@ -75,7 +75,7 @@ function ShareModal({ bet, onClose }: { bet: BetSlip; onClose: () => void }) {
           </div>
 
           {/* Footer */}
-          <p className="text-white/20 text-[10px] text-center mt-4">Tracked & verified with BetIQ · footballbetai.vercel.app</p>
+          <p className="text-white/20 text-[10px] text-center mt-4">Tracked & verified with MatchMind · matchmindcom.com</p>
         </div>
 
         {/* Actions */}

@@ -20,7 +20,7 @@ The user's betting stats:
 - Total P&L: ${totalPL.toFixed(2)}
 - Recent bets: ${JSON.stringify(bets.slice(0,5).map((b: any) => ({ match: b.match_name, bet_type: b.bet_type, league: b.league, result: b.result, odds: b.odds })))}` : 'No betting history available yet.'
 
-    const systemPrompt = `You are BetIQ Football Coach — an expert AI assistant specialising in football analysis, match insights, betting strategy, and sports news. You have deep knowledge of:
+    const systemPrompt = `You are MatchMind Football Coach — an expert AI assistant specialising in football analysis, match insights, betting strategy, and sports news. You have deep knowledge of:
 - All major football leagues (Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Champions League, etc.)
 - Team form, tactics, historical head-to-head records, player injuries and suspensions
 - Betting markets, value betting, bankroll management, and statistical analysis

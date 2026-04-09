@@ -18,7 +18,7 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: "Welcome to BetIQ Coach! 🏆 I'm loaded with today's live fixtures, standings, and your betting history. Ask me anything — from today's best bets to analysing your form. What do you want to know?"
+      content: "Welcome to MatchMind Coach! 🏆 I'm loaded with today's live fixtures, standings, and your betting history. Ask me anything — from today's best bets to analysing your form. What do you want to know?"
     }
   ])
   const [input, setInput] = useState('')
@@ -78,7 +78,7 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
               🤖
             </div>
             <div>
-              <div className="text-sm font-semibold text-white">BetIQ Coach</div>
+              <div className="text-sm font-semibold text-white">MatchMind Coach</div>
               <div className="text-[10px] text-emerald-400 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
                 Live data connected

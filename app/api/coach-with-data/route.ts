@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
 
   const leagueName = LEAGUE_NAMES[leagueId] || 'Football'
 
-  const systemPrompt = `You are BetIQ, an elite AI football betting coach with access to real-time data for the ${season}/${season + 1} season. You combine deep football intelligence with sharp statistical analysis to help users make smarter betting decisions.
+  const systemPrompt = `You are MatchMind, an elite AI football betting coach with access to real-time data for the ${season}/${season + 1} season. You combine deep football intelligence with sharp statistical analysis to help users make smarter betting decisions.
 
 === LIVE FOOTBALL DATA — ${leagueName} (${season}/${String(season + 1).slice(2)} season) ===
 

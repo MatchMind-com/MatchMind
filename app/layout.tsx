@@ -6,7 +6,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'BetIQ — AI Betting Coach',
+  title: 'MatchMind — AI Betting Coach',
   description: 'Track your football bets, analyze performance, and get AI-powered coaching.',
 }
 
