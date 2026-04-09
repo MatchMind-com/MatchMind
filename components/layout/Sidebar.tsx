@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 const CORE_NAV = [
   { href: '/dashboard', label: 'Command Center', icon: '🏠', exact: true },
@@ -62,7 +63,9 @@ export default function Sidebar({ email }: { email: string }) {
         {/* Logo */}
         <div className="p-6 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-violet-500/25">M</div>
+            <div className="w-10 h-10 flex items-center justify-center">
+              <Image src="/logo-icon.png" alt="MatchMind" width={40} height={40} className="object-contain" />
+            </div>
             <div>
               <div className="text-white font-bold text-xl tracking-tight leading-tight">
                 Match<span className="text-violet-400">Mind</span>

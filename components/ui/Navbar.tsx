@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import Image from 'next/image'
 
 export default function Navbar({ email }: { email: string }) {
   const supabase = createClient()
@@ -20,10 +21,8 @@ export default function Navbar({ email }: { email: string }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/>
-              </svg>
+            <div className="w-9 h-9 flex items-center justify-center">
+              <Image src="/logo-icon.png" alt="MatchMind" width={36} height={36} className="object-contain" />
             </div>
             <div>
               <span className="text-white font-bold text-xl tracking-tight">Match<span className="text-violet-400">Mind</span></span>
