@@ -1,7 +1,7 @@
 {
-  "name": "BetIQ — AI Betting Coach",
-  "short_name": "BetIQ",
-  "description": "AI-powered football betting coach. Track bets, find value, get AI picks.",
+  "name": "MatchMind — AI Football Intelligence",
+  "short_name": "MatchMind",
+  "description": "AI-powered football betting intelligence. Track bets, find value, get AI picks.",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#0B0B14",

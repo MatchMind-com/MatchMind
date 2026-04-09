@@ -62,12 +62,12 @@ export default function Sidebar({ email }: { email: string }) {
         {/* Logo */}
         <div className="p-6 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-violet-500/25">B</div>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-violet-500/25">M</div>
             <div>
               <div className="text-white font-bold text-xl tracking-tight leading-tight">
-                Bet<span className="text-violet-400">IQ</span>
+                Match<span className="text-violet-400">Mind</span>
               </div>
-              <div className="text-white/30 text-xs">AI Betting Coach</div>
+              <div className="text-white/30 text-xs">AI Football Intelligence</div>
             </div>
           </div>
         </div>

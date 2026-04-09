@@ -26,8 +26,8 @@ export default function Navbar({ email }: { email: string }) {
               </svg>
             </div>
             <div>
-              <span className="text-white font-bold text-xl tracking-tight">Bet<span className="text-violet-400">IQ</span></span>
-              <div className="text-[10px] text-slate-500 -mt-1 leading-none">AI Betting Coach</div>
+              <span className="text-white font-bold text-xl tracking-tight">Match<span className="text-violet-400">Mind</span></span>
+              <div className="text-[10px] text-slate-500 -mt-1 leading-none">AI Football Intelligence</div>
             </div>
           </div>
           <div className="flex items-center gap-3">
