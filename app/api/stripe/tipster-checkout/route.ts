@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Already subscribed' }, { status: 400 })
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.company'
 
   // Create Stripe Checkout session for tipster subscription
   // We create a one-time price on the fly (or use a product per tipster)

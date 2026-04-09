@@ -138,7 +138,7 @@ export default function BecomeTipsterPage() {
   }
 
   const shareText = encodeURIComponent("I just set up my tipster profile on MatchMind — AI-powered football betting tracker. Join me and see if you can beat the AI 👀⚽")
-  const shareUrl = encodeURIComponent("https://matchmindcom.com/signup")
+  const shareUrl = encodeURIComponent("https://matchmindcom.company/signup")
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto">

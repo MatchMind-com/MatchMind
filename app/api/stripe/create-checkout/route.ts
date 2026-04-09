@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/signin', request.url))
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.company'
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'subscription',

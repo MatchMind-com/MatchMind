@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 async function getTodaysPicks() {
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'}/api/public/predictions`,
+      `${process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.company'}/api/public/predictions`,
       { next: { revalidate: 1800 } }
     )
     if (!res.ok) throw new Error()

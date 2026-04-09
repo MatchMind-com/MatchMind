@@ -1,4 +1,4 @@
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.company'
 
 // ─── Day 1: Welcome ───────────────────────────────────────────────────────────
 
@@ -55,7 +55,7 @@ export function buildDay1Email(params: { email: string; name?: string }): { subj
     <p style="color:rgba(255,255,255,0.2);font-size:12px;text-align:center;margin-top:32px;line-height:1.6;">
       You're receiving this because you just signed up to MatchMind.<br>
       Please gamble responsibly. 18+.<br>
-      <a href="${APP_URL}" style="color:rgba(255,255,255,0.3);">matchmindcom.com</a>
+      <a href="${APP_URL}" style="color:rgba(255,255,255,0.3);">matchmindcom.company</a>
     </p>
   </div>
 </body>
@@ -129,7 +129,7 @@ export function buildDay3Email(params: { email: string; name?: string }): { subj
     <!-- Footer -->
     <p style="color:rgba(255,255,255,0.2);font-size:12px;text-align:center;line-height:1.6;">
       MatchMind · Please gamble responsibly · 18+<br>
-      <a href="${APP_URL}" style="color:rgba(255,255,255,0.3);">matchmindcom.com</a>
+      <a href="${APP_URL}" style="color:rgba(255,255,255,0.3);">matchmindcom.company</a>
     </p>
   </div>
 </body>
@@ -201,7 +201,7 @@ export function buildDay6Email(params: { email: string; name?: string }): { subj
     <!-- Footer -->
     <p style="color:rgba(255,255,255,0.15);font-size:12px;text-align:center;line-height:1.6;">
       MatchMind · Please gamble responsibly · 18+<br>
-      <a href="${APP_URL}" style="color:rgba(255,255,255,0.25);">matchmindcom.com</a>
+      <a href="${APP_URL}" style="color:rgba(255,255,255,0.25);">matchmindcom.company</a>
     </p>
   </div>
 </body>
