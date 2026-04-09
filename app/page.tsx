@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import EmailCapture from '@/components/landing/EmailCapture'
 import ActivityStrip from '@/components/landing/ActivityStrip'
 
@@ -62,7 +63,7 @@ export default async function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B0B14]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-violet-500/30">M</div>
+            <Image src="/logo-icon.png" alt="MatchMind" width={36} height={36} className="object-contain" />
             <span className="text-white font-bold text-xl tracking-tight">Match<span className="text-violet-400">Mind</span></span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-white/50">
@@ -787,7 +788,7 @@ export default async function LandingPage() {
       <footer className="border-t border-white/5 py-10 px-4">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm">M</div>
+            <Image src="/logo-icon.png" alt="MatchMind" width={28} height={28} className="object-contain" />
             <span className="text-white/60 font-bold">MatchMind</span>
           </div>
           <p className="text-white/20 text-xs text-center">

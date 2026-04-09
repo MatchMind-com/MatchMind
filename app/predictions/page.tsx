@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 
 export const metadata: Metadata = {
@@ -75,7 +76,7 @@ export default async function PredictionsIndexPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B0B14]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-5xl mx-auto px-4 flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm">M</div>
+            <Image src="/logo-icon.png" alt="MatchMind" width={32} height={32} className="object-contain" />
             <span className="text-white font-bold text-lg tracking-tight">Match<span className="text-violet-400">Mind</span></span>
           </Link>
           <div className="flex items-center gap-4 text-sm">
