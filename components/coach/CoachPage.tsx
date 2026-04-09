@@ -15,7 +15,7 @@ const SUGGESTED_QUESTIONS = [
 
 export default function CoachPage({ userId, bets }: { userId: string; bets: BetSlip[] }) {
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: "Hello! I'm your BetIQ Football Coach — your AI expert for football insights, match analysis, betting strategy, and news. I also have access to your betting history so I can give you truly personalised advice.\n\nWhat would you like to know? You can ask me about upcoming matches, team form, leagues, betting strategies, or I can analyse your personal stats." }
+    { role: 'assistant', content: "Hello! I'm your MatchMind Football Coach — your AI expert for football insights, match analysis, betting strategy, and news. I also have access to your betting history so I can give you truly personalised advice.\n\nWhat would you like to know? You can ask me about upcoming matches, team form, leagues, betting strategies, or I can analyse your personal stats." }
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)

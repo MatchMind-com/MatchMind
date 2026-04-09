@@ -137,8 +137,8 @@ export default function BecomeTipsterPage() {
     router.push('/dashboard/my-tipster')
   }
 
-  const shareText = encodeURIComponent("I just set up my tipster profile on BetIQ — AI-powered football betting tracker. Join me and see if you can beat the AI 👀⚽")
-  const shareUrl = encodeURIComponent("https://footballbetai.vercel.app/signup")
+  const shareText = encodeURIComponent("I just set up my tipster profile on MatchMind — AI-powered football betting tracker. Join me and see if you can beat the AI 👀⚽")
+  const shareUrl = encodeURIComponent("https://matchmindcom.com/signup")
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto">
@@ -153,7 +153,7 @@ export default function BecomeTipsterPage() {
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400">Into Monthly Income</span>
         </h1>
         <p className="text-white/50 text-base max-w-xl mx-auto mb-6">
-          Post your tips, build a verified track record, and earn from subscribers — all on BetIQ's growing platform.
+          Post your tips, build a verified track record, and earn from subscribers — all on MatchMind's growing platform.
           Founding tipsters keep <span className="text-amber-300 font-bold">90%</span> of every subscription.
         </p>
         {!showForm && (
@@ -368,7 +368,7 @@ export default function BecomeTipsterPage() {
           <div className="text-left space-y-3 max-w-2xl mx-auto">
             <p className="text-white/40 text-xs font-semibold uppercase tracking-widest text-center mb-4">Common Questions</p>
             {[
-              { q: 'Do I need a big following?', a: 'No. BetIQ brings the audience to you. A verifiable track record is all you need to start attracting subscribers.' },
+              { q: 'Do I need a big following?', a: 'No. MatchMind brings the audience to you. A verifiable track record is all you need to start attracting subscribers.' },
               { q: 'How are results verified?', a: 'All tips and results are logged on-platform. You can\'t edit results after the match — subscribers can trust what they see.' },
               { q: 'When do I get paid?', a: 'Monthly payouts via bank transfer or PayPal. Minimum withdrawal is £20.' },
               { q: 'What is the 90/10 split?', a: 'Founding tipsters keep 90% of every subscription for the life of the account. Standard tipsters keep 80%.' },

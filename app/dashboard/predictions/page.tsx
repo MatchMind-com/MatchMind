@@ -189,7 +189,7 @@ export default function PredictionsPage() {
     if (!acca) return
     const text = acca.legs.map((l, i) =>
       `${i + 1}. ${l.home_team} vs ${l.away_team} — ${l.bet_type} @ ${l.odds}`
-    ).join('\n') + `\n\nCombined odds: ${acca.combined_odds} | Combined EV: +${acca.combined_ev}%\nBuilt by BetIQ AI`
+    ).join('\n') + `\n\nCombined odds: ${acca.combined_odds} | Combined EV: +${acca.combined_ev}%\nBuilt by MatchMind AI`
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)

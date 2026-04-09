@@ -3,9 +3,9 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'AI Prediction Track Record — Verified Results',
-  description: 'Every BetIQ AI prediction is logged before kickoff and auto-verified against official results. No cherry-picking, no edited history — full transparency on win rate and ROI.',
+  description: 'Every MatchMind AI prediction is logged before kickoff and auto-verified against official results. No cherry-picking, no edited history — full transparency on win rate and ROI.',
   openGraph: {
-    title: 'BetIQ AI Prediction Track Record — Verified Results',
+    title: 'MatchMind AI Prediction Track Record — Verified Results',
     description: 'Transparent, auto-verified AI football predictions. See win rate, ROI, and every pick — logged before kickoff.',
   },
 }
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 async function getTrackRecord() {
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'https://footballbetai.vercel.app'}/api/track-record`,
+      `${process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'}/api/track-record`,
       { next: { revalidate: 3600 } }
     )
     if (!res.ok) throw new Error()
@@ -127,7 +127,7 @@ export default async function TrackRecordPage() {
             <span className="text-xl">📊</span>
             <div>
               <p className="text-amber-300 font-semibold">Example data — real predictions building now</p>
-              <p className="text-white/40 text-xs mt-0.5">These figures show what a typical BetIQ AI track record looks like. Real verified predictions will appear here within the first week.</p>
+              <p className="text-white/40 text-xs mt-0.5">These figures show what a typical MatchMind AI track record looks like. Real verified predictions will appear here within the first week.</p>
             </div>
           </div>
         )}

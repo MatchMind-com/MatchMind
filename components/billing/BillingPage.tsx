@@ -109,7 +109,7 @@ export default function BillingPage({ profile }: { profile: any }) {
         <h1 className="text-2xl font-bold text-white mb-1">Billing & Plans</h1>
         <p className="text-gray-400 text-sm">
           {tier === 'free'
-            ? 'Upgrade to unlock the full power of BetIQ'
+            ? 'Upgrade to unlock the full power of MatchMind'
             : `You're on the ${tier.charAt(0).toUpperCase() + tier.slice(1)} plan${periodEnd ? ` — renews ${periodEnd}` : ''}`}
         </p>
       </div>

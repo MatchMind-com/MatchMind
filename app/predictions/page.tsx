@@ -3,10 +3,10 @@ import Link from 'next/link'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 
 export const metadata: Metadata = {
-  title: "Today's AI Football Predictions — Free Match Tips | BetIQ",
-  description: "Free AI-generated football match predictions with EV analysis. BetIQ analyses 15 leagues daily — see today's picks before kickoff.",
+  title: "Today's AI Football Predictions — Free Match Tips | MatchMind",
+  description: "Free AI-generated football match predictions with EV analysis. MatchMind analyses 15 leagues daily — see today's picks before kickoff.",
   openGraph: {
-    title: "Today's AI Football Predictions — BetIQ",
+    title: "Today's AI Football Predictions — MatchMind",
     description: "AI-powered match predictions across Premier League, La Liga, Champions League and more. Free, updated daily.",
   },
 }

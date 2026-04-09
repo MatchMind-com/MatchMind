@@ -120,7 +120,7 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
         {/* Loss Limit */}
         <div className="mb-5">
           <p className="text-white text-sm font-medium mb-1">Weekly Loss Limit</p>
-          <p className="text-white/40 text-xs mb-3">Set a weekly P&L floor. BetIQ will warn you when you approach or exceed this limit.</p>
+          <p className="text-white/40 text-xs mb-3">Set a weekly P&L floor. MatchMind will warn you when you approach or exceed this limit.</p>
           <div className="flex items-center gap-3">
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">£</span>

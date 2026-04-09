@@ -8,7 +8,7 @@ const supabaseAdmin = createAdmin(
 )
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://footballbetai.vercel.app'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 
 export async function POST(req: NextRequest) {
   try {
@@ -66,9 +66,9 @@ export async function POST(req: NextRequest) {
         </div>`
 
     await resend.emails.send({
-      from: 'BetIQ <reports@betiq.ai>',
+      from: 'MatchMind <reports@matchmindcom.com>',
       to: normalised,
-      subject: hasRealBets ? `⚡ Today's top ${topBets!.length} value bet${topBets!.length > 1 ? 's' : ''} — BetIQ` : '⚡ You\'re on the BetIQ list — BetIQ',
+      subject: hasRealBets ? `⚡ Today's top ${topBets!.length} value bet${topBets!.length > 1 ? 's' : ''} — MatchMind` : '⚡ You\'re on the MatchMind list — MatchMind',
       html: `
         <!DOCTYPE html>
         <html>

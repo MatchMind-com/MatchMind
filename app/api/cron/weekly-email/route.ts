@@ -12,7 +12,7 @@ const supabaseAdmin = createClient(
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const resend = new Resend(process.env.RESEND_API_KEY!)
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://footballbetai.vercel.app'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 
 // Vercel Cron hits this with Authorization: Bearer <CRON_SECRET>
 export async function GET(req: NextRequest) {
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
       })
 
       const { error: emailError } = await resend.emails.send({
-        from: 'BetIQ <reports@betiq.ai>',
+        from: 'MatchMind <reports@matchmindcom.com>',
         to: profile.email,
         subject,
         html,
@@ -132,7 +132,7 @@ async function generateReport(bets: Array<Record<string, unknown>>) {
       response_format: { type: 'json_object' },
       messages: [{
         role: 'system',
-        content: 'You are BetIQ, an expert football betting coach. Generate honest, insightful weekly reports. Be specific and constructive. Return valid JSON only.'
+        content: 'You are MatchMind, an expert football betting coach. Generate honest, insightful weekly reports. Be specific and constructive. Return valid JSON only.'
       }, {
         role: 'user',
         content: `Weekly betting report for last 7 days:

@@ -6,7 +6,7 @@ import ActivityStrip from '@/components/landing/ActivityStrip'
 
 async function getLiveStats() {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://footballbetai.vercel.app'}/api/stats/public`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'}/api/stats/public`, {
       next: { revalidate: 300 },
     })
     if (!res.ok) throw new Error()
@@ -18,7 +18,7 @@ async function getLiveStats() {
 
 async function getPublicPredictions() {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://footballbetai.vercel.app'}/api/public/predictions`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'}/api/public/predictions`, {
       next: { revalidate: 300 },
     })
     if (!res.ok) throw new Error()
@@ -481,7 +481,7 @@ export default async function LandingPage() {
                     <div className="flex items-center gap-2 mb-0.5">
                       <p className="text-white font-bold text-sm">
                         {stats.users > 0 ? `${stats.users.toLocaleString()} bettors` : 'Growing fast'}
-                        {' '}already on BetIQ
+                        {' '}already on MatchMind
                       </p>
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     </div>
@@ -521,7 +521,7 @@ export default async function LandingPage() {
               { icon: '🛒', title: 'Tipster Marketplace', desc: 'Browse verified tipsters sorted by ROI. Every record is auto-tracked — no fake screenshots.', badge: 'New', badgeColor: 'text-amber-300 bg-amber-500/10 border-amber-500/20' },
               { icon: '🏥', title: 'Injury & Lineup Feed', desc: 'Real-time injury reports and confirmed lineups for every match, direct from API-Football.', badge: 'Live', badgeColor: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20' },
               { icon: '📋', title: 'Weekly Report Card', desc: 'AI grades your week — strengths, weaknesses, best call, worst call, and one tip to improve.', badge: null, badgeColor: '' },
-              { icon: '🏆', title: 'Leaderboard', desc: 'See how your performance ranks against other BetIQ users. Compete on ROI and win rate.', badge: null, badgeColor: '' },
+              { icon: '🏆', title: 'Leaderboard', desc: 'See how your performance ranks against other MatchMind users. Compete on ROI and win rate.', badge: null, badgeColor: '' },
             ].map((f, i) => (
               <div key={i} className="bg-[#12121F] border border-white/8 rounded-2xl p-5 hover:border-white/15 transition-all group">
                 <div className="flex items-start justify-between mb-3">
@@ -635,10 +635,10 @@ export default async function LandingPage() {
           <h2 className="text-3xl font-black text-center mb-12">Common questions</h2>
           <div className="space-y-4">
             {[
-              { q: 'Is BetIQ a tipster service?', a: "No. BetIQ is an analytics and intelligence platform. The AI Predictions feature surfaces value bets based on mathematical edge — but you decide what to place. The Tipster Marketplace connects you with independent human tipsters who have verified track records." },
-              { q: 'What makes BetIQ different from free odds sites?', a: "Free odds sites show you odds. BetIQ shows you which bets have a mathematical edge over the bookmaker (positive Expected Value), feeds AI analysis from real injury and lineup data, and tracks whether the AI is actually profitable over time — something no free tool does." },
+              { q: 'Is MatchMind a tipster service?', a: "No. MatchMind is an analytics and intelligence platform. The AI Predictions feature surfaces value bets based on mathematical edge — but you decide what to place. The Tipster Marketplace connects you with independent human tipsters who have verified track records." },
+              { q: 'What makes MatchMind different from free odds sites?', a: "Free odds sites show you odds. MatchMind shows you which bets have a mathematical edge over the bookmaker (positive Expected Value), feeds AI analysis from real injury and lineup data, and tracks whether the AI is actually profitable over time — something no free tool does." },
               { q: 'How does EV% work?', a: "Expected Value measures whether a bet is worth taking. If the AI calculates a 65% chance of Over 2.5 Goals but Bet365 prices it as if there's only a 55% chance, that's a positive EV bet — you have an edge. We show the exact EV% so you can prioritise the best bets." },
-              { q: 'Is it legal in the UK?', a: 'Yes. BetIQ is an analytics tool, not a bookmaker. Using betting analytics software is perfectly legal in the UK. Always gamble responsibly. 18+.' },
+              { q: 'Is it legal in the UK?', a: 'Yes. MatchMind is an analytics tool, not a bookmaker. Using betting analytics software is perfectly legal in the UK. Always gamble responsibly. 18+.' },
               { q: 'Can I cancel anytime?', a: 'Yes, cancel any time with one click from your billing page. No contracts, no cancellation fees. Your data stays accessible on the free plan indefinitely.' },
             ].map((item, i) => (
               <div key={i} className="bg-[#12121F] border border-white/8 rounded-2xl p-5">
@@ -672,7 +672,7 @@ export default async function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-14">
             {[
               {
-                quote: "Finally stopped guessing. The EV breakdown made me realise I was taking terrible value on favourites for years. First month using BetIQ I had my best ROI ever.",
+                quote: "Finally stopped guessing. The EV breakdown made me realise I was taking terrible value on favourites for years. First month using MatchMind I had my best ROI ever.",
                 name: "James R.",
                 detail: "Premier League bettor · 3 months on Pro",
                 rating: 5,
@@ -788,7 +788,7 @@ export default async function LandingPage() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm">B</div>
-            <span className="text-white/60 font-bold">BetIQ</span>
+            <span className="text-white/60 font-bold">MatchMind</span>
           </div>
           <p className="text-white/20 text-xs text-center">
             For analytics and entertainment purposes only. Please gamble responsibly. 18+ only.

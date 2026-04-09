@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 async function getTodaysPicks() {
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'https://footballbetai.vercel.app'}/api/public/predictions`,
+      `${process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'}/api/public/predictions`,
       { next: { revalidate: 1800 } }
     )
     if (!res.ok) throw new Error()
@@ -168,8 +168,8 @@ export default async function ValueBetsPage() {
           <h2 className="text-2xl font-black text-white">Frequently Asked Questions</h2>
           {[
             {
-              q: 'How does BetIQ find value bets?',
-              a: 'BetIQ\'s AI analyses team form, injuries, head-to-head records, and market odds across 15 leagues. It calculates the true probability of each outcome and flags bets where the bookmaker odds imply a lower probability than the AI estimates — these are called value bets.',
+              q: 'How does MatchMind find value bets?',
+              a: 'MatchMind\'s AI analyses team form, injuries, head-to-head records, and market odds across 15 leagues. It calculates the true probability of each outcome and flags bets where the bookmaker odds imply a lower probability than the AI estimates — these are called value bets.',
             },
             {
               q: 'What is Expected Value (EV) in betting?',
@@ -177,11 +177,11 @@ export default async function ValueBetsPage() {
             },
             {
               q: 'Are these football tips guaranteed to win?',
-              a: 'No tip service can guarantee wins. BetIQ\'s AI identifies statistical edges using Expected Value — bets that are priced better than their true probability. Over a large sample, positive EV bets should be profitable, but variance means short-term losing runs are normal.',
+              a: 'No tip service can guarantee wins. MatchMind\'s AI identifies statistical edges using Expected Value — bets that are priced better than their true probability. Over a large sample, positive EV bets should be profitable, but variance means short-term losing runs are normal.',
             },
             {
-              q: 'Which football leagues does BetIQ cover?',
-              a: 'BetIQ currently covers Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Champions League, Europa League, Championship, Turkish Süper Lig, and more — 15 leagues in total.',
+              q: 'Which football leagues does MatchMind cover?',
+              a: 'MatchMind currently covers Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Champions League, Europa League, Championship, Turkish Süper Lig, and more — 15 leagues in total.',
             },
           ].map((item, i) => (
             <div key={i} className="border-b border-white/5 pb-5">
@@ -192,7 +192,7 @@ export default async function ValueBetsPage() {
         </div>
 
         <p className="text-white/15 text-xs text-center mt-10">
-          18+ only. Gambling involves risk. BetIQ picks are for entertainment and educational purposes — not financial advice. Please bet responsibly. <a href="https://www.begambleaware.org" className="underline" target="_blank" rel="noopener noreferrer">BeGambleAware.org</a>
+          18+ only. Gambling involves risk. MatchMind picks are for entertainment and educational purposes — not financial advice. Please bet responsibly. <a href="https://www.begambleaware.org" className="underline" target="_blank" rel="noopener noreferrer">BeGambleAware.org</a>
         </p>
       </div>
     </div>

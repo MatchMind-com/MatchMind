@@ -1,10 +1,10 @@
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://footballbetai.vercel.app'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 
 // ─── Day 1: Welcome ───────────────────────────────────────────────────────────
 
 export function buildDay1Email(params: { email: string; name?: string }): { subject: string; html: string } {
   const name = params.name || 'there'
-  const subject = '⚡ Welcome to BetIQ — here\'s how to get your edge'
+  const subject = '⚡ Welcome to MatchMind — here\'s how to get your edge'
 
   const html = `
 <!DOCTYPE html>
@@ -16,7 +16,7 @@ export function buildDay1Email(params: { email: string; name?: string }): { subj
     <!-- Logo -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:36px;">
       <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#7C3AED,#4F46E5);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#fff;">B</div>
-      <span style="font-weight:700;font-size:16px;color:#fff;">BetIQ</span>
+      <span style="font-weight:700;font-size:16px;color:#fff;">MatchMind</span>
     </div>
 
     <!-- Hero -->
@@ -53,9 +53,9 @@ export function buildDay1Email(params: { email: string; name?: string }): { subj
 
     <!-- Footer -->
     <p style="color:rgba(255,255,255,0.2);font-size:12px;text-align:center;margin-top:32px;line-height:1.6;">
-      You're receiving this because you just signed up to BetIQ.<br>
+      You're receiving this because you just signed up to MatchMind.<br>
       Please gamble responsibly. 18+.<br>
-      <a href="${APP_URL}" style="color:rgba(255,255,255,0.3);">betiq.ai</a>
+      <a href="${APP_URL}" style="color:rgba(255,255,255,0.3);">matchmindcom.com</a>
     </p>
   </div>
 </body>
@@ -80,7 +80,7 @@ export function buildDay3Email(params: { email: string; name?: string }): { subj
     <!-- Logo -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:36px;">
       <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#7C3AED,#4F46E5);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#fff;">B</div>
-      <span style="font-weight:700;font-size:16px;color:#fff;">BetIQ</span>
+      <span style="font-weight:700;font-size:16px;color:#fff;">MatchMind</span>
     </div>
 
     <!-- Hero -->
@@ -128,8 +128,8 @@ export function buildDay3Email(params: { email: string; name?: string }): { subj
 
     <!-- Footer -->
     <p style="color:rgba(255,255,255,0.2);font-size:12px;text-align:center;line-height:1.6;">
-      BetIQ · Please gamble responsibly · 18+<br>
-      <a href="${APP_URL}" style="color:rgba(255,255,255,0.3);">betiq.ai</a>
+      MatchMind · Please gamble responsibly · 18+<br>
+      <a href="${APP_URL}" style="color:rgba(255,255,255,0.3);">matchmindcom.com</a>
     </p>
   </div>
 </body>
@@ -154,7 +154,7 @@ export function buildDay6Email(params: { email: string; name?: string }): { subj
     <!-- Logo -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:36px;">
       <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#7C3AED,#4F46E5);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#fff;">B</div>
-      <span style="font-weight:700;font-size:16px;color:#fff;">BetIQ</span>
+      <span style="font-weight:700;font-size:16px;color:#fff;">MatchMind</span>
     </div>
 
     <!-- Urgency bar -->
@@ -200,8 +200,8 @@ export function buildDay6Email(params: { email: string; name?: string }): { subj
 
     <!-- Footer -->
     <p style="color:rgba(255,255,255,0.15);font-size:12px;text-align:center;line-height:1.6;">
-      BetIQ · Please gamble responsibly · 18+<br>
-      <a href="${APP_URL}" style="color:rgba(255,255,255,0.25);">betiq.ai</a>
+      MatchMind · Please gamble responsibly · 18+<br>
+      <a href="${APP_URL}" style="color:rgba(255,255,255,0.25);">matchmindcom.com</a>
     </p>
   </div>
 </body>

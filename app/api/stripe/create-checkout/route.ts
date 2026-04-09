@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const plan = searchParams.get('plan') as 'pro' | 'elite'
-    const coupon = searchParams.get('coupon') // e.g. BETIQ20
+    const coupon = searchParams.get('coupon') // e.g. MATCHMIND20
 
     if (!plan || !PLANS[plan]) {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/signin', request.url))
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://footballbetai.vercel.app'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'subscription',
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       cancel_url: `${appUrl}/dashboard?upgrade=cancelled`,
     }
 
-    // Apply coupon if provided (e.g. BETIQ20)
+    // Apply coupon if provided (e.g. MATCHMIND20)
     if (coupon) {
       // Look up or create the coupon in Stripe
       try {
