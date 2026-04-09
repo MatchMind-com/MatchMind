@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export const metadata: Metadata = {
   title: 'AI Prediction Track Record — Verified Results',
@@ -81,7 +82,7 @@ function ResultBadge({ result }: { result: string }) {
 export default async function TrackRecordPage() {
   const { stats: realStats, byLeague: realByLeague, byBetType: realByBetType, recent: realRecent } = await getTrackRecord()
 
-  const hasRealData = realStats && realStats.total > 0
+  const hasRealData = realStats && realStats.total > 50
   const stats = hasRealData ? realStats : DEMO_STATS
   const byLeague = hasRealData ? realByLeague : DEMO_BY_LEAGUE
   const byBetType = hasRealData ? realByBetType : DEMO_BY_TYPE
@@ -94,7 +95,7 @@ export default async function TrackRecordPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B0B14]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg">M</div>
+            <Image src="/logo-icon.png" alt="MatchMind" width={36} height={36} className="object-contain" />
             <span className="text-white font-bold text-xl tracking-tight">Match<span className="text-violet-400">Mind</span></span>
           </Link>
           <div className="flex items-center gap-3">
