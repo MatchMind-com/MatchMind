@@ -8,7 +8,7 @@ const supabaseAdmin = createAdmin(
 )
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.company'
 
 export async function POST(req: NextRequest) {
   try {
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
         </div>`
 
     await resend.emails.send({
-      from: 'MatchMind <reports@matchmindcom.com>',
+      from: 'MatchMind <reports@matchmindcom.company>',
       to: normalised,
       subject: hasRealBets ? `⚡ Today's top ${topBets!.length} value bet${topBets!.length > 1 ? 's' : ''} — MatchMind` : '⚡ You\'re on the MatchMind list — MatchMind',
       html: `

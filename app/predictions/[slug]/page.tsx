@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.company'
 
 const supabaseAdmin = createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

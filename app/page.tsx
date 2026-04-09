@@ -6,7 +6,7 @@ import ActivityStrip from '@/components/landing/ActivityStrip'
 
 async function getLiveStats() {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'}/api/stats/public`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.company'}/api/stats/public`, {
       next: { revalidate: 300 },
     })
     if (!res.ok) throw new Error()
@@ -18,7 +18,7 @@ async function getLiveStats() {
 
 async function getPublicPredictions() {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'}/api/public/predictions`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.company'}/api/public/predictions`, {
       next: { revalidate: 300 },
     })
     if (!res.ok) throw new Error()

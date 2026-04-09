@@ -13,7 +13,7 @@ const supabaseAdmin = createClient(
 )
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
-const FROM = 'MatchMind <hello@matchmindcom.com>'
+const FROM = 'MatchMind <hello@matchmindcom.company>'
 
 /**
  * Vercel Cron — runs daily at 09:00 UTC.

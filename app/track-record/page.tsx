@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 async function getTrackRecord() {
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'}/api/track-record`,
+      `${process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.company'}/api/track-record`,
       { next: { revalidate: 3600 } }
     )
     if (!res.ok) throw new Error()

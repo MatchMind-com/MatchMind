@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 
-const APP_URL = 'https://matchmindcom.com'
+const APP_URL = 'https://matchmindcom.company'
 
 interface Props {
   referralCode: string

@@ -24,7 +24,7 @@ function ShareModal({ bet, onClose }: { bet: BetSlip; onClose: () => void }) {
   const isWin = bet.result === 'win'
   const pnlStr = `${pl >= 0 ? '+' : ''}£${Math.abs(pl).toFixed(2)}`
 
-  const shareText = `${isWin ? '🔥 Won' : '✅'} ${bet.match_name}\n${bet.selection} @ ${Number(bet.odds).toFixed(2)}\n${bet.bet_type} · Stake £${Number(bet.stake).toFixed(2)} · P&L ${pnlStr}\n\nTracked with MatchMind — AI Betting Coach 📊\nmatchmindcom.com`
+  const shareText = `${isWin ? '🔥 Won' : '✅'} ${bet.match_name}\n${bet.selection} @ ${Number(bet.odds).toFixed(2)}\n${bet.bet_type} · Stake £${Number(bet.stake).toFixed(2)} · P&L ${pnlStr}\n\nTracked with MatchMind — AI Betting Coach 📊\nmatchmindcom.company`
 
   async function copyText() {
     await navigator.clipboard.writeText(shareText)
@@ -75,7 +75,7 @@ function ShareModal({ bet, onClose }: { bet: BetSlip; onClose: () => void }) {
           </div>
 
           {/* Footer */}
-          <p className="text-white/20 text-[10px] text-center mt-4">Tracked & verified with MatchMind · matchmindcom.com</p>
+          <p className="text-white/20 text-[10px] text-center mt-4">Tracked & verified with MatchMind · matchmindcom.company</p>
         </div>
 
         {/* Actions */}
