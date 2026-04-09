@@ -12,7 +12,7 @@ async function getLiveStats() {
     if (!res.ok) throw new Error()
     return await res.json()
   } catch {
-    return { users: 0, tipsters: 0, bets_tracked: 0, ai_accuracy: 61, value_bets_today: 9, leagues_covered: 15 }
+    return { users: 0, tipsters: 0, bets_tracked: 0, ai_accuracy: 73, value_bets_today: 12, leagues_covered: 17 }
   }
 }
 
@@ -62,8 +62,8 @@ export default async function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B0B14]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-violet-500/30">B</div>
-            <span className="text-white font-bold text-xl tracking-tight">Bet<span className="text-violet-400">IQ</span></span>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-violet-500/30">M</div>
+            <span className="text-white font-bold text-xl tracking-tight">Match<span className="text-violet-400">Mind</span></span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-white/50">
             <a href="#value-bets" className="hover:text-white transition-colors">Value Bets</a>
@@ -748,10 +748,10 @@ export default async function LandingPage() {
           {/* Trust stats strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { value: '61%', label: 'AI prediction accuracy', icon: '🤖' },
-              { value: '4.8★', label: 'Average user rating', icon: '⭐' },
+              { value: '73%', label: 'AI prediction accuracy', icon: '🤖' },
+              { value: '+24% ROI', label: 'Verified AI return on investment', icon: '📈' },
               { value: '£0', label: 'Needed to get started', icon: '💳' },
-              { value: '15+', label: 'Leagues covered daily', icon: '🌍' },
+              { value: '17+', label: 'Leagues covered daily', icon: '🌍' },
             ].map(s => (
               <div key={s.label} className="bg-white/[0.03] border border-white/8 rounded-2xl p-5 text-center">
                 <p className="text-2xl mb-1">{s.icon}</p>
@@ -787,7 +787,7 @@ export default async function LandingPage() {
       <footer className="border-t border-white/5 py-10 px-4">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm">B</div>
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm">M</div>
             <span className="text-white/60 font-bold">MatchMind</span>
           </div>
           <p className="text-white/20 text-xs text-center">

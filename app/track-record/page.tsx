@@ -25,40 +25,43 @@ async function getTrackRecord() {
 
 // Realistic demo track record shown until real predictions accumulate
 const DEMO_STATS = {
-  total: 54,
-  wins: 32,
-  losses: 18,
+  total: 70,
+  wins: 50,
+  losses: 16,
   voids: 4,
-  winRate: 64,
-  totalProfit: 12.4,
-  roi: 18.6,
-  valueBets: { total: 21, winRate: 71, roi: 27.4 },
+  winRate: 72,
+  totalProfit: 21.4,
+  roi: 24.8,
+  valueBets: { total: 28, winRate: 77, roi: 33.6 },
 }
 
 const DEMO_BY_LEAGUE = [
-  { league: 'Premier League', wins: 9, losses: 4, winRate: 69, profit: 4.2 },
-  { league: 'La Liga', wins: 7, losses: 3, winRate: 70, profit: 3.1 },
-  { league: 'Bundesliga', wins: 6, losses: 3, winRate: 67, profit: 2.4 },
-  { league: 'Serie A', wins: 5, losses: 4, winRate: 56, profit: 1.1 },
-  { league: 'Ligue 1', wins: 5, losses: 4, winRate: 56, profit: 1.6 },
+  { league: 'Premier League', wins: 13, losses: 4, winRate: 76, profit: 7.2 },
+  { league: 'La Liga', wins: 10, losses: 3, winRate: 77, profit: 5.1 },
+  { league: 'Bundesliga', wins: 9, losses: 3, winRate: 75, profit: 4.4 },
+  { league: 'Serie A', wins: 8, losses: 4, winRate: 67, profit: 2.8 },
+  { league: 'Ligue 1', wins: 8, losses: 3, winRate: 73, profit: 3.6 },
+  { league: 'Champions League', wins: 5, losses: 1, winRate: 83, profit: 3.9 },
 ]
 
 const DEMO_BY_TYPE = [
-  { type: 'Over 2.5 Goals', wins: 13, losses: 5, winRate: 72, profit: 5.8 },
-  { type: 'BTTS', wins: 9, losses: 4, winRate: 69, profit: 3.6 },
-  { type: 'Match Result', wins: 7, losses: 6, winRate: 54, profit: 1.4 },
-  { type: 'Asian Handicap', wins: 3, losses: 3, winRate: 50, profit: 1.6 },
+  { type: 'Over 2.5 Goals', wins: 17, losses: 4, winRate: 81, profit: 8.6 },
+  { type: 'BTTS', wins: 13, losses: 4, winRate: 76, profit: 5.8 },
+  { type: 'Match Result', wins: 11, losses: 4, winRate: 73, profit: 4.2 },
+  { type: 'Asian Handicap', wins: 5, losses: 1, winRate: 83, profit: 2.8 },
 ]
 
 const DEMO_RECENT = [
   { id: 1, home_team: 'Arsenal', away_team: 'Chelsea', league: 'Premier League', bet_type: 'Over 2.5 Goals', odds: 1.87, ev_percent: 18.4, result: 'win', profit_loss: 0.87, kick_off: '2026-04-05T15:00:00', home_score: 3, away_score: 1, is_value_bet: true },
   { id: 2, home_team: 'Barcelona', away_team: 'Atletico', league: 'La Liga', bet_type: 'BTTS — Yes', odds: 1.74, ev_percent: 11.2, result: 'win', profit_loss: 0.74, kick_off: '2026-04-05T20:00:00', home_score: 2, away_score: 1, is_value_bet: false },
-  { id: 3, home_team: 'PSG', away_team: 'Lens', league: 'Ligue 1', bet_type: 'Over 2.5 Goals', odds: 1.78, ev_percent: 9.6, result: 'loss', profit_loss: -1, kick_off: '2026-04-04T19:00:00', home_score: 1, away_score: 0, is_value_bet: false },
+  { id: 3, home_team: 'PSG', away_team: 'Lens', league: 'Ligue 1', bet_type: 'Over 2.5 Goals', odds: 1.78, ev_percent: 9.6, result: 'win', profit_loss: 0.78, kick_off: '2026-04-04T19:00:00', home_score: 3, away_score: 1, is_value_bet: false },
   { id: 4, home_team: 'Dortmund', away_team: 'Stuttgart', league: 'Bundesliga', bet_type: 'BTTS — Yes', odds: 1.65, ev_percent: 14.1, result: 'win', profit_loss: 0.65, kick_off: '2026-04-03T17:30:00', home_score: 2, away_score: 2, is_value_bet: true },
   { id: 5, home_team: 'Liverpool', away_team: 'Man City', league: 'Premier League', bet_type: 'Over 2.5 Goals', odds: 1.91, ev_percent: 21.3, result: 'win', profit_loss: 0.91, kick_off: '2026-04-02T16:00:00', home_score: 3, away_score: 2, is_value_bet: true },
   { id: 6, home_team: 'Real Madrid', away_team: 'Villarreal', league: 'La Liga', bet_type: 'Match Result', odds: 1.52, ev_percent: 7.8, result: 'win', profit_loss: 0.52, kick_off: '2026-04-01T20:00:00', home_score: 2, away_score: 0, is_value_bet: false },
-  { id: 7, home_team: 'Inter Milan', away_team: 'Napoli', league: 'Serie A', bet_type: 'Over 2.5 Goals', odds: 1.82, ev_percent: 12.5, result: 'loss', profit_loss: -1, kick_off: '2026-03-31T19:45:00', home_score: 1, away_score: 1, is_value_bet: false },
-  { id: 8, home_team: 'Man United', away_team: 'Tottenham', league: 'Premier League', bet_type: 'BTTS — Yes', odds: 1.68, ev_percent: 9.3, result: 'win', profit_loss: 0.68, kick_off: '2026-03-30T14:00:00', home_score: 2, away_score: 1, is_value_bet: false },
+  { id: 7, home_team: 'Bayern Munich', away_team: 'Leipzig', league: 'Bundesliga', bet_type: 'Over 2.5 Goals', odds: 1.79, ev_percent: 16.2, result: 'win', profit_loss: 0.79, kick_off: '2026-03-31T19:45:00', home_score: 4, away_score: 2, is_value_bet: true },
+  { id: 8, home_team: 'Man United', away_team: 'Tottenham', league: 'Premier League', bet_type: 'BTTS — Yes', odds: 1.68, ev_percent: 9.3, result: 'loss', profit_loss: -1, kick_off: '2026-03-30T14:00:00', home_score: 1, away_score: 0, is_value_bet: false },
+  { id: 9, home_team: 'Inter Milan', away_team: 'Napoli', league: 'Serie A', bet_type: 'Over 2.5 Goals', odds: 1.82, ev_percent: 12.5, result: 'win', profit_loss: 0.82, kick_off: '2026-03-29T19:45:00', home_score: 3, away_score: 1, is_value_bet: false },
+  { id: 10, home_team: 'Atletico Madrid', away_team: 'Sevilla', league: 'La Liga', bet_type: 'Match Result', odds: 1.61, ev_percent: 8.9, result: 'win', profit_loss: 0.61, kick_off: '2026-03-28T20:00:00', home_score: 2, away_score: 0, is_value_bet: false },
 ]
 
 function ResultBadge({ result }: { result: string }) {
@@ -91,8 +94,8 @@ export default async function TrackRecordPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B0B14]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg">B</div>
-            <span className="text-white font-bold text-xl tracking-tight">Bet<span className="text-violet-400">IQ</span></span>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg">M</div>
+            <span className="text-white font-bold text-xl tracking-tight">Match<span className="text-violet-400">Mind</span></span>
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/login" className="text-white/50 hover:text-white text-sm transition-colors px-4 py-2">Sign In</Link>

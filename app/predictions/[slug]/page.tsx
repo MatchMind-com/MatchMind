@@ -107,8 +107,8 @@ export default async function MatchPredictionPage({ params }: { params: { slug: 
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B0B14]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-5xl mx-auto px-4 flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm">B</div>
-            <span className="text-white font-bold text-lg tracking-tight">Bet<span className="text-violet-400">IQ</span></span>
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm">M</div>
+            <span className="text-white font-bold text-lg tracking-tight">Match<span className="text-violet-400">Mind</span></span>
           </Link>
           <div className="flex items-center gap-4 text-sm">
             <Link href="/predictions" className="text-white/50 hover:text-white transition-colors">All Predictions</Link>
