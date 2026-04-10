@@ -251,3 +251,4 @@ export default function Sidebar({ email }: { email: string }) {
     </>
   )
 }
+/* sidebar v2 */
