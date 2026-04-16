@@ -29,6 +29,7 @@ const SECTIONS: Section[] = [
       { href: '/dashboard', label: 'Dashboard', exact: true },
       { href: '/dashboard/statistics', label: 'Statistics', exact: false },
       { href: '/dashboard/bankroll', label: 'Bankroll', exact: false },
+      { href: '/track-record', label: 'Track Record', exact: false },
     ],
   },
   {
@@ -41,22 +42,7 @@ const SECTIONS: Section[] = [
     ),
     items: [
       { href: '/dashboard/predictions', label: 'AI Predictions', exact: false },
-      { href: '/dashboard/suggestions', label: 'AI Suggestions', exact: false },
       { href: '/dashboard/coach', label: 'Football Coach', exact: false },
-    ],
-  },
-  {
-    key: 'community',
-    label: 'Community',
-    icon: (open, active) => (
-      <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
-    items: [
-      { href: '/dashboard/leaderboard', label: 'Leaderboard', exact: false },
-      { href: '/dashboard/marketplace', label: 'Marketplace', exact: false },
-      { href: '/dashboard/my-tipster', label: 'My Tipster', exact: false },
     ],
   },
   {
@@ -69,7 +55,6 @@ const SECTIONS: Section[] = [
       </svg>
     ),
     items: [
-      { href: '/dashboard/referral', label: 'Refer a Friend', exact: false },
       { href: '/dashboard/billing', label: 'Billing', exact: false },
       { href: '/dashboard/settings', label: 'Settings', exact: false },
     ],
@@ -251,4 +236,3 @@ export default function Sidebar({ email }: { email: string }) {
     </>
   )
 }
-/* sidebar v2 */

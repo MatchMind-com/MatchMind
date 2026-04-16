@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { effectiveTier } from '@/lib/trial'
 
 interface BookmakerOdds {
   home: number | null
@@ -43,8 +42,10 @@ interface Prediction {
   bookmaker: BookmakerOdds | null
   ev: { home: number | null; draw: number | null; away: number | null; over25: number | null; btts: number | null }
   best_value: ValueBet | null
+  pinnacle_edge: { market: string; edge_pct: number; pinnacle_odds: number; bet365_odds: number } | null
   is_value_bet: boolean
   value_score: number | null
+  edge_explanation: string | null
 }
 
 function ConfidenceBar({ value, color }: { value: number; color: string }) {
@@ -93,19 +94,6 @@ function EVBadge({ ev }: { ev: number }) {
       {isPositive ? '+' : ''}{ev}% EV
     </span>
   )
-}
-
-/** Maps a recommended_bet label to the real bookmaker odds field */
-function getLiveOddsForBet(rec: string, bk: BookmakerOdds | null): number | null {
-  if (!bk) return null
-  const r = rec.toLowerCase()
-  if (r.includes('home win') || r === 'home') return bk.home
-  if (r.includes('away win') || r === 'away') return bk.away
-  if (r === 'draw') return bk.draw
-  if (r.includes('over 2.5') || r.includes('over2.5')) return bk.over25
-  if (r.includes('under 2.5') || r.includes('under2.5')) return null // btts no not in interface — fall back
-  if (r.includes('btts') && !r.includes('no')) return bk.btts
-  return null
 }
 
 function OddsChip({ label, odds, ev }: { label: string; odds: number | null; ev: number | null }) {
@@ -158,12 +146,9 @@ export default function PredictionsPage() {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        supabase.from('profiles').select('subscription_tier, created_at').eq('user_id', user.id).single()
+        supabase.from('profiles').select('subscription_tier').eq('user_id', user.id).single()
           .then(({ data }) => {
-            if (data) {
-              const tier = effectiveTier(data.subscription_tier, data.created_at)
-              setSubscriptionTier(tier)
-            }
+            if (data?.subscription_tier) setSubscriptionTier(data.subscription_tier as 'free' | 'pro' | 'elite')
           })
       }
     })
@@ -209,7 +194,7 @@ export default function PredictionsPage() {
           <div className="w-10 h-10 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-xl">🔮</div>
           <div>
             <h1 className="text-2xl font-bold text-white">AI Match Predictions</h1>
-            <p className="text-white/40 text-sm">GPT-4 + Bet365 odds · Refreshed every 30 min</p>
+            <p className="text-white/40 text-sm">GPT-4o · Pinnacle edge detection · Refreshed every 30 min</p>
           </div>
         </div>
       </div>
@@ -334,8 +319,8 @@ export default function PredictionsPage() {
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-xl">🔥</span>
                 <div>
-                  <h2 className="text-white font-bold text-base">Value Bets Today</h2>
-                  <p className="text-emerald-400/70 text-xs">AI probability vs Bet365 odds — positive EV bets only</p>
+                  <h2 className="text-white font-bold text-base">Pinnacle Value Bets Today</h2>
+                  <p className="text-emerald-400/70 text-xs">Sharp money (Pinnacle) disagrees with Bet365 — these have real edge</p>
                 </div>
               </div>
               <div className="space-y-2">
@@ -393,11 +378,27 @@ export default function PredictionsPage() {
                       : 'bg-[#13162b] border-white/8 hover:border-violet-500/30'
                   }`}
                 >
-                  {/* Value bet banner */}
+                  {/* Pinnacle edge banner */}
                   {pred.is_value_bet && isPro && (
-                    <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 border-b border-emerald-500/20">
-                      <span className="text-xs text-emerald-400 font-bold">🔥 VALUE BET</span>
-                      <span className="text-xs text-emerald-400/70">· {pred.best_value?.label} @ {pred.best_value?.odds.toFixed(2)} · +{pred.value_score}% EV</span>
+                    <div className="px-4 py-2 bg-emerald-500/10 border-b border-emerald-500/20">
+                      {pred.pinnacle_edge ? (
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-emerald-300 font-black tracking-wide">🎯 PINNACLE EDGE +{pred.pinnacle_edge.edge_pct}%</span>
+                            <span className="text-xs text-emerald-400/60">· {pred.pinnacle_edge.market}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[11px] text-white/50">
+                            <span className="text-white/70 font-semibold">Pinnacle {pred.pinnacle_edge.pinnacle_odds.toFixed(2)}</span>
+                            <span>→</span>
+                            <span className="text-emerald-400 font-semibold">Bet365 {pred.pinnacle_edge.bet365_odds.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-emerald-400 font-bold">🔥 VALUE BET</span>
+                          <span className="text-xs text-emerald-400/70">· {pred.best_value?.label} @ {pred.best_value?.odds?.toFixed(2)} · +{pred.value_score}% EV</span>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -452,6 +453,14 @@ export default function PredictionsPage() {
                       </div>
                     )}
 
+                    {/* AI edge explanation — shown when value bet detected */}
+                    {pred.is_value_bet && pred.edge_explanation && (
+                      <div className="mb-4 bg-white/[0.03] border border-white/8 rounded-xl px-4 py-3">
+                        <p className="text-[10px] text-white/30 font-semibold uppercase tracking-wide mb-1">💡 Why this has edge</p>
+                        <p className="text-white/70 text-xs leading-relaxed">{pred.edge_explanation}</p>
+                      </div>
+                    )}
+
                     {/* Recommended bet */}
                     <div className={`border rounded-xl px-4 py-3 mb-3 flex items-center justify-between ${
                       pred.is_value_bet && isPro
@@ -465,20 +474,8 @@ export default function PredictionsPage() {
                         <p className="text-white font-bold">{pred.recommended_bet}</p>
                       </div>
                       <div className="text-right">
-                        {(() => {
-                          const liveOdds = getLiveOddsForBet(pred.recommended_bet, pred.bookmaker)
-                          return liveOdds ? (
-                            <>
-                              <p className="text-white/40 text-xs">Bet365 odds</p>
-                              <p className={`font-bold text-lg ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-violet-300'}`}>@ {liveOdds.toFixed(2)}</p>
-                            </>
-                          ) : (
-                            <>
-                              <p className="text-white/40 text-xs">Est. odds</p>
-                              <p className={`font-bold ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-violet-300'}`}>{pred.recommended_odds_range}</p>
-                            </>
-                          )
-                        })()}
+                        <p className="text-white/40 text-xs">Est. odds</p>
+                        <p className={`font-bold ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-violet-300'}`}>{pred.recommended_odds_range}</p>
                       </div>
                     </div>
 
@@ -489,26 +486,6 @@ export default function PredictionsPage() {
                         <ConfidenceDots score={pred.confidence} />
                       </div>
                       <span className="text-white/60 text-sm font-semibold">{pred.confidence}/10</span>
-                    </div>
-
-                    {/* Bookmaker quick-links */}
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <span className="text-white/25 text-[10px] uppercase tracking-wide">Bet at:</span>
-                      {[
-                        { name: 'Bet365', url: 'https://www.bet365.com', color: 'text-emerald-400 border-emerald-500/25 bg-emerald-500/8 hover:bg-emerald-500/15' },
-                        { name: 'Betfair', url: 'https://www.betfair.com', color: 'text-sky-400 border-sky-500/25 bg-sky-500/8 hover:bg-sky-500/15' },
-                        { name: 'William Hill', url: 'https://www.williamhill.com', color: 'text-amber-400 border-amber-500/25 bg-amber-500/8 hover:bg-amber-500/15' },
-                      ].map(bm => (
-                        <a
-                          key={bm.name}
-                          href={bm.url}
-                          target="_blank"
-                          rel="noopener noreferrer sponsored"
-                          className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg border transition-colors ${bm.color}`}
-                        >
-                          {bm.name} ↗
-                        </a>
-                      ))}
                     </div>
 
                     {/* Expand toggle */}
