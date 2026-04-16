@@ -65,6 +65,36 @@ function calcEV(aiPct: number, decimalOdds: number): number | null {
   return Math.round(((aiPct / 100) * decimalOdds - 1) * 100)
 }
 
+// Pinnacle (sharp market) vs Bet365 edge detection
+// Pinnacle's implied probability = closest to true odds → when Bet365 is longer, that's value
+type OddsShape = { home: number; draw: number; away: number; over25: number; btts: number } | null
+function calcPinnacleEdge(
+  pinnacle: OddsShape,
+  bet365: OddsShape
+): { market: string; edge_pct: number; pinnacle_odds: number; bet365_odds: number } | null {
+  if (!pinnacle || !bet365) return null
+  const markets = [
+    { key: 'home'   as const, label: 'Home Win' },
+    { key: 'draw'   as const, label: 'Draw'     },
+    { key: 'away'   as const, label: 'Away Win' },
+    { key: 'over25' as const, label: 'Over 2.5' },
+    { key: 'btts'   as const, label: 'BTTS'     },
+  ]
+  let best: { market: string; edge_pct: number; pinnacle_odds: number; bet365_odds: number } | null = null
+  for (const { key, label } of markets) {
+    const pOdds = pinnacle[key]
+    const bOdds = bet365[key]
+    if (!pOdds || !bOdds || pOdds <= 1 || bOdds <= 1) continue
+    // Edge = how much more Pinnacle implies vs what Bet365 implies (in % points)
+    const edge = (1 / pOdds - 1 / bOdds) * 100
+    const edgeRounded = Math.round(edge * 10) / 10
+    if (edgeRounded >= 2 && (!best || edgeRounded > best.edge_pct)) {
+      best = { market: label, edge_pct: edgeRounded, pinnacle_odds: pOdds, bet365_odds: bOdds }
+    }
+  }
+  return best
+}
+
 // Format last-5 form for a team: "W 2-1 vs Arsenal (H) | D 1-1 vs Chelsea (A) | ..."
 function formatForm(fixtures: any[], teamId: number): string {
   if (!fixtures?.length) return 'No data'
@@ -117,19 +147,30 @@ export async function GET() {
     // Fetch fixtures + Bet365 odds per league in parallel
     const leagueResults = await Promise.all(
       TOP_LEAGUES.map(async (league) => {
-        const [fixtures, oddsData, injuries] = await Promise.all([
+        const [fixtures, oddsData, pinnacleData, injuries] = await Promise.all([
           apiFetch(`/fixtures?league=${league.id}&season=${season}&from=${today}&to=${in3days}&status=NS`),
-          apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}&bookmaker=1`),
+          apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}&bookmaker=1`),   // Bet365
+          apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}&bookmaker=29`),  // Pinnacle (sharp)
           apiFetch(`/injuries?league=${league.id}&season=${season}&date=${today}`),
         ])
 
-        // Build fixture_id → odds map
+        // Build fixture_id → Bet365 odds map
         const oddsMap: Record<number, ReturnType<typeof extractOdds>> = {}
         if (oddsData) {
           for (const entry of oddsData) {
             const fid = entry.fixture?.id
             const bk = entry.bookmakers?.[0]
             if (fid && bk) oddsMap[fid] = extractOdds(bk)
+          }
+        }
+
+        // Build fixture_id → Pinnacle odds map
+        const pinnacleMap: Record<number, ReturnType<typeof extractOdds>> = {}
+        if (pinnacleData) {
+          for (const entry of pinnacleData) {
+            const fid = entry.fixture?.id
+            const bk = entry.bookmakers?.[0]
+            if (fid && bk) pinnacleMap[fid] = extractOdds(bk)
           }
         }
 
@@ -152,6 +193,7 @@ export async function GET() {
           _leagueName: league.name,
           _leagueFlag: league.flag,
           _odds: oddsMap[f.fixture?.id] ?? null,
+          _pinnacleOdds: pinnacleMap[f.fixture?.id] ?? null,
           _homeInjuries: injuryMap[f.teams?.home?.id] ?? [],
           _awayInjuries: injuryMap[f.teams?.away?.id] ?? [],
         }))
@@ -287,6 +329,10 @@ Return JSON with this exact structure:
 
       const bestValue = valueBets[0] ?? null
 
+      // Pinnacle edge: compare sharp market (Pinnacle) vs soft market (Bet365)
+      const pinnacleEdge = calcPinnacleEdge(f._pinnacleOdds ?? null, o ?? null)
+      const isPinnacleValueBet = pinnacleEdge !== null
+
       return {
         id: f.fixture?.id,
         date: f.fixture?.date,
@@ -317,8 +363,10 @@ Return JSON with this exact structure:
         // Expected value per market
         ev: { home: homeEV, draw: drawEV, away: awayEV, over25: over25EV, btts: bttsEV },
         best_value: bestValue,
-        is_value_bet: bestValue !== null && (bestValue.ev ?? 0) >= 5,
-        value_score: bestValue?.ev ?? null,
+        // Pinnacle sharp-money edge (the core differentiator)
+        pinnacle_edge: pinnacleEdge,
+        is_value_bet: (bestValue !== null && (bestValue.ev ?? 0) >= 5) || isPinnacleValueBet,
+        value_score: pinnacleEdge?.edge_pct ?? bestValue?.ev ?? null,
         // Injuries
         home_injuries: f._homeInjuries ?? [],
         away_injuries: f._awayInjuries ?? [],
