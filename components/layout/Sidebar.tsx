@@ -29,6 +29,7 @@ const SECTIONS: Section[] = [
       { href: '/dashboard', label: 'Dashboard', exact: true },
       { href: '/dashboard/statistics', label: 'Statistics', exact: false },
       { href: '/dashboard/bankroll', label: 'Bankroll', exact: false },
+      { href: '/track-record', label: 'Track Record', exact: false },
     ],
   },
   {
