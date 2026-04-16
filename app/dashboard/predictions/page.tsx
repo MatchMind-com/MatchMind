@@ -45,6 +45,7 @@ interface Prediction {
   pinnacle_edge: { market: string; edge_pct: number; pinnacle_odds: number; bet365_odds: number } | null
   is_value_bet: boolean
   value_score: number | null
+  edge_explanation: string | null
 }
 
 function ConfidenceBar({ value, color }: { value: number; color: string }) {
@@ -449,6 +450,14 @@ export default function PredictionsPage() {
                           <OddsChip label="O2.5" odds={pred.bookmaker.over25} ev={pred.ev.over25} />
                           <OddsChip label="BTTS" odds={pred.bookmaker.btts} ev={pred.ev.btts} />
                         </div>
+                      </div>
+                    )}
+
+                    {/* AI edge explanation — shown when value bet detected */}
+                    {pred.is_value_bet && pred.edge_explanation && (
+                      <div className="mb-4 bg-white/[0.03] border border-white/8 rounded-xl px-4 py-3">
+                        <p className="text-[10px] text-white/30 font-semibold uppercase tracking-wide mb-1">💡 Why this has edge</p>
+                        <p className="text-white/70 text-xs leading-relaxed">{pred.edge_explanation}</p>
                       </div>
                     )}
 

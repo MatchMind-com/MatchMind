@@ -267,7 +267,8 @@ Return JSON with this exact structure:
       "recommended_bet": "Home Win",
       "recommended_odds_range": "1.85-2.10",
       "key_factors": ["5-game home winning run", "Away striker suspended", "H2H: home won 4 of last 5"],
-      "risk_level": "Low"
+      "risk_level": "Low",
+      "edge_explanation": "2-sentence plain-English explanation of WHY this bet has mathematical edge — reference the actual form data and odds. E.g. 'Liverpool have won their last 4 home games and conceded just twice, while Bet365's 2.20 odds imply only a 45% chance — our model gives them 58% based on current form and H2H dominance.'"
     }
   ]
 }`
@@ -352,6 +353,7 @@ Return JSON with this exact structure:
         recommended_odds_range: pred.recommended_odds_range ?? '—',
         key_factors: pred.key_factors ?? [],
         risk_level: pred.risk_level ?? 'Medium',
+        edge_explanation: pred.edge_explanation ?? null,
         // Real Bet365 odds
         bookmaker: o ? {
           home: o.home || null,
