@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { PRIMARY_AFFILIATE } from '@/lib/affiliates'
 
 const FORCE_PRO_TIER = true // temp: set false to restore paywall
 
@@ -373,17 +374,31 @@ export default function PredictionsPage() {
                 )}
 
                 <div className="flex items-center justify-between gap-3">
-                  <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-2 text-sm">
-                    <span className="text-slate-500">£10 stake → </span>
+                  <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-2 text-sm flex-shrink-0">
+                    <span className="text-slate-500">£10 → </span>
                     <span className="text-white font-black">£{(10 * acca.combined_odds).toFixed(2)}</span>
                   </div>
-                  <button
-                    onClick={copyAcca}
-                    className="flex items-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/25 text-blue-300 font-bold px-4 py-2 rounded-xl text-sm transition-all"
-                  >
-                    {copied ? <><CheckIcon /> Copied!</> : <><CopyIcon /> Copy Acca</>}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={copyAcca}
+                      className="flex items-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/25 text-blue-300 font-bold px-3 py-2 rounded-xl text-sm transition-all"
+                    >
+                      {copied ? <><CheckIcon /> Copied!</> : <><CopyIcon /> Copy</>}
+                    </button>
+                    <a
+                      href={PRIMARY_AFFILIATE.url}
+                      target="_blank"
+                      rel="noopener noreferrer sponsored"
+                      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-sm transition-all"
+                    >
+                      Place on {PRIMARY_AFFILIATE.short}
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </div>
                 </div>
+                <p className="text-slate-600 text-[10px] mt-2">18+ | Gamble responsibly | begambleaware.org</p>
               </div>
             </div>
           ) : (
@@ -624,6 +639,28 @@ export default function PredictionsPage() {
                         </div>
                       )
                     })()}
+
+                    {/* Bet Now CTA */}
+                    <a
+                      href={PRIMARY_AFFILIATE.url}
+                      target="_blank"
+                      rel="noopener noreferrer sponsored"
+                      className={`flex items-center justify-between w-full rounded-xl px-4 py-2.5 mb-3 transition-all group ${
+                        pred.is_value_bet && isPro
+                          ? 'bg-emerald-600 hover:bg-emerald-500'
+                          : 'bg-blue-600 hover:bg-blue-500'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-black text-sm">Bet Now on {PRIMARY_AFFILIATE.short}</span>
+                        {PRIMARY_AFFILIATE.bonus && (
+                          <span className="text-white/60 text-[10px] font-medium">{PRIMARY_AFFILIATE.bonus}</span>
+                        )}
+                      </div>
+                      <svg className="w-4 h-4 text-white/80 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
 
                     {/* Confidence */}
                     <div className="flex items-center justify-between mb-3">
@@ -877,8 +914,10 @@ export default function PredictionsPage() {
       )}
 
       {!loading && predictions.length > 0 && (
-        <p className="text-center text-slate-600 text-xs">
-          EV = Expected Value vs Bet365 implied probability. Positive EV bets are statistically profitable long-term. Always bet responsibly.
+        <p className="text-center text-slate-600 text-[10px] leading-relaxed max-w-xl mx-auto">
+          EV = Expected Value vs Bet365 implied probability. Positive EV bets are statistically profitable long-term.
+          {' '}Bet Now links are affiliate links — we may earn a commission at no extra cost to you.
+          {' '}18+ · Gamble responsibly · <a href="https://www.begambleaware.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-400">begambleaware.org</a>
         </p>
       )}
     </div>
