@@ -29,16 +29,17 @@ function computeStats(bets: BetSlip[]) {
 }
 
 function StatCard({ label, value, sub, color='default', icon }: { label:string;value:string;sub?:string;color?:string;icon:React.ReactNode }) {
-  const c: Record<string,string> = { default:'text-white', green:'text-emerald-400', red:'text-red-400', violet:'text-violet-400', amber:'text-amber-400' }
-  const bg: Record<string,string> = { default:'bg-slate-700/30', green:'bg-emerald-500/10', red:'bg-red-500/10', violet:'bg-violet-500/10', amber:'bg-amber-500/10' }
+  const c: Record<string,string> = { default:'text-white', green:'text-emerald-400', red:'text-red-400', orange:'text-orange-400', amber:'text-amber-400' }
+  const bg: Record<string,string> = { default:'bg-white/[0.06]', green:'bg-emerald-500/10', red:'bg-red-500/10', orange:'bg-orange-500/10', amber:'bg-amber-500/10' }
+  const border: Record<string,string> = { default:'border-white/[0.07]', green:'border-white/[0.07]', red:'border-white/[0.07]', orange:'border-orange-500/20', amber:'border-white/[0.07]' }
   return (
-    <div className="bg-[#13131F] border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-all">
+    <div className={`bg-[#161B26] border ${border[color] || 'border-white/[0.07]'} rounded-2xl p-5 hover:border-white/[0.12] transition-all`}>
       <div className="flex items-start justify-between mb-3">
-        <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">{label}</span>
-        <div className={`w-8 h-8 rounded-lg ${bg[color]} flex items-center justify-center ${c[color]}`}>{icon}</div>
+        <span className="text-slate-500 text-[10px] font-semibold uppercase tracking-wider">{label}</span>
+        <div className={`w-7 h-7 rounded-lg ${bg[color]} flex items-center justify-center ${c[color]}`}>{icon}</div>
       </div>
-      <div className={`text-2xl font-bold ${c[color]} mb-1`}>{value}</div>
-      {sub && <div className="text-xs text-slate-500">{sub}</div>}
+      <div className={`text-2xl font-black ${c[color]} mb-1`}>{value}</div>
+      {sub && <div className="text-xs text-slate-600">{sub}</div>}
     </div>
   )
 }
@@ -52,7 +53,7 @@ export default function StatsOverview({ bets }: { bets: BetSlip[] }) {
         <span className="text-slate-500 text-sm">{s.totalBets} bets tracked</span>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Total Bets" value={String(s.totalBets)} sub={`${s.pendingBets} pending`} color="violet"
+        <StatCard label="Total Bets" value={String(s.totalBets)} sub={`${s.pendingBets} pending`} color="orange"
           icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>}/>
         <StatCard label="Win Rate" value={`${s.winRate.toFixed(1)}%`} sub={`${s.winningBets}W / ${s.losingBets}L`}
           color={s.winRate >= 50 ? 'green' : s.winRate > 0 ? 'amber' : 'default'}
