@@ -69,11 +69,15 @@ export async function GET() {
     .eq('user_id', user.id)
     .single()
 
-  const today = new Date().toISOString().split('T')[0]
   const season = getCurrentSeason()
+  const now = new Date()
+  const today = now.toISOString().split('T')[0]
+  const in3days = new Date(now.getTime() + 3 * 86400000).toISOString().split('T')[0]
 
   // Build set of league IDs to fetch (major + favourites)
   const leagueIds = new Set<number>(MAJOR_LEAGUES)
+  // Add more leagues for broader coverage
+  ;[88, 94, 203, 144, 113].forEach(id => leagueIds.add(id))
   if (prefs?.favourite_leagues) {
     for (const name of prefs.favourite_leagues) {
       const id = LEAGUE_NAME_TO_ID[name]
@@ -81,9 +85,9 @@ export async function GET() {
     }
   }
 
-  // Fetch today's fixtures for all relevant leagues in parallel
+  // Fetch next 3 days of fixtures for all relevant leagues in parallel
   const fixturePromises = Array.from(leagueIds).map(id =>
-    apiFetch(`/fixtures?league=${id}&season=${season}&date=${today}`)
+    apiFetch(`/fixtures?league=${id}&season=${season}&from=${today}&to=${in3days}&status=NS-1H-2H-ET-HT-FT`)
   )
   const results = await Promise.all(fixturePromises)
 
@@ -98,9 +102,15 @@ export async function GET() {
     leagueFixtures.forEach((f: any) => {
       if (seen.has(f.fixture?.id)) return
       seen.add(f.fixture?.id)
+      const fixtureDate = f.fixture?.date?.split('T')[0]
+      const dayLabel = fixtureDate === today ? 'Today'
+        : fixtureDate === new Date(now.getTime() + 86400000).toISOString().split('T')[0] ? 'Tomorrow'
+        : new Date(fixtureDate).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+
       fixtures.push({
         id: f.fixture?.id,
         date: f.fixture?.date,
+        matchDay: dayLabel,
         status: f.fixture?.status?.short,
         elapsed: f.fixture?.status?.elapsed,
         venue: f.fixture?.venue?.name,

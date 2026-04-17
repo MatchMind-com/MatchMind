@@ -5,6 +5,7 @@ import MatchDetailModal from './MatchDetailModal'
 interface Fixture {
   id: number
   date: string
+  matchDay: string
   status: string
   elapsed: number | null
   venue: string
@@ -15,23 +16,6 @@ interface Fixture {
   league: { id: number; name: string; logo: string; color: string }
   isFavouriteLeague: boolean
   isFavouriteTeam: boolean
-}
-
-function StatusBadge({ status, elapsed }: { status: string; elapsed: number | null }) {
-  if (status === 'LIVE' || status === '1H' || status === '2H' || status === 'ET' || status === 'HT') {
-    return (
-      <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-        {status === 'HT' ? 'HT' : `${elapsed}'`}
-      </span>
-    )
-  }
-  if (status === 'FT') return <span className="text-[10px] text-slate-500 font-medium">FT</span>
-  if (status === 'NS') {
-    const time = new Date(0)
-    return <span className="text-[10px] text-slate-400 font-medium">{new Date(0).toLocaleTimeString()}</span>
-  }
-  return <span className="text-[10px] text-slate-500">{status}</span>
 }
 
 function MatchCard({ fixture, onClick }: { fixture: Fixture; onClick: () => void }) {
@@ -85,8 +69,13 @@ function MatchCard({ fixture, onClick }: { fixture: Fixture; onClick: () => void
 
         {/* Status / Kickoff */}
         <div className="flex items-center justify-between">
-          {isLive || isFinished ? (
-            <StatusBadge status={fixture.status} elapsed={fixture.elapsed} />
+          {isLive ? (
+            <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              {fixture.status === 'HT' ? 'HT' : `${fixture.elapsed}'`}
+            </span>
+          ) : isFinished ? (
+            <span className="text-[10px] text-slate-500 font-medium">FT</span>
           ) : (
             <span className="text-[11px] text-slate-400 font-medium">{kickoff}</span>
           )}
@@ -114,8 +103,6 @@ export default function TodaysGames() {
       .catch(() => setLoading(false))
   }, [])
 
-  const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
-
   if (loading) {
     return (
       <div className="mb-6">
@@ -135,31 +122,50 @@ export default function TodaysGames() {
   if (fixtures.length === 0) {
     return (
       <div className="mb-6 p-4 rounded-xl border border-white/8 bg-[#0E1628] text-center">
-        <p className="text-slate-500 text-sm">No matches scheduled today</p>
+        <p className="text-slate-500 text-sm">No matches scheduled in the next 3 days</p>
       </div>
     )
   }
 
+  // Group fixtures by matchDay label
+  const grouped: { label: string; fixtures: Fixture[] }[] = []
+  const seen = new Map<string, number>()
+  for (const f of fixtures) {
+    const label = f.matchDay || 'Upcoming'
+    if (!seen.has(label)) {
+      seen.set(label, grouped.length)
+      grouped.push({ label, fixtures: [] })
+    }
+    grouped[seen.get(label)!].fixtures.push(f)
+  }
+
   return (
     <>
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-sm font-bold text-white">Today's Matches</h2>
-            <p className="text-xs text-slate-500">{today} · {fixtures.length} games</p>
-          </div>
-          <span className="text-xs text-slate-500">Click any match for full analysis</span>
-        </div>
+      <div className="mb-6 space-y-4">
+        {grouped.map(({ label, fixtures: dayFixtures }) => (
+          <div key={label}>
+            {/* Day header */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-white">{label === 'Today' ? "Today's Matches" : label}</h2>
+                <span className="text-[10px] text-slate-600 font-medium">{dayFixtures.length} games</span>
+              </div>
+              {label === 'Today' && (
+                <span className="text-xs text-slate-500">Click any match for full analysis</span>
+              )}
+            </div>
 
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
-          {fixtures.map(fixture => (
-            <MatchCard
-              key={fixture.id}
-              fixture={fixture}
-              onClick={() => setSelectedFixtureId(fixture.id)}
-            />
-          ))}
-        </div>
+            <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {dayFixtures.map(fixture => (
+                <MatchCard
+                  key={fixture.id}
+                  fixture={fixture}
+                  onClick={() => setSelectedFixtureId(fixture.id)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       {selectedFixtureId && (
