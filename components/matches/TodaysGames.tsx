@@ -27,8 +27,8 @@ function MatchCard({ fixture, onClick }: { fixture: Fixture; onClick: () => void
     <button
       onClick={onClick}
       className={`flex-shrink-0 w-52 rounded-xl border transition-all duration-200 hover:scale-[1.02] hover:border-white/20 cursor-pointer text-left overflow-hidden group
-        ${isLive ? 'border-emerald-500/30 bg-emerald-950/20' : 'border-white/8 bg-[#0E1628]'}
-        ${fixture.isFavouriteTeam ? 'ring-1 ring-blue-500/40' : ''}
+        ${isLive ? 'border-emerald-500/30 bg-emerald-950/20' : 'border-white/8 bg-[#161B26]'}
+        ${fixture.isFavouriteTeam ? 'ring-1 ring-orange-500/40' : ''}
       `}
     >
       {/* League strip */}
@@ -41,13 +41,12 @@ function MatchCard({ fixture, onClick }: { fixture: Fixture; onClick: () => void
         )}
         <span className="text-[10px] font-semibold text-white/80 truncate">{fixture.league.name}</span>
         {fixture.isFavouriteTeam && (
-          <span className="ml-auto text-[9px] text-blue-300 font-bold">★ FAV</span>
+          <span className="ml-auto text-[9px] text-orange-300 font-bold">★ FAV</span>
         )}
       </div>
 
       {/* Match content */}
       <div className="p-3">
-        {/* Teams */}
         <div className="space-y-2 mb-2.5">
           {[
             { team: fixture.home, goals: fixture.score.home },
@@ -67,7 +66,6 @@ function MatchCard({ fixture, onClick }: { fixture: Fixture; onClick: () => void
           ))}
         </div>
 
-        {/* Status / Kickoff */}
         <div className="flex items-center justify-between">
           {isLive ? (
             <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
@@ -75,11 +73,11 @@ function MatchCard({ fixture, onClick }: { fixture: Fixture; onClick: () => void
               {fixture.status === 'HT' ? 'HT' : `${fixture.elapsed}'`}
             </span>
           ) : isFinished ? (
-            <span className="text-[10px] text-slate-500 font-medium">FT</span>
+            <span className="text-[10px] text-white/30 font-medium">FT</span>
           ) : (
-            <span className="text-[11px] text-slate-400 font-medium">{kickoff}</span>
+            <span className="text-[11px] text-white/50 font-medium">{kickoff}</span>
           )}
-          <span className="text-[10px] text-slate-600 group-hover:text-blue-400 transition-colors">
+          <span className="text-[10px] text-white/20 group-hover:text-orange-400 transition-colors">
             Analysis →
           </span>
         </div>
@@ -92,12 +90,19 @@ export default function TodaysGames() {
   const [fixtures, setFixtures] = useState<Fixture[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedFixtureId, setSelectedFixtureId] = useState<number | null>(null)
+  const [activeDay, setActiveDay] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/fixtures/today')
       .then(r => r.json())
       .then(data => {
-        setFixtures(data.fixtures || [])
+        const fx: Fixture[] = data.fixtures || []
+        setFixtures(fx)
+        // Default to first day that has games
+        if (fx.length > 0) {
+          const firstDay = fx[0].matchDay
+          setActiveDay(firstDay)
+        }
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -108,7 +113,9 @@ export default function TodaysGames() {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <div className="h-4 w-32 bg-white/5 rounded animate-pulse" />
-          <div className="h-3 w-20 bg-white/5 rounded animate-pulse" />
+        </div>
+        <div className="flex gap-2 mb-4">
+          {[...Array(4)].map((_, i) => <div key={i} className="h-8 w-24 rounded-lg bg-white/5 animate-pulse" />)}
         </div>
         <div className="flex gap-3 overflow-hidden">
           {[...Array(5)].map((_, i) => (
@@ -121,51 +128,85 @@ export default function TodaysGames() {
 
   if (fixtures.length === 0) {
     return (
-      <div className="mb-6 p-4 rounded-xl border border-white/8 bg-[#0E1628] text-center">
-        <p className="text-slate-500 text-sm">No matches scheduled in the next 3 days</p>
+      <div className="mb-6 p-4 rounded-xl border border-white/8 bg-[#161B26] text-center">
+        <p className="text-white/30 text-sm">No matches scheduled in the next few days</p>
       </div>
     )
   }
 
-  // Group fixtures by matchDay label
-  const grouped: { label: string; fixtures: Fixture[] }[] = []
-  const seen = new Map<string, number>()
+  // Build ordered day list
+  const dayOrder: string[] = []
+  const dayMap = new Map<string, Fixture[]>()
   for (const f of fixtures) {
     const label = f.matchDay || 'Upcoming'
-    if (!seen.has(label)) {
-      seen.set(label, grouped.length)
-      grouped.push({ label, fixtures: [] })
+    if (!dayMap.has(label)) {
+      dayOrder.push(label)
+      dayMap.set(label, [])
     }
-    grouped[seen.get(label)!].fixtures.push(f)
+    dayMap.get(label)!.push(f)
   }
+
+  const currentDay = activeDay ?? dayOrder[0]
+  const visibleFixtures = dayMap.get(currentDay) ?? []
+
+  // Count live games for "Today" tab badge
+  const liveCount = (dayMap.get('Today') ?? []).filter(f =>
+    ['1H', '2H', 'ET', 'HT', 'LIVE'].includes(f.status)
+  ).length
 
   return (
     <>
-      <div className="mb-6 space-y-4">
-        {grouped.map(({ label, fixtures: dayFixtures }) => (
-          <div key={label}>
-            {/* Day header */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-white">{label === 'Today' ? "Today's Matches" : label}</h2>
-                <span className="text-[10px] text-slate-600 font-medium">{dayFixtures.length} games</span>
-              </div>
-              {label === 'Today' && (
-                <span className="text-xs text-slate-500">Click any match for full analysis</span>
-              )}
-            </div>
-
-            <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {dayFixtures.map(fixture => (
-                <MatchCard
-                  key={fixture.id}
-                  fixture={fixture}
-                  onClick={() => setSelectedFixtureId(fixture.id)}
-                />
-              ))}
-            </div>
+      <div className="mb-6">
+        {/* Header + date tabs on one row */}
+        <div className="flex items-center justify-between mb-3 gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-bold text-white">Matches</h2>
+            <span className="text-[10px] text-white/25 font-medium">{visibleFixtures.length} games</span>
           </div>
-        ))}
+
+          {/* Date filter tabs */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {dayOrder.map(day => {
+              const count = dayMap.get(day)!.length
+              const isActive = currentDay === day
+              const isToday = day === 'Today'
+              const hasLive = isToday && liveCount > 0
+
+              return (
+                <button
+                  key={day}
+                  onClick={() => setActiveDay(day)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    isActive
+                      ? 'bg-orange-500/15 border border-orange-500/30 text-orange-400'
+                      : 'bg-white/[0.04] border border-white/[0.07] text-white/40 hover:text-white/70 hover:bg-white/[0.07]'
+                  }`}
+                >
+                  {day}
+                  {hasLive ? (
+                    <span className="flex items-center gap-0.5 text-emerald-400 font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      {liveCount}
+                    </span>
+                  ) : (
+                    <span className={`text-[10px] font-bold ${isActive ? 'text-orange-400/60' : 'text-white/20'}`}>{count}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Fixtures row */}
+        <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          {visibleFixtures.map(fixture => (
+            <MatchCard
+              key={fixture.id}
+              fixture={fixture}
+              onClick={() => setSelectedFixtureId(fixture.id)}
+            />
+          ))}
+        </div>
       </div>
 
       {selectedFixtureId && (
