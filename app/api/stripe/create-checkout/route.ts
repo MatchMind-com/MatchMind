@@ -8,13 +8,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 const PLANS = {
   pro: process.env.STRIPE_PRO_PRICE_ID!,
-  elite: process.env.STRIPE_ELITE_PRICE_ID!,
 }
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const plan = searchParams.get('plan') as 'pro' | 'elite'
+    const plan = searchParams.get('plan') as 'pro'
     const coupon = searchParams.get('coupon') // e.g. MATCHMIND20
 
     if (!plan || !PLANS[plan]) {
@@ -28,7 +27,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/signin', request.url))
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.company'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://footballbetai.vercel.app'
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'subscription',

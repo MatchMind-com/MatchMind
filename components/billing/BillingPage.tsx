@@ -27,39 +27,19 @@ const PLANS = [
     name: 'Pro',
     price: '£9.99',
     period: 'per month',
-    description: 'For serious bettors',
+    description: 'Everything you need to bet smarter',
     color: 'border-violet-500',
-    badge: '🔥 Most Popular',
+    badge: '🔥 7-Day Free Trial',
     trial: '7-day free trial',
     features: [
       '✅ Unlimited bet tracking',
-      '✅ Full AI predictions (all leagues)',
-      '✅ Pinnacle value bet finder',
-      '✅ Real Bet365 odds + EV scores',
+      '✅ Full AI predictions (10+ leagues daily)',
+      '✅ Pinnacle value bet finder + EV scores',
+      '✅ Real Bet365 odds comparison',
       '✅ Daily AI accumulator builder',
       '✅ AI Football Coach (GPT-4o)',
-      '✅ Bankroll tracker + chart',
+      '✅ Bankroll tracker + P&L chart',
       '✅ Full leaderboard access',
-    ],
-  },
-  {
-    id: 'elite',
-    name: 'Elite',
-    price: '£19.99',
-    period: 'per month',
-    description: 'For professional bettors',
-    color: 'border-amber-500',
-    badge: '⭐ Best Value',
-    trial: '7-day free trial',
-    features: [
-      '✅ Everything in Pro',
-      '✅ Kelly Criterion stake sizing',
-      '✅ Advanced pattern detection',
-      '✅ Multi-league live data',
-      '✅ Priority AI responses',
-      '✅ Injury & team news alerts',
-      '✅ Export data to CSV',
-      '✅ Priority email support',
     ],
   },
 ]
@@ -135,7 +115,7 @@ export default function BillingPage({ profile }: { profile: any }) {
       )}
 
       {/* Plans grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
         {PLANS.map((plan) => {
           const isCurrent = plan.id === tier
           const isPopular = plan.id === 'pro'
