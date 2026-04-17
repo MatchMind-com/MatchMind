@@ -233,6 +233,149 @@ function StatBar({ label, value, max, color }: { label: string; value: number; m
   )
 }
 
+interface TrackingBet {
+  match_name: string
+  league: string
+  selection: string
+  bet_type: string
+  odds: number | null
+  bookmaker: string
+  match_date: string
+}
+
+function mapBetType(label: string): string {
+  const l = label.toLowerCase()
+  if (l.includes('home') || l.includes('away') || l.includes('draw')) return 'Match Result (1X2)'
+  if (l.includes('over') || l.includes('under') || l.includes('2.5')) return 'Over / Under'
+  if (l.includes('btts') || l.includes('both')) return 'Both Teams to Score'
+  return 'Match Result (1X2)'
+}
+
+function TrackBetModal({
+  bet,
+  userId,
+  onClose,
+  onTracked,
+}: {
+  bet: TrackingBet
+  userId: string
+  onClose: () => void
+  onTracked: () => void
+}) {
+  const [stake, setStake] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [done, setDone] = useState(false)
+  const supabase = createClient()
+
+  async function submit() {
+    const stakeNum = parseFloat(stake)
+    if (!stakeNum || stakeNum <= 0) return
+    setLoading(true)
+    const oddsNum = bet.odds ?? 2.0
+    await supabase.from('bet_slips').insert({
+      user_id: userId,
+      match_name: bet.match_name,
+      league: bet.league,
+      bet_type: bet.bet_type,
+      selection: bet.selection,
+      odds: oddsNum,
+      stake: stakeNum,
+      bookmaker: bet.bookmaker || null,
+      potential_return: oddsNum * stakeNum,
+      result: 'pending',
+      profit_loss: 0,
+      match_date: bet.match_date || null,
+      notes: 'Added from AI Predictions',
+    })
+    setLoading(false)
+    setDone(true)
+    setTimeout(() => { onTracked(); onClose() }, 1200)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <div
+        className="relative bg-[#161B26] border border-white/[0.10] rounded-2xl p-5 w-full max-w-sm shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        {done ? (
+          <div className="text-center py-4">
+            <div className="w-12 h-12 rounded-full bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <p className="text-white font-bold">Bet tracked!</p>
+            <p className="text-slate-500 text-sm mt-0.5">Added to your Statistics</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <p className="text-white font-bold text-sm">{bet.match_name}</p>
+                <p className="text-slate-500 text-xs mt-0.5">{bet.league}</p>
+              </div>
+              <button onClick={onClose} className="text-white/30 hover:text-white/70 transition-colors ml-3">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 py-2.5 mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-wide">Selection</p>
+                  <p className="text-white font-bold text-sm mt-0.5">{bet.selection}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-wide">Odds</p>
+                  <p className="text-orange-400 font-black text-base mt-0.5">{bet.odds ? bet.odds.toFixed(2) : 'Est.'}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-wide mb-2">Stake</p>
+              <div className="flex gap-1.5 mb-2">
+                {[1, 5, 10, 25, 50].map(v => (
+                  <button
+                    key={v}
+                    onClick={() => setStake(String(v))}
+                    className={`flex-1 py-1 rounded-lg text-xs font-bold border transition-all ${
+                      stake === String(v)
+                        ? 'bg-orange-500/20 border-orange-500/40 text-orange-400'
+                        : 'bg-white/[0.04] border-white/[0.08] text-white/50 hover:text-white/80 hover:bg-white/[0.07]'
+                    }`}
+                  >
+                    £{v}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="number"
+                value={stake}
+                onChange={e => setStake(e.target.value)}
+                placeholder="Or enter amount…"
+                className="w-full bg-white/[0.04] border border-white/[0.10] rounded-xl px-3 py-2.5 text-white text-sm placeholder-white/20 outline-none focus:border-orange-500/50"
+              />
+            </div>
+
+            <button
+              onClick={submit}
+              disabled={loading || !stake || parseFloat(stake) <= 0}
+              className="w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black py-2.5 rounded-xl text-sm transition-all"
+            >
+              {loading ? 'Tracking…' : 'Track Bet'}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function PredictionsPage() {
   const [predictions, setPredictions] = useState<Prediction[]>([])
   const [loading, setLoading] = useState(true)
@@ -242,11 +385,14 @@ export default function PredictionsPage() {
   const [acca, setAcca] = useState<Acca | null>(null)
   const [accaLoading, setAccaLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [trackingBet, setTrackingBet] = useState<TrackingBet | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
+        setUserId(user.id)
         supabase.from('profiles').select('subscription_tier').eq('user_id', user.id).single()
           .then(({ data }) => {
             if (data?.subscription_tier) setSubscriptionTier(data.subscription_tier as 'free' | 'pro' | 'elite')
@@ -646,7 +792,7 @@ export default function PredictionsPage() {
                       href={PRIMARY_AFFILIATE.url}
                       target="_blank"
                       rel="noopener noreferrer sponsored"
-                      className={`flex items-center justify-between w-full rounded-xl px-4 py-2.5 mb-3 transition-all group ${
+                      className={`flex items-center justify-between w-full rounded-xl px-4 py-2.5 mb-2 transition-all group ${
                         pred.is_value_bet && isPro
                           ? 'bg-emerald-600 hover:bg-emerald-500'
                           : 'bg-blue-600 hover:bg-blue-500'
@@ -662,6 +808,38 @@ export default function PredictionsPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
                     </a>
+
+                    {/* Track this bet */}
+                    <button
+                      onClick={() => {
+                        const bestLabel = pred.best_value?.label || pred.recommended_bet
+                        const bestOdds = (() => {
+                          const b = bestLabel.toLowerCase()
+                          if (!pred.bookmaker) return pred.best_value?.odds ?? null
+                          if (b.includes('home')) return pred.bookmaker.home
+                          if (b.includes('away')) return pred.bookmaker.away
+                          if (b.includes('draw')) return pred.bookmaker.draw
+                          if (b.includes('over') || b.includes('2.5')) return pred.bookmaker.over25
+                          if (b.includes('btts') || b.includes('both')) return pred.bookmaker.btts
+                          return pred.best_value?.odds ?? null
+                        })()
+                        setTrackingBet({
+                          match_name: `${pred.home_team} vs ${pred.away_team}`,
+                          league: pred.league,
+                          selection: bestLabel,
+                          bet_type: mapBetType(bestLabel),
+                          odds: bestOdds,
+                          bookmaker: pred.bookmaker_name || '',
+                          match_date: pred.date,
+                        })
+                      }}
+                      className="flex items-center justify-center gap-2 w-full rounded-xl px-4 py-2 mb-3 text-sm font-semibold text-white/50 hover:text-white/80 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.07] transition-all"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                      </svg>
+                      Track this bet
+                    </button>
 
                     {/* Confidence */}
                     <div className="flex items-center justify-between mb-3">
@@ -920,6 +1098,15 @@ export default function PredictionsPage() {
           {' '}Bet Now links are affiliate links — we may earn a commission at no extra cost to you.
           {' '}18+ · Gamble responsibly · <a href="https://www.begambleaware.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-400">begambleaware.org</a>
         </p>
+      )}
+
+      {trackingBet && userId && (
+        <TrackBetModal
+          bet={trackingBet}
+          userId={userId}
+          onClose={() => setTrackingBet(null)}
+          onTracked={() => setTrackingBet(null)}
+        />
       )}
     </div>
   )
