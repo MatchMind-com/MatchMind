@@ -44,7 +44,7 @@ export async function GET(
   const leagueId = fixture.league?.id
 
   // Fetch all detail data in parallel
-  const [injuries, h2h, homeForm, awayForm, homeSquad, awaySquad, predictions] = await Promise.all([
+  const [injuries, h2h, homeForm, awayForm, homeSquad, awaySquad, predictions, matchStats] = await Promise.all([
     apiFetch(`/injuries?fixture=${fixtureId}`),
     apiFetch(`/fixtures/headtohead?h2h=${homeTeamId}-${awayTeamId}&last=5`),
     apiFetch(`/fixtures?team=${homeTeamId}&league=${leagueId}&season=${season}&last=5&status=FT`),
@@ -52,6 +52,7 @@ export async function GET(
     apiFetch(`/players/squads?team=${homeTeamId}`),
     apiFetch(`/players/squads?team=${awayTeamId}`),
     apiFetch(`/predictions?fixture=${fixtureId}`),
+    apiFetch(`/fixtures/statistics?fixture=${fixtureId}`),
   ])
 
   // Process injuries by team
@@ -99,6 +100,54 @@ export async function GET(
   const homeFormProcessed = processForm(homeForm || [], homeTeamId)
   const awayFormProcessed = processForm(awayForm || [], awayTeamId)
 
+  // Process match statistics (live/finished games)
+  function extractStat(teamStats: any[], statType: string) {
+    const entry = teamStats?.find((s: any) => s.type === statType)
+    const val = entry?.value
+    if (val === null || val === undefined) return null
+    // Some values come as "45%" strings
+    if (typeof val === 'string' && val.endsWith('%')) return parseFloat(val)
+    return typeof val === 'number' ? val : parseFloat(val) || null
+  }
+
+  let statistics: any = null
+  if (matchStats && matchStats.length >= 2) {
+    const homeTeamStats = matchStats.find((s: any) => s.team?.id === homeTeamId)?.statistics || []
+    const awayTeamStats = matchStats.find((s: any) => s.team?.id === awayTeamId)?.statistics || []
+    statistics = {
+      home: {
+        possession: extractStat(homeTeamStats, 'Ball Possession'),
+        shots_total: extractStat(homeTeamStats, 'Total Shots'),
+        shots_on_goal: extractStat(homeTeamStats, 'Shots on Goal'),
+        xg: extractStat(homeTeamStats, 'expected_goals'),
+        corners: extractStat(homeTeamStats, 'Corner Kicks'),
+        fouls: extractStat(homeTeamStats, 'Fouls'),
+        yellow_cards: extractStat(homeTeamStats, 'Yellow Cards'),
+        red_cards: extractStat(homeTeamStats, 'Red Cards'),
+        saves: extractStat(homeTeamStats, 'Goalkeeper Saves'),
+        passes_total: extractStat(homeTeamStats, 'Total passes'),
+        passes_accurate: extractStat(homeTeamStats, 'Passes accurate'),
+        pass_accuracy: extractStat(homeTeamStats, 'Passes %'),
+        offsides: extractStat(homeTeamStats, 'Offsides'),
+      },
+      away: {
+        possession: extractStat(awayTeamStats, 'Ball Possession'),
+        shots_total: extractStat(awayTeamStats, 'Total Shots'),
+        shots_on_goal: extractStat(awayTeamStats, 'Shots on Goal'),
+        xg: extractStat(awayTeamStats, 'expected_goals'),
+        corners: extractStat(awayTeamStats, 'Corner Kicks'),
+        fouls: extractStat(awayTeamStats, 'Fouls'),
+        yellow_cards: extractStat(awayTeamStats, 'Yellow Cards'),
+        red_cards: extractStat(awayTeamStats, 'Red Cards'),
+        saves: extractStat(awayTeamStats, 'Goalkeeper Saves'),
+        passes_total: extractStat(awayTeamStats, 'Total passes'),
+        passes_accurate: extractStat(awayTeamStats, 'Passes accurate'),
+        pass_accuracy: extractStat(awayTeamStats, 'Passes %'),
+        offsides: extractStat(awayTeamStats, 'Offsides'),
+      },
+    }
+  }
+
   // Get prediction data
   const pred = predictions?.[0]
   const aiPrediction = pred ? {
@@ -145,5 +194,6 @@ export async function GET(
     },
     h2h: h2hMatches,
     prediction: aiPrediction,
+    statistics,
   })
 }
