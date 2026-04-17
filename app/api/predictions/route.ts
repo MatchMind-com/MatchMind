@@ -168,13 +168,18 @@ const TOP_LEAGUES = [
   { id: 848, name: 'Conference League', flag: '🥉' },
   { id: 88,  name: 'Eredivisie',        flag: '🇳🇱' },
   { id: 94,  name: 'Primeira Liga',     flag: '🇵🇹' },
+  { id: 203, name: 'Süper Lig',         flag: '🇹🇷' },
+  { id: 40,  name: 'Championship',      flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+  { id: 144, name: 'Pro League',        flag: '🇧🇪' },
+  { id: 113, name: 'Allsvenskan',       flag: '🇸🇪' },
+  { id: 262, name: 'Liga MX',           flag: '🇲🇽' },
 ]
 
 export async function GET() {
   try {
     const season = getCurrentSeason()
     const today = new Date().toISOString().split('T')[0]
-    const in3days = getDatePlusDays(3)
+    const in3days = getDatePlusDays(4)
 
     const tomorrow = getDatePlusDays(1)
 
@@ -232,7 +237,7 @@ export async function GET() {
           }
         }
 
-        return (fixtures || []).slice(0, 2).map((f: any) => ({
+        return (fixtures || []).slice(0, 4).map((f: any) => ({
           ...f,
           _leagueName: league.name,
           _leagueFlag: league.flag,
@@ -247,7 +252,7 @@ export async function GET() {
       })
     )
 
-    const allFixtures = leagueResults.flat().slice(0, 20)
+    const allFixtures = leagueResults.flat().slice(0, 40)
 
     if (allFixtures.length === 0) {
       return NextResponse.json(
@@ -329,7 +334,7 @@ Return JSON with this exact structure:
   ]
 }`
       }],
-      max_tokens: 4000,
+      max_tokens: 8000,
     })
 
     const gptData = JSON.parse(completion.choices[0]?.message?.content || '{"predictions":[]}')
