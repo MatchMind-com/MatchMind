@@ -13,6 +13,24 @@ interface BookmakerOdds {
   btts: number | null
 }
 
+interface TeamStats {
+  played: number
+  wins: number
+  draws: number
+  losses: number
+  goals_for: number
+  goals_against: number
+  goals_per_game: number
+  conceded_per_game: number
+  clean_sheets: number
+  clean_sheet_pct: number
+  failed_to_score: number
+  league_position: number | null
+  home: { wins: number; draws: number; losses: number }
+  away: { wins: number; draws: number; losses: number }
+  form: string | null
+}
+
 interface ValueBet {
   label: string
   ev: number
@@ -42,6 +60,8 @@ interface Prediction {
   away_injuries: string[]
   lineups: { home: string[]; away: string[] } | null
   bookmaker: BookmakerOdds | null
+  home_stats: TeamStats | null
+  away_stats: TeamStats | null
   ev: { home: number | null; draw: number | null; away: number | null; over25: number | null; btts: number | null }
   best_value: ValueBet | null
   pinnacle_edge: { market: string; edge_pct: number; pinnacle_odds: number; bet365_odds: number } | null
@@ -183,6 +203,31 @@ function CheckIcon() {
     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
     </svg>
+  )
+}
+
+/** Resolve real Bet365 odds for a recommended bet type */
+function resolveRecommendedOdds(recommendedBet: string, bookmaker: BookmakerOdds | null): number | null {
+  if (!bookmaker) return null
+  const b = recommendedBet.toLowerCase()
+  if (b.includes('home')) return bookmaker.home
+  if (b.includes('away')) return bookmaker.away
+  if (b.includes('draw')) return bookmaker.draw
+  if (b.includes('over') || b.includes('2.5')) return bookmaker.over25
+  if (b.includes('btts') || b.includes('both')) return bookmaker.btts
+  return bookmaker.home // fallback to home
+}
+
+function StatBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+  const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-slate-500 text-[10px] w-16 shrink-0">{label}</span>
+      <div className="flex-1 bg-white/[0.05] rounded-full h-1.5 overflow-hidden">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+      </div>
+      <span className="text-xs font-bold text-white w-8 text-right">{value}</span>
+    </div>
   )
 }
 
@@ -539,22 +584,46 @@ export default function PredictionsPage() {
                     )}
 
                     {/* Recommended bet */}
-                    <div className={`border rounded-xl px-4 py-3 mb-3 flex items-center justify-between ${
-                      pred.is_value_bet && isPro
-                        ? 'bg-emerald-600/8 border-emerald-500/25'
-                        : 'bg-blue-600/8 border-blue-500/20'
-                    }`}>
-                      <div>
-                        <p className={`text-[10px] font-semibold uppercase tracking-wide mb-0.5 ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-blue-400'}`}>
-                          AI Recommended Bet
-                        </p>
-                        <p className="text-white font-bold text-sm">{pred.recommended_bet}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-slate-500 text-[10px]">Est. odds</p>
-                        <p className={`font-bold text-sm ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-blue-300'}`}>{pred.recommended_odds_range}</p>
-                      </div>
-                    </div>
+                    {(() => {
+                      const recOdds = resolveRecommendedOdds(pred.recommended_bet, pred.bookmaker)
+                      const recEV = recOdds && pred.bookmaker ? (() => {
+                        const b = pred.recommended_bet.toLowerCase()
+                        if (b.includes('home')) return pred.ev.home
+                        if (b.includes('away')) return pred.ev.away
+                        if (b.includes('draw')) return pred.ev.draw
+                        if (b.includes('over') || b.includes('2.5')) return pred.ev.over25
+                        if (b.includes('btts') || b.includes('both')) return pred.ev.btts
+                        return pred.ev.home
+                      })() : null
+                      return (
+                        <div className={`border rounded-xl px-4 py-3 mb-3 flex items-center justify-between ${
+                          pred.is_value_bet && isPro
+                            ? 'bg-emerald-600/8 border-emerald-500/25'
+                            : 'bg-blue-600/8 border-blue-500/20'
+                        }`}>
+                          <div>
+                            <p className={`text-[10px] font-semibold uppercase tracking-wide mb-0.5 ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-blue-400'}`}>
+                              AI Recommended Bet
+                            </p>
+                            <p className="text-white font-bold text-sm">{pred.recommended_bet}</p>
+                          </div>
+                          <div className="text-right">
+                            {recOdds ? (
+                              <>
+                                <p className="text-slate-500 text-[10px]">Bet365</p>
+                                <p className={`font-black text-base ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-blue-300'}`}>{recOdds.toFixed(2)}</p>
+                                {recEV !== null && <p className={`text-[9px] font-bold ${recEV > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>{recEV > 0 ? '+' : ''}{recEV}% EV</p>}
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-slate-500 text-[10px]">Est. odds</p>
+                                <p className={`font-bold text-sm ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-blue-300'}`}>{pred.recommended_odds_range}</p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })()}
 
                     {/* Confidence */}
                     <div className="flex items-center justify-between mb-3">
@@ -577,6 +646,136 @@ export default function PredictionsPage() {
                   {/* Expanded details */}
                   {isExpanded && (
                     <div className="border-t border-white/[0.05] px-4 pb-4 pt-3 space-y-4">
+
+                      {/* Team stats comparison — SofaScore style */}
+                      {(pred.home_stats || pred.away_stats) && (
+                        <div>
+                          <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-wide mb-2.5">Team Statistics (Season)</p>
+
+                          {/* League positions */}
+                          {(pred.home_stats?.league_position || pred.away_stats?.league_position) && (
+                            <div className="flex items-center justify-between mb-2 bg-white/[0.03] border border-white/[0.05] rounded-xl px-4 py-2.5">
+                              <div className="text-center">
+                                <p className="text-white font-black text-2xl leading-none">
+                                  {pred.home_stats?.league_position ? `#${pred.home_stats.league_position}` : '—'}
+                                </p>
+                                <p className="text-slate-500 text-[10px] mt-0.5">League pos.</p>
+                              </div>
+                              <p className="text-slate-600 text-xs font-medium">vs</p>
+                              <div className="text-center">
+                                <p className="text-white font-black text-2xl leading-none">
+                                  {pred.away_stats?.league_position ? `#${pred.away_stats.league_position}` : '—'}
+                                </p>
+                                <p className="text-slate-500 text-[10px] mt-0.5">League pos.</p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Stats grid: home vs away */}
+                          <div className="grid grid-cols-2 gap-2.5">
+                            {/* Home stats */}
+                            {pred.home_stats && (
+                              <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3">
+                                <p className="text-slate-400 text-[10px] font-bold mb-2 truncate">{pred.home_team}</p>
+                                <div className="space-y-1.5">
+                                  <div className="flex justify-between text-[11px]">
+                                    <span className="text-slate-500">W/D/L</span>
+                                    <span className="text-white font-bold">{pred.home_stats.wins}/{pred.home_stats.draws}/{pred.home_stats.losses}</span>
+                                  </div>
+                                  <div className="flex justify-between text-[11px]">
+                                    <span className="text-slate-500">Goals/game</span>
+                                    <span className="text-emerald-400 font-bold">{pred.home_stats.goals_per_game}</span>
+                                  </div>
+                                  <div className="flex justify-between text-[11px]">
+                                    <span className="text-slate-500">Conceded/game</span>
+                                    <span className="text-red-400 font-bold">{pred.home_stats.conceded_per_game}</span>
+                                  </div>
+                                  <div className="flex justify-between text-[11px]">
+                                    <span className="text-slate-500">Clean sheets</span>
+                                    <span className="text-blue-400 font-bold">{pred.home_stats.clean_sheets} ({pred.home_stats.clean_sheet_pct}%)</span>
+                                  </div>
+                                  <div className="flex justify-between text-[11px]">
+                                    <span className="text-slate-500">Home record</span>
+                                    <span className="text-white font-semibold">{pred.home_stats.home.wins}W/{pred.home_stats.home.draws}D/{pred.home_stats.home.losses}L</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            {/* Away stats */}
+                            {pred.away_stats && (
+                              <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3">
+                                <p className="text-slate-400 text-[10px] font-bold mb-2 truncate">{pred.away_team}</p>
+                                <div className="space-y-1.5">
+                                  <div className="flex justify-between text-[11px]">
+                                    <span className="text-slate-500">W/D/L</span>
+                                    <span className="text-white font-bold">{pred.away_stats.wins}/{pred.away_stats.draws}/{pred.away_stats.losses}</span>
+                                  </div>
+                                  <div className="flex justify-between text-[11px]">
+                                    <span className="text-slate-500">Goals/game</span>
+                                    <span className="text-emerald-400 font-bold">{pred.away_stats.goals_per_game}</span>
+                                  </div>
+                                  <div className="flex justify-between text-[11px]">
+                                    <span className="text-slate-500">Conceded/game</span>
+                                    <span className="text-red-400 font-bold">{pred.away_stats.conceded_per_game}</span>
+                                  </div>
+                                  <div className="flex justify-between text-[11px]">
+                                    <span className="text-slate-500">Clean sheets</span>
+                                    <span className="text-blue-400 font-bold">{pred.away_stats.clean_sheets} ({pred.away_stats.clean_sheet_pct}%)</span>
+                                  </div>
+                                  <div className="flex justify-between text-[11px]">
+                                    <span className="text-slate-500">Away record</span>
+                                    <span className="text-white font-semibold">{pred.away_stats.away.wins}W/{pred.away_stats.away.draws}D/{pred.away_stats.away.losses}L</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Visual bars comparison */}
+                          {pred.home_stats && pred.away_stats && (
+                            <div className="mt-2.5 bg-white/[0.03] border border-white/[0.05] rounded-xl p-3 space-y-2">
+                              <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-wide mb-2">Head-to-Head Stats</p>
+                              {/* Goals For bar */}
+                              <div>
+                                <div className="flex justify-between text-[10px] text-slate-500 mb-1">
+                                  <span className="text-white font-bold">{pred.home_stats.goals_per_game}</span>
+                                  <span>Goals / Game</span>
+                                  <span className="text-white font-bold">{pred.away_stats.goals_per_game}</span>
+                                </div>
+                                <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden">
+                                  <div className="bg-blue-500 rounded-l-full" style={{ width: `${(pred.home_stats.goals_per_game / (pred.home_stats.goals_per_game + pred.away_stats.goals_per_game + 0.001)) * 100}%` }} />
+                                  <div className="bg-slate-700 flex-1 rounded-r-full" />
+                                </div>
+                              </div>
+                              {/* Goals Against bar */}
+                              <div>
+                                <div className="flex justify-between text-[10px] text-slate-500 mb-1">
+                                  <span className="text-white font-bold">{pred.home_stats.conceded_per_game}</span>
+                                  <span>Conceded / Game</span>
+                                  <span className="text-white font-bold">{pred.away_stats.conceded_per_game}</span>
+                                </div>
+                                <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden">
+                                  <div className="bg-red-500 rounded-l-full" style={{ width: `${(pred.home_stats.conceded_per_game / (pred.home_stats.conceded_per_game + pred.away_stats.conceded_per_game + 0.001)) * 100}%` }} />
+                                  <div className="bg-slate-700 flex-1 rounded-r-full" />
+                                </div>
+                              </div>
+                              {/* Clean sheets bar */}
+                              <div>
+                                <div className="flex justify-between text-[10px] text-slate-500 mb-1">
+                                  <span className="text-white font-bold">{pred.home_stats.clean_sheet_pct}%</span>
+                                  <span>Clean Sheet %</span>
+                                  <span className="text-white font-bold">{pred.away_stats.clean_sheet_pct}%</span>
+                                </div>
+                                <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden">
+                                  <div className="bg-emerald-500 rounded-l-full" style={{ width: `${(pred.home_stats.clean_sheet_pct / (pred.home_stats.clean_sheet_pct + pred.away_stats.clean_sheet_pct + 0.001)) * 100}%` }} />
+                                  <div className="bg-slate-700 flex-1 rounded-r-full" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <p className="text-slate-500 text-[10px] mb-1.5 uppercase tracking-wide">Over 2.5 Goals</p>

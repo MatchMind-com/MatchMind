@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
-export const revalidate = 3600 // rebuild acca once per hour
+export const revalidate = 1800
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const API_KEY = process.env.API_FOOTBALL_KEY!
@@ -12,11 +12,17 @@ function getCurrentSeason() {
   return (now.getMonth() + 1) >= 8 ? now.getFullYear() : now.getFullYear() - 1
 }
 
+function getDatePlusDays(days: number) {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return d.toISOString().split('T')[0]
+}
+
 async function apiFetch(path: string) {
   try {
     const res = await fetch(`${BASE}${path}`, {
       headers: { 'x-apisports-key': API_KEY },
-      next: { revalidate: 3600 },
+      next: { revalidate: 1800 },
     })
     if (!res.ok) return null
     const json = await res.json()
@@ -44,27 +50,41 @@ function calcEV(aiPct: number, odds: number) {
   return Math.round(((aiPct / 100) * odds - 1) * 100)
 }
 
+function formatForm(fixtures: any[], teamId: number): string {
+  if (!fixtures?.length) return 'No data'
+  return fixtures.slice(0, 5).map((f: any) => {
+    const isHome = f.teams?.home?.id === teamId
+    const scored = isHome ? f.goals?.home ?? 0 : f.goals?.away ?? 0
+    const conceded = isHome ? f.goals?.away ?? 0 : f.goals?.home ?? 0
+    const opp = isHome ? f.teams?.away?.name : f.teams?.home?.name
+    const result = scored > conceded ? 'W' : scored < conceded ? 'L' : 'D'
+    return `${result} ${scored}-${conceded} vs ${opp}`
+  }).join(' | ')
+}
+
 const LEAGUES = [
-  { id: 39, name: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-  { id: 140, name: 'La Liga', flag: '🇪🇸' },
-  { id: 78, name: 'Bundesliga', flag: '🇩🇪' },
-  { id: 135, name: 'Serie A', flag: '🇮🇹' },
-  { id: 61, name: 'Ligue 1', flag: '🇫🇷' },
-  { id: 2, name: 'Champions League', flag: '🏆' },
-  { id: 88, name: 'Eredivisie', flag: '🇳🇱' },
-  { id: 94, name: 'Primeira Liga', flag: '🇵🇹' },
+  { id: 39,  name: 'Premier League',    flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+  { id: 140, name: 'La Liga',           flag: '🇪🇸' },
+  { id: 78,  name: 'Bundesliga',        flag: '🇩🇪' },
+  { id: 135, name: 'Serie A',           flag: '🇮🇹' },
+  { id: 61,  name: 'Ligue 1',           flag: '🇫🇷' },
+  { id: 2,   name: 'Champions League',  flag: '🏆' },
+  { id: 3,   name: 'Europa League',     flag: '🥈' },
+  { id: 88,  name: 'Eredivisie',        flag: '🇳🇱' },
+  { id: 94,  name: 'Primeira Liga',     flag: '🇵🇹' },
 ]
 
 export async function GET() {
   try {
     const season = getCurrentSeason()
     const today = new Date().toISOString().split('T')[0]
+    const in3days = getDatePlusDays(3)
 
-    // Fetch today's fixtures + odds from each league in parallel
+    // Fetch next 3 days — not just today (fixes "no acca in evenings" issue)
     const leagueData = await Promise.all(
       LEAGUES.map(async (league) => {
         const [fixtures, oddsData] = await Promise.all([
-          apiFetch(`/fixtures?league=${league.id}&season=${season}&date=${today}&status=NS`),
+          apiFetch(`/fixtures?league=${league.id}&season=${season}&from=${today}&to=${in3days}&status=NS`),
           apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}&bookmaker=1`),
         ])
 
@@ -76,20 +96,18 @@ export async function GET() {
             if (fid && bk) oddsMap[fid] = extractOdds(bk)
           }
         }
-
         return { league, fixtures: fixtures || [], oddsMap }
       })
     )
 
-    // Build candidate list: fixtures with real odds available
+    // Candidates: fixtures with real odds from different leagues
     const candidates: Array<{
-      fixture: any
-      league: typeof LEAGUES[0]
+      fixture: any; league: typeof LEAGUES[0]
       odds: NonNullable<ReturnType<typeof extractOdds>>
     }> = []
 
     for (const { league, fixtures, oddsMap } of leagueData) {
-      for (const f of fixtures.slice(0, 3)) {
+      for (const f of fixtures.slice(0, 4)) {
         const o = oddsMap[f.fixture?.id]
         if (o && (o.home || o.over25 || o.btts)) {
           candidates.push({ fixture: f, league, odds: o as any })
@@ -98,38 +116,57 @@ export async function GET() {
     }
 
     if (candidates.length < 3) {
-      return NextResponse.json({
-        success: true,
-        acca: null,
-        message: 'Not enough fixtures with odds available today',
-      })
+      // Fallback: use fixtures even without odds
+      const allFixtures = leagueData.flatMap(({ league, fixtures }) =>
+        fixtures.slice(0, 2).map(f => ({
+          fixture: f, league,
+          odds: { home: null, draw: null, away: null, over25: null, btts: null } as any,
+        }))
+      )
+      if (allFixtures.length < 3) {
+        return NextResponse.json({ success: true, acca: null, message: 'No upcoming fixtures found' })
+      }
+      candidates.push(...allFixtures.slice(0, 6))
     }
 
-    // Ask AI to pick the best 3 legs from different leagues
-    const fixtureList = candidates.map((c, i) => {
+    // Fetch form for top candidates
+    const topCandidates = candidates.slice(0, 9)
+    const formResults = await Promise.all(
+      topCandidates.map(async (c) => {
+        const homeId = c.fixture.teams?.home?.id
+        const awayId = c.fixture.teams?.away?.id
+        const [homeForm, awayForm] = await Promise.all([
+          apiFetch(`/fixtures?team=${homeId}&last=5`),
+          apiFetch(`/fixtures?team=${awayId}&last=5`),
+        ])
+        return { homeId, awayId, homeForm, awayForm }
+      })
+    )
+
+    const fixtureList = topCandidates.map((c, i) => {
       const home = c.fixture.teams?.home?.name
       const away = c.fixture.teams?.away?.name
+      const date = new Date(c.fixture.fixture?.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
       const o = c.odds
-      return `${i + 1}. ${home} vs ${away} | ${c.league.name} | Bet365: H ${o.home ?? 'N/A'} / D ${o.draw ?? 'N/A'} / A ${o.away ?? 'N/A'} / Over2.5 ${o.over25 ?? 'N/A'} / BTTS ${o.btts ?? 'N/A'}`
-    }).join('\n')
+      const oddsStr = o?.home ? ` | H ${o.home} / D ${o.draw} / A ${o.away} / O2.5 ${o.over25 ?? 'N/A'} / BTTS ${o.btts ?? 'N/A'}` : ''
+      const fd = formResults[i]
+      const homeF = fd?.homeForm ? formatForm(fd.homeForm, fd.homeId) : ''
+      const awayF = fd?.awayForm ? formatForm(fd.awayForm, fd.awayId) : ''
+      return `${i + 1}. ${home} vs ${away} | ${c.league.name} | ${date}${oddsStr}${homeF ? `\n   ${home} form: ${homeF}` : ''}${awayF ? `\n   ${away} form: ${awayF}` : ''}`
+    }).join('\n\n')
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       response_format: { type: 'json_object' },
       messages: [{
         role: 'system',
-        content: 'You are an expert football betting analyst. Your job is to build an accumulator (multi-bet) from the provided fixtures by selecting exactly 3 legs — each from a DIFFERENT league — where you have genuine positive expected value. Focus on the highest probability outcomes with the best value odds. Return valid JSON only.'
+        content: 'You are an elite football betting analyst. Build a 3-leg accumulator with genuine positive expected value. Use the form data and odds to find where the market is mispriced. Return valid JSON only.'
       }, {
         role: 'user',
-        content: `Today's fixtures with Bet365 odds:
+        content: `Build a 3-leg accumulator from these upcoming fixtures. Pick legs from 3 DIFFERENT leagues. Prioritise positive EV based on form data vs the odds offered.
 
+Fixtures:
 ${fixtureList}
-
-Rules:
-- Pick exactly 3 legs from 3 DIFFERENT leagues
-- Each leg must have positive EV (your estimated probability > implied odds probability)
-- Prefer Over 2.5 or BTTS for high-scoring leagues, Home/Away Win for clear favourites
-- Provide your probability estimate for each selected bet
 
 Return JSON:
 {
@@ -138,41 +175,39 @@ Return JSON:
       "fixture_index": 1,
       "bet_type": "Over 2.5 Goals",
       "your_probability": 68,
-      "reasoning": "Both teams score in 4 of last 5, strong attack vs weak defence",
+      "reasoning": "Both teams averaged 2.3+ goals in last 5, weak defences on current form",
       "confidence": "High"
     }
   ],
-  "acca_reasoning": "Brief overall reasoning for this accumulator"
+  "acca_reasoning": "2-sentence overall rationale for this accumulator"
 }`
       }],
-      max_tokens: 800,
+      max_tokens: 1000,
     })
 
     const gptData = JSON.parse(completion.choices[0]?.message?.content || '{"legs":[]}')
     const legs = gptData.legs || []
 
     if (legs.length < 2) {
-      return NextResponse.json({ success: true, acca: null, message: 'AI could not build a confident accumulator today' })
+      return NextResponse.json({ success: true, acca: null, message: 'AI could not identify a confident accumulator' })
     }
 
-    // Build the acca legs with real odds and EV
     const accaLegs = legs.map((leg: any) => {
-      const idx = (leg.fixture_index || 1) - 1
-      const candidate = candidates[Math.min(idx, candidates.length - 1)]
+      const idx = Math.min((leg.fixture_index || 1) - 1, topCandidates.length - 1)
+      const candidate = topCandidates[idx]
       if (!candidate) return null
 
       const o = candidate.odds
       const betType = leg.bet_type || 'Home Win'
       const aiPct = leg.your_probability || 55
 
-      // Get the relevant odds for this bet type
       let relevantOdds: number | null = null
       if (betType.toLowerCase().includes('home')) relevantOdds = o.home
       else if (betType.toLowerCase().includes('away')) relevantOdds = o.away
       else if (betType.toLowerCase().includes('draw')) relevantOdds = o.draw
       else if (betType.toLowerCase().includes('over') || betType.toLowerCase().includes('2.5')) relevantOdds = o.over25
       else if (betType.toLowerCase().includes('btts') || betType.toLowerCase().includes('both')) relevantOdds = o.btts
-      else relevantOdds = o.home // fallback
+      else relevantOdds = o.home
 
       const ev = relevantOdds ? calcEV(aiPct, relevantOdds) : null
 
@@ -195,19 +230,20 @@ Return JSON:
       return NextResponse.json({ success: true, acca: null, message: 'Could not build acca with valid odds' })
     }
 
-    // Combined odds and combined EV
-    const combinedOdds = accaLegs.reduce((prod: number, leg: any) => prod * (leg.odds || 1), 1)
-    const roundedCombinedOdds = Math.round(combinedOdds * 100) / 100
+    const combinedOdds = Math.round(
+      accaLegs.reduce((prod: number, leg: any) => prod * (leg.odds || 1), 1) * 100
+    ) / 100
 
-    // Combined EV: geometric mean of individual EVs (simplified)
-    const avgEV = accaLegs.reduce((sum: number, leg: any) => sum + (leg.ev_percent || 0), 0) / accaLegs.length
+    const avgEV = Math.round(
+      accaLegs.reduce((sum: number, leg: any) => sum + (leg.ev_percent || 0), 0) / accaLegs.length
+    )
 
     return NextResponse.json({
       success: true,
       acca: {
         legs: accaLegs,
-        combined_odds: roundedCombinedOdds,
-        combined_ev: Math.round(avgEV),
+        combined_odds: combinedOdds,
+        combined_ev: avgEV,
         reasoning: gptData.acca_reasoning || '',
         generated_at: new Date().toISOString(),
       }

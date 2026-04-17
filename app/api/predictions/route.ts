@@ -113,6 +113,38 @@ function formatForm(fixtures: any[], teamId: number): string {
   }).join(' | ')
 }
 
+// Extract clean team stats from /teams/statistics response
+function extractTeamStats(stats: any, position: number | null) {
+  if (!stats) return null
+  const fx = stats.fixtures || {}
+  const goals = stats.goals || {}
+
+  const played = fx.played?.total || 0
+  const wins = fx.wins?.total || 0
+  const draws = fx.draws?.total || 0
+  const losses = fx.loses?.total || 0
+  const goalsFor = goals.for?.total?.total || 0
+  const goalsAgainst = goals.against?.total?.total || 0
+  const cleanSheets = stats.clean_sheet?.total || 0
+  const failedToScore = stats.failed_to_score?.total || 0
+
+  return {
+    played, wins, draws, losses,
+    goals_for: goalsFor,
+    goals_against: goalsAgainst,
+    goals_per_game: played > 0 ? Math.round((goalsFor / played) * 10) / 10 : 0,
+    conceded_per_game: played > 0 ? Math.round((goalsAgainst / played) * 10) / 10 : 0,
+    clean_sheets: cleanSheets,
+    clean_sheet_pct: played > 0 ? Math.round((cleanSheets / played) * 100) : 0,
+    failed_to_score: failedToScore,
+    league_position: position,
+    home: { wins: fx.wins?.home || 0, draws: fx.draws?.home || 0, losses: fx.loses?.home || 0 },
+    away: { wins: fx.wins?.away || 0, draws: fx.draws?.away || 0, losses: fx.loses?.away || 0 },
+    biggest_win: stats.biggest?.wins?.home ?? stats.biggest?.wins?.away ?? null,
+    form: stats.form ?? null,
+  }
+}
+
 // Format H2H fixtures: "Man Utd 2-1 Liverpool | Arsenal 0-0 Man Utd | ..."
 function formatH2H(fixtures: any[]): string {
   if (!fixtures?.length) return 'No H2H data'
@@ -147,12 +179,20 @@ export async function GET() {
     // Fetch fixtures + Bet365 odds per league in parallel
     const leagueResults = await Promise.all(
       TOP_LEAGUES.map(async (league) => {
-        const [fixtures, oddsData, pinnacleData, injuries] = await Promise.all([
+        const [fixtures, oddsData, pinnacleData, injuries, standings] = await Promise.all([
           apiFetch(`/fixtures?league=${league.id}&season=${season}&from=${today}&to=${in3days}&status=NS`),
           apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}&bookmaker=1`),   // Bet365
           apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}&bookmaker=29`),  // Pinnacle (sharp)
           apiFetch(`/injuries?league=${league.id}&season=${season}&date=${today}`),
+          apiFetch(`/standings?league=${league.id}&season=${season}`),
         ])
+
+        // Build teamId → league position map
+        const standingMap: Record<number, number> = {}
+        const rawStandings = standings?.[0]?.league?.standings?.[0] ?? standings?.[0]?.league?.standings?.flat?.() ?? []
+        for (const s of rawStandings) {
+          if (s?.team?.id) standingMap[s.team.id] = s.rank
+        }
 
         // Build fixture_id → Bet365 odds map
         const oddsMap: Record<number, ReturnType<typeof extractOdds>> = {}
@@ -192,10 +232,13 @@ export async function GET() {
           ...f,
           _leagueName: league.name,
           _leagueFlag: league.flag,
+          _leagueId: league.id,
           _odds: oddsMap[f.fixture?.id] ?? null,
           _pinnacleOdds: pinnacleMap[f.fixture?.id] ?? null,
           _homeInjuries: injuryMap[f.teams?.home?.id] ?? [],
           _awayInjuries: injuryMap[f.teams?.away?.id] ?? [],
+          _homePosition: standingMap[f.teams?.home?.id] ?? null,
+          _awayPosition: standingMap[f.teams?.away?.id] ?? null,
         }))
       })
     )
@@ -209,18 +252,23 @@ export async function GET() {
       )
     }
 
-    // ── Fetch real form data for each fixture in parallel ─────────────────────
+    // ── Fetch form, H2H + team stats per fixture in parallel ──────────────────
     const formData = await Promise.all(
       allFixtures.map(async (f: any) => {
         const homeId = f.teams?.home?.id
         const awayId = f.teams?.away?.id
-        if (!homeId || !awayId) return { homeId: null, awayId: null, homeForm: null, awayForm: null, h2h: null }
-        const [homeForm, awayForm, h2h] = await Promise.all([
+        const leagueId = f._leagueId
+        if (!homeId || !awayId) return { homeId: null, awayId: null, homeForm: null, awayForm: null, h2h: null, homeStats: null, awayStats: null }
+        const [homeForm, awayForm, h2h, homeStatsRaw, awayStatsRaw] = await Promise.all([
           apiFetch(`/fixtures?team=${homeId}&last=5`),
           apiFetch(`/fixtures?team=${awayId}&last=5`),
           apiFetch(`/fixtures/headtohead?h2h=${homeId}-${awayId}&last=5`),
+          apiFetch(`/teams/statistics?league=${leagueId}&season=${season}&team=${homeId}`),
+          apiFetch(`/teams/statistics?league=${leagueId}&season=${season}&team=${awayId}`),
         ])
-        return { homeId, awayId, homeForm, awayForm, h2h }
+        const homeStats = extractTeamStats(homeStatsRaw, f._homePosition)
+        const awayStats = extractTeamStats(awayStatsRaw, f._awayPosition)
+        return { homeId, awayId, homeForm, awayForm, h2h, homeStats, awayStats }
       })
     )
 
@@ -237,7 +285,11 @@ export async function GET() {
       const homeFormStr = fd?.homeForm ? `\n   ${home} last 5: ${formatForm(fd.homeForm, fd.homeId)}` : ''
       const awayFormStr = fd?.awayForm ? `\n   ${away} last 5: ${formatForm(fd.awayForm, fd.awayId)}` : ''
       const h2hStr = fd?.h2h?.length ? `\n   H2H: ${formatH2H(fd.h2h)}` : ''
-      return `${i + 1}. ${home} vs ${away} | ${f._leagueName} | ${date}${oddsStr}${homeInj}${awayInj}${homeFormStr}${awayFormStr}${h2hStr}`
+      const hs = fd?.homeStats
+      const as_ = fd?.awayStats
+      const homeStatsStr = hs ? `\n   ${home} season: ${hs.league_position ? `#${hs.league_position} ` : ''}${hs.wins}W/${hs.draws}D/${hs.losses}L | ${hs.goals_per_game} g/game | ${hs.conceded_per_game} conceded/game | ${hs.clean_sheet_pct}% clean sheets` : ''
+      const awayStatsStr = as_ ? `\n   ${away} season: ${as_.league_position ? `#${as_.league_position} ` : ''}${as_.wins}W/${as_.draws}D/${as_.losses}L | ${as_.goals_per_game} g/game | ${as_.conceded_per_game} conceded/game | ${as_.clean_sheet_pct}% clean sheets` : ''
+      return `${i + 1}. ${home} vs ${away} | ${f._leagueName} | ${date}${oddsStr}${homeInj}${awayInj}${homeFormStr}${awayFormStr}${h2hStr}${homeStatsStr}${awayStatsStr}`
     }).join('\n\n')
 
     const completion = await openai.chat.completions.create({
@@ -374,6 +426,9 @@ Return JSON with this exact structure:
         away_injuries: f._awayInjuries ?? [],
         // Lineups (if available)
         lineups: lineupMap[f.fixture?.id] ?? null,
+        // Team season statistics
+        home_stats: formData[i]?.homeStats ?? null,
+        away_stats: formData[i]?.awayStats ?? null,
       }
     })
 
