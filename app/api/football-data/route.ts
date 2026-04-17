@@ -36,8 +36,9 @@ export async function GET(req: NextRequest) {
 
   try {
     if (type === 'fixtures') {
+      // NS = Not Started only — exclude live and finished games
       const today = new Date().toISOString().split('T')[0]
-      const data = await apiFetch(`/fixtures?league=${league}&season=${season}&from=${today}&to=${getDatePlusDays(7)}`)
+      const data = await apiFetch(`/fixtures?league=${league}&season=${season}&from=${today}&to=${getDatePlusDays(7)}&status=NS`)
       return NextResponse.json({ success: true, data: data.response?.slice(0, 30) || [] })
     }
 
@@ -47,11 +48,11 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === 'results') {
-      // Last 7 days of results
+      // Last 7 days + today's finished games
       const from = getDatePlusDays(-7)
-      const yesterday = getDatePlusDays(-1)
-      const data = await apiFetch(`/fixtures?league=${league}&season=${season}&from=${from}&to=${yesterday}&status=FT`)
-      return NextResponse.json({ success: true, data: data.response?.slice(0, 20) || [] })
+      const today = new Date().toISOString().split('T')[0]
+      const data = await apiFetch(`/fixtures?league=${league}&season=${season}&from=${from}&to=${today}&status=FT`)
+      return NextResponse.json({ success: true, data: data.response?.slice(0, 20).reverse() || [] })
     }
 
     if (type === 'team_form' && team) {
