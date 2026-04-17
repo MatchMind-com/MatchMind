@@ -61,6 +61,7 @@ interface Prediction {
   away_injuries: string[]
   lineups: { home: string[]; away: string[] } | null
   bookmaker: BookmakerOdds | null
+  bookmaker_name: string | null
   home_stats: TeamStats | null
   away_stats: TeamStats | null
   ev: { home: number | null; draw: number | null; away: number | null; over25: number | null; btts: number | null }
@@ -576,10 +577,10 @@ export default function PredictionsPage() {
                       </div>
                     </div>
 
-                    {/* Bet365 odds + EV — Pro only */}
+                    {/* Live odds + EV — Pro only */}
                     {isPro && pred.bookmaker && (
                       <div className="mb-3">
-                        <p className="text-slate-600 text-[10px] mb-1.5 font-medium uppercase tracking-wide">Bet365 Odds · Expected Value</p>
+                        <p className="text-slate-600 text-[10px] mb-1.5 font-medium uppercase tracking-wide">{pred.bookmaker_name ?? 'Live'} Odds · Expected Value</p>
                         <div className="flex gap-1.5">
                           <OddsChip label="Home" odds={pred.bookmaker.home} ev={pred.ev.home} />
                           <OddsChip label="Draw" odds={pred.bookmaker.draw} ev={pred.ev.draw} />
@@ -625,7 +626,7 @@ export default function PredictionsPage() {
                           <div className="text-right">
                             {recOdds ? (
                               <>
-                                <p className="text-slate-500 text-[10px]">Bet365</p>
+                                <p className="text-slate-500 text-[10px]">{pred.bookmaker_name ?? 'Live'}</p>
                                 <p className={`font-black text-base ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-blue-300'}`}>{recOdds.toFixed(2)}</p>
                                 {recEV !== null && <p className={`text-[9px] font-bold ${recEV > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>{recEV > 0 ? '+' : ''}{recEV}% EV</p>}
                               </>

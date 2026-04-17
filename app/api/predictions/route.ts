@@ -186,12 +186,10 @@ export async function GET() {
     // Fetch fixtures + Bet365 odds per league in parallel
     const leagueResults = await Promise.all(
       TOP_LEAGUES.map(async (league) => {
-        const [fixtures, oddsToday, oddsTomorrow, pinnacleToday, pinnacleTomorrow, injuries, standings] = await Promise.all([
+        const [fixtures, oddsToday, oddsTomorrow, injuries, standings] = await Promise.all([
           apiFetch(`/fixtures?league=${league.id}&season=${season}&from=${today}&to=${in3days}&status=NS`),
-          apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}&bookmaker=1`),     // Bet365 today
-          apiFetch(`/odds?league=${league.id}&season=${season}&date=${tomorrow}&bookmaker=1`),  // Bet365 tomorrow
-          apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}&bookmaker=29`),    // Pinnacle today
-          apiFetch(`/odds?league=${league.id}&season=${season}&date=${tomorrow}&bookmaker=29`), // Pinnacle tomorrow
+          apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}`),     // all bookmakers today
+          apiFetch(`/odds?league=${league.id}&season=${season}&date=${tomorrow}`),  // all bookmakers tomorrow
           apiFetch(`/injuries?league=${league.id}&season=${season}&date=${today}`),
           apiFetch(`/standings?league=${league.id}&season=${season}`),
         ])
@@ -205,22 +203,29 @@ export async function GET() {
 
         // Merge today + tomorrow odds into a single map
         const oddsData = [...(oddsToday || []), ...(oddsTomorrow || [])]
-        const pinnacleData = [...(pinnacleToday || []), ...(pinnacleTomorrow || [])]
 
-        // Build fixture_id → Bet365 odds map
+        // Build fixture_id → Bet365 odds map (prefer Bet365 id=1, fallback to Pinnacle id=29, then any bookmaker)
         const oddsMap: Record<number, ReturnType<typeof extractOdds>> = {}
+        const pinnacleMap: Record<number, ReturnType<typeof extractOdds>> = {}
+        const oddsBookmakerName: Record<number, string> = {}
+
         for (const entry of oddsData) {
           const fid = entry.fixture?.id
-          const bk = entry.bookmakers?.[0]
-          if (fid && bk) oddsMap[fid] = extractOdds(bk)
-        }
+          if (!fid) continue
+          const bookmakers: any[] = entry.bookmakers || []
 
-        // Build fixture_id → Pinnacle odds map
-        const pinnacleMap: Record<number, ReturnType<typeof extractOdds>> = {}
-        for (const entry of pinnacleData) {
-          const fid = entry.fixture?.id
-          const bk = entry.bookmakers?.[0]
-          if (fid && bk) pinnacleMap[fid] = extractOdds(bk)
+          // Extract Pinnacle separately for edge detection
+          const pinnacleRaw = bookmakers.find((b: any) => b.id === 29)
+          if (pinnacleRaw) pinnacleMap[fid] = extractOdds(pinnacleRaw)
+
+          // Prefer Bet365 → then Pinnacle → then first available
+          const bet365Raw = bookmakers.find((b: any) => b.id === 1)
+          const anyRaw = bookmakers[0]
+          const chosen = bet365Raw || pinnacleRaw || anyRaw
+          if (chosen) {
+            oddsMap[fid] = extractOdds(chosen)
+            oddsBookmakerName[fid] = chosen.name || 'Live'
+          }
         }
 
         // Build injury lookup: team_id -> injured player names
@@ -244,6 +249,7 @@ export async function GET() {
           _leagueId: league.id,
           _odds: oddsMap[f.fixture?.id] ?? null,
           _pinnacleOdds: pinnacleMap[f.fixture?.id] ?? null,
+          _oddsBookmaker: oddsBookmakerName[f.fixture?.id] ?? null,
           _homeInjuries: injuryMap[f.teams?.home?.id] ?? [],
           _awayInjuries: injuryMap[f.teams?.away?.id] ?? [],
           _homePosition: standingMap[f.teams?.home?.id] ?? null,
@@ -415,7 +421,7 @@ Return JSON with this exact structure:
         key_factors: pred.key_factors ?? [],
         risk_level: pred.risk_level ?? 'Medium',
         edge_explanation: pred.edge_explanation ?? null,
-        // Real Bet365 odds
+        // Real bookmaker odds (Bet365 preferred, fallback to best available)
         bookmaker: o ? {
           home: o.home || null,
           draw: o.draw || null,
@@ -423,6 +429,7 @@ Return JSON with this exact structure:
           over25: o.over25 || null,
           btts: o.btts || null,
         } : null,
+        bookmaker_name: f._oddsBookmaker ?? null,
         // Expected value per market
         ev: { home: homeEV, draw: drawEV, away: awayEV, over25: over25EV, btts: bttsEV },
         best_value: bestValue,
