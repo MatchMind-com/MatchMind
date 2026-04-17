@@ -8,7 +8,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
   return (
-    <div className="min-h-screen bg-[#0B0B14]">
+    <div className="min-h-screen bg-[#0D1117]">
       <Sidebar email={user.email!} />
       <div className="lg:pl-60 pt-14 lg:pt-0 min-h-screen">
         {children}
