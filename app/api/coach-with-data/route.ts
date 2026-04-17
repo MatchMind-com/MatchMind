@@ -49,13 +49,20 @@ export async function POST(req: NextRequest) {
   const season = getCurrentSeason()
   const today = new Date().toISOString().split('T')[0]
 
-  // Fetch user's bet history for context
-  const { data: recentBets } = await supabase
-    .from('bet_slips')
-    .select('match_name, league, stake, odds, result, profit_loss, bet_type, created_at')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(15)
+  // Fetch user's bet history + preferences in parallel
+  const [{ data: recentBets }, { data: userPrefs }] = await Promise.all([
+    supabase
+      .from('bet_slips')
+      .select('match_name, league, stake, odds, result, profit_loss, bet_type, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(15),
+    supabase
+      .from('user_preferences')
+      .select('favourite_team, lucky_charm_team, favourite_leagues, betting_experience, monthly_pl_estimate, preferred_bet_types')
+      .eq('user_id', user.id)
+      .single(),
+  ])
 
   // Fetch rich football data in parallel (all cached 60s)
   const [fixtures, liveGames, standings, topScorers, recentResults, injuries] = await Promise.all([
@@ -130,8 +137,29 @@ export async function POST(req: NextRequest) {
 
   const leagueName = LEAGUE_NAMES[leagueId] || 'Football'
 
-  const systemPrompt = `You are MatchMind, an elite AI football betting coach with access to real-time data for the ${season}/${season + 1} season. You combine deep football intelligence with sharp statistical analysis to help users make smarter betting decisions.
+  // Build personalisation context from onboarding preferences
+  const personalisation = userPrefs ? `
+=== USER PROFILE (personalised from onboarding) ===
+- Favourite team: ${userPrefs.favourite_team || 'Not set'}
+- Lucky charm team: ${userPrefs.lucky_charm_team || 'Not set'}
+- Preferred leagues: ${userPrefs.favourite_leagues?.join(', ') || 'Not set'}
+- Betting experience: ${userPrefs.betting_experience || 'Not set'}
+- Monthly P&L: ${userPrefs.monthly_pl_estimate || 'Not set'}
+- Preferred bet types: ${userPrefs.preferred_bet_types?.join(', ') || 'Not set'}
 
+Adjust your coaching tone to this profile: ${
+    userPrefs.betting_experience === 'beginner' ? 'Explain concepts clearly, avoid jargon, encourage good habits.' :
+    userPrefs.betting_experience === 'casual' ? 'Be friendly and informative, no need for over-explanation.' :
+    userPrefs.betting_experience === 'serious' ? 'Be analytical and data-focused. Skip basics.' :
+    userPrefs.betting_experience === 'professional' ? 'Be concise and highly technical. EV, Kelly Criterion, market movements.' :
+    'Be balanced and helpful.'
+  }
+${userPrefs.monthly_pl_estimate === 'losing' ? 'This user is net losing — prioritise stake management and identifying leaks.' : ''}
+${userPrefs.monthly_pl_estimate === 'consistent_profit' ? 'This user is profitable — focus on maximising EV and scaling intelligently.' : ''}
+` : ''
+
+  const systemPrompt = `You are MatchMind, an elite AI football betting coach with access to real-time data for the ${season}/${season + 1} season. You combine deep football intelligence with sharp statistical analysis to help users make smarter betting decisions.
+${personalisation}
 === LIVE FOOTBALL DATA — ${leagueName} (${season}/${String(season + 1).slice(2)} season) ===
 
 📅 UPCOMING FIXTURES (next 7 days):

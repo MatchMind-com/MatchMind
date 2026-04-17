@@ -27,20 +27,20 @@ export default function UpgradeModal({ isOpen, onClose, betCount, trigger = 'pay
 
   const proFeatures = [
     { icon: '📊', text: 'Unlimited bet tracking' },
-    { icon: '🤖', text: 'Full AI coaching & pattern detection' },
-    { icon: '📈', text: 'Advanced performance analytics' },
-    { icon: '📧', text: 'Weekly AI performance report (Mondays)' },
-    { icon: '🎯', text: '2 AI match predictions per day' },
-    { icon: '🏆', text: 'Community leaderboard access' },
+    { icon: '🔮', text: 'All AI predictions (10+ leagues daily)' },
+    { icon: '🔥', text: 'Pinnacle value bet finder + EV scores' },
+    { icon: '🎯', text: 'Daily AI accumulator builder' },
+    { icon: '🤖', text: 'AI Football Coach (GPT-4o)' },
+    { icon: '🏆', text: 'Full leaderboard access' },
   ]
 
   const eliteFeatures = [
     { icon: '⚡', text: 'Everything in Pro' },
-    { icon: '🎯', text: '5 AI match predictions per day' },
-    { icon: '💡', text: 'Elite-only insights & alerts' },
-    { icon: '🔔', text: 'Real-time tipster pick alerts' },
+    { icon: '📐', text: 'Kelly Criterion stake calculator' },
+    { icon: '🔔', text: 'Injury & team news alerts' },
     { icon: '👑', text: 'Priority AI coaching responses' },
-    { icon: '📱', text: 'Early access to new features' },
+    { icon: '📁', text: 'Export data to CSV' },
+    { icon: '📱', text: 'Priority email support' },
   ]
 
   return (

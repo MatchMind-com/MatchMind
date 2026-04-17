@@ -12,14 +12,14 @@ const PLANS = [
     color: 'border-white/10',
     badge: null,
     features: [
-      '✅ Track up to 20 bets/month',
+      '✅ Track up to 10 bets',
       '✅ Basic win/loss statistics',
       '✅ Manual bet entry',
+      '✅ 3 AI predictions daily',
       '❌ AI Football Coach',
-      '❌ Live fixture data',
+      '❌ Full predictions + value bets',
       '❌ Bankroll tracker',
-      '❌ Weekly Report Card',
-      '❌ Auto result detection',
+      '❌ Weekly AI Report Card',
     ],
   },
   {
@@ -33,13 +33,13 @@ const PLANS = [
     trial: '7-day free trial',
     features: [
       '✅ Unlimited bet tracking',
-      '✅ Full statistics & analytics',
+      '✅ Full AI predictions (all leagues)',
+      '✅ Pinnacle value bet finder',
+      '✅ Real Bet365 odds + EV scores',
+      '✅ Daily AI accumulator builder',
       '✅ AI Football Coach (GPT-4o)',
-      '✅ Live fixtures & standings',
       '✅ Bankroll tracker + chart',
-      '✅ Weekly AI Report Card',
-      '✅ Auto result detection',
-      '❌ Kelly Criterion calculator',
+      '✅ Full leaderboard access',
     ],
   },
   {
@@ -86,14 +86,8 @@ export default function BillingPage({ profile }: { profile: any }) {
       return
     }
 
-    const res = await fetch('/api/stripe/create-checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tier: planId }),
-    })
-    const { url, error } = await res.json()
-    if (error) { alert(error); setLoading(null); return }
-    window.location.href = url
+    // create-checkout is a GET route that redirects directly to Stripe
+    window.location.href = `/api/stripe/create-checkout?plan=${planId}`
   }
 
   async function handleManage() {
