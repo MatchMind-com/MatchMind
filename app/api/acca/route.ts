@@ -80,21 +80,24 @@ export async function GET() {
     const today = new Date().toISOString().split('T')[0]
     const in3days = getDatePlusDays(3)
 
-    // Fetch next 3 days — not just today (fixes "no acca in evenings" issue)
+    const tomorrow = getDatePlusDays(1)
+
+    // Fetch next 3 days — not just today. Odds fetched for today + tomorrow to cover multi-day fixtures.
     const leagueData = await Promise.all(
       LEAGUES.map(async (league) => {
-        const [fixtures, oddsData] = await Promise.all([
+        const [fixtures, oddsToday, oddsTomorrow] = await Promise.all([
           apiFetch(`/fixtures?league=${league.id}&season=${season}&from=${today}&to=${in3days}&status=NS`),
           apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}&bookmaker=1`),
+          apiFetch(`/odds?league=${league.id}&season=${season}&date=${tomorrow}&bookmaker=1`),
         ])
 
+        // Merge today + tomorrow odds
+        const allOdds = [...(oddsToday || []), ...(oddsTomorrow || [])]
         const oddsMap: Record<number, ReturnType<typeof extractOdds>> = {}
-        if (oddsData) {
-          for (const entry of oddsData) {
-            const fid = entry.fixture?.id
-            const bk = entry.bookmakers?.[0]
-            if (fid && bk) oddsMap[fid] = extractOdds(bk)
-          }
+        for (const entry of allOdds) {
+          const fid = entry.fixture?.id
+          const bk = entry.bookmakers?.[0]
+          if (fid && bk) oddsMap[fid] = extractOdds(bk)
         }
         return { league, fixtures: fixtures || [], oddsMap }
       })

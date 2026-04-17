@@ -176,13 +176,17 @@ export async function GET() {
     const today = new Date().toISOString().split('T')[0]
     const in3days = getDatePlusDays(3)
 
+    const tomorrow = getDatePlusDays(1)
+
     // Fetch fixtures + Bet365 odds per league in parallel
     const leagueResults = await Promise.all(
       TOP_LEAGUES.map(async (league) => {
-        const [fixtures, oddsData, pinnacleData, injuries, standings] = await Promise.all([
+        const [fixtures, oddsToday, oddsTomorrow, pinnacleToday, pinnacleTomorrow, injuries, standings] = await Promise.all([
           apiFetch(`/fixtures?league=${league.id}&season=${season}&from=${today}&to=${in3days}&status=NS`),
-          apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}&bookmaker=1`),   // Bet365
-          apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}&bookmaker=29`),  // Pinnacle (sharp)
+          apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}&bookmaker=1`),     // Bet365 today
+          apiFetch(`/odds?league=${league.id}&season=${season}&date=${tomorrow}&bookmaker=1`),  // Bet365 tomorrow
+          apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}&bookmaker=29`),    // Pinnacle today
+          apiFetch(`/odds?league=${league.id}&season=${season}&date=${tomorrow}&bookmaker=29`), // Pinnacle tomorrow
           apiFetch(`/injuries?league=${league.id}&season=${season}&date=${today}`),
           apiFetch(`/standings?league=${league.id}&season=${season}`),
         ])
@@ -194,24 +198,24 @@ export async function GET() {
           if (s?.team?.id) standingMap[s.team.id] = s.rank
         }
 
+        // Merge today + tomorrow odds into a single map
+        const oddsData = [...(oddsToday || []), ...(oddsTomorrow || [])]
+        const pinnacleData = [...(pinnacleToday || []), ...(pinnacleTomorrow || [])]
+
         // Build fixture_id → Bet365 odds map
         const oddsMap: Record<number, ReturnType<typeof extractOdds>> = {}
-        if (oddsData) {
-          for (const entry of oddsData) {
-            const fid = entry.fixture?.id
-            const bk = entry.bookmakers?.[0]
-            if (fid && bk) oddsMap[fid] = extractOdds(bk)
-          }
+        for (const entry of oddsData) {
+          const fid = entry.fixture?.id
+          const bk = entry.bookmakers?.[0]
+          if (fid && bk) oddsMap[fid] = extractOdds(bk)
         }
 
         // Build fixture_id → Pinnacle odds map
         const pinnacleMap: Record<number, ReturnType<typeof extractOdds>> = {}
-        if (pinnacleData) {
-          for (const entry of pinnacleData) {
-            const fid = entry.fixture?.id
-            const bk = entry.bookmakers?.[0]
-            if (fid && bk) pinnacleMap[fid] = extractOdds(bk)
-          }
+        for (const entry of pinnacleData) {
+          const fid = entry.fixture?.id
+          const bk = entry.bookmakers?.[0]
+          if (fid && bk) pinnacleMap[fid] = extractOdds(bk)
         }
 
         // Build injury lookup: team_id -> injured player names
