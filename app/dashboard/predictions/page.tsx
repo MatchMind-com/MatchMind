@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { FORCE_PRO_TIER } from '@/lib/dev-config'
+
+const FORCE_PRO_TIER = true // temp: set false to restore paywall
 
 interface BookmakerOdds {
   home: number | null

@@ -8,7 +8,8 @@ import BetHistory from './BetHistory'
 import PerformanceChart from './PerformanceChart'
 import AICoaching from './AICoaching'
 import InsightsBanner from '@/components/conversion/InsightsBanner'
-import { FORCE_PRO_TIER } from '@/lib/dev-config'
+
+const FORCE_PRO_TIER = true // temp: set false to restore paywall
 import ExitIntentPopup from '@/components/conversion/ExitIntentPopup'
 import UpgradeModal from '@/components/conversion/UpgradeModal'
 
