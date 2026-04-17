@@ -17,6 +17,20 @@ interface MatchStats {
   offsides: number | null
 }
 
+interface TeamSeasonStats {
+  played: number; wins: number; draws: number; losses: number; win_rate: number
+  goals_for: number; goals_against: number; goals_for_avg: number; goals_against_avg: number
+  home: { goals_for: number; goals_against: number; wins: number; draws: number; losses: number }
+  away: { goals_for: number; goals_against: number; wins: number; draws: number; losses: number }
+  clean_sheets: number; clean_sheet_pct: number
+  failed_to_score: number; failed_to_score_pct: number
+  yellow_cards_total: number; yellow_cards_avg: number
+  red_cards_total: number
+  biggest_win: string | null; biggest_loss: string | null
+  penalties_scored: number; penalties_missed: number
+  top_formation: string | null; form: string | null
+}
+
 interface MatchDetail {
   fixture: { id: number; date: string; status: string; elapsed: number | null; venue: string; city: string; referee: string }
   league: { id: number; name: string; logo: string; round: string }
@@ -25,6 +39,8 @@ interface MatchDetail {
   h2h: H2HMatch[]
   prediction: Prediction | null
   statistics: { home: MatchStats; away: MatchStats } | null
+  home_stats: TeamSeasonStats | null
+  away_stats: TeamSeasonStats | null
 }
 
 interface Injury { player: string; photo?: string; reason: string; type: string }
@@ -318,74 +334,103 @@ export default function MatchDetailModal({ fixtureId, onClose }: { fixtureId: nu
                   </div>
                 </div>
               ) : (
-                /* Pre-match — show form streaks */
-                <div className="space-y-5">
-                  <p className="text-xs text-slate-500 text-center pb-1">Match statistics will appear here once the game kicks off</p>
+                /* Pre-match — real season stats comparison */
+                <div className="space-y-4">
+                  {/* No data fallback */}
+                  {!data.home_stats && !data.away_stats && (
+                    <p className="text-xs text-slate-500 text-center py-6">Season statistics not available for this league</p>
+                  )}
 
-                  {/* Form streaks for both teams */}
-                  {[{ team: data.home, form: data.home.form }, { team: data.away, form: data.away.form }].map(({ team, form }) => {
-                    const wins = form.filter(m => m.result === 'W').length
-                    const draws = form.filter(m => m.result === 'D').length
-                    const losses = form.filter(m => m.result === 'L').length
-                    const goalsScored = form.reduce((sum, m) => {
-                      const [scored] = m.score.split('-').map(Number)
-                      return sum + (isNaN(scored) ? 0 : scored)
-                    }, 0)
+                  {data.home_stats && data.away_stats && (() => {
+                    const hs = data.home_stats!
+                    const as_ = data.away_stats!
                     return (
-                      <div key={team.id} className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <img src={team.logo} alt={team.name} className="w-6 h-6 object-contain" />
-                          <span className="text-sm font-bold text-white">{team.name}</span>
-                          <span className="text-xs text-slate-500 ml-auto">Last {form.length} games</span>
-                        </div>
-
-                        {/* Form dots */}
-                        <div className="flex gap-1.5 mb-4">
-                          {form.length > 0
-                            ? form.map((m, i) => <FormDot key={i} result={m.result} />)
-                            : <span className="text-xs text-slate-600">No recent data</span>
-                          }
-                        </div>
-
-                        {/* Mini stats */}
-                        <div className="grid grid-cols-4 gap-2 text-center">
-                          <div className="bg-white/[0.04] rounded-lg py-2">
-                            <div className="text-lg font-black text-emerald-400">{wins}</div>
-                            <div className="text-[10px] text-slate-500">Wins</div>
+                      <>
+                        {/* Team header strip */}
+                        <div className="flex items-center justify-between px-1 mb-1">
+                          <div className="flex items-center gap-2">
+                            <img src={data.home.logo} alt={data.home.name} className="w-7 h-7 object-contain" />
+                            <div>
+                              <p className="text-xs font-bold text-white truncate max-w-[110px]">{data.home.name}</p>
+                              {hs.top_formation && <p className="text-[10px] text-slate-500">{hs.top_formation}</p>}
+                            </div>
                           </div>
-                          <div className="bg-white/[0.04] rounded-lg py-2">
-                            <div className="text-lg font-black text-slate-400">{draws}</div>
-                            <div className="text-[10px] text-slate-500">Draws</div>
-                          </div>
-                          <div className="bg-white/[0.04] rounded-lg py-2">
-                            <div className="text-lg font-black text-red-400">{losses}</div>
-                            <div className="text-[10px] text-slate-500">Losses</div>
-                          </div>
-                          <div className="bg-white/[0.04] rounded-lg py-2">
-                            <div className="text-lg font-black text-blue-400">{goalsScored}</div>
-                            <div className="text-[10px] text-slate-500">Goals</div>
+                          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Season Stats</p>
+                          <div className="flex items-center gap-2 justify-end">
+                            <div className="text-right">
+                              <p className="text-xs font-bold text-white truncate max-w-[110px]">{data.away.name}</p>
+                              {as_.top_formation && <p className="text-[10px] text-slate-500">{as_.top_formation}</p>}
+                            </div>
+                            <img src={data.away.logo} alt={data.away.name} className="w-7 h-7 object-contain" />
                           </div>
                         </div>
 
-                        {/* Recent results */}
-                        {form.length > 0 && (
-                          <div className="mt-3 space-y-1.5">
-                            {form.slice(0, 3).map((m, i) => {
-                              const date = new Date(m.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-                              return (
-                                <div key={i} className="flex items-center gap-2 text-xs">
-                                  <FormDot result={m.result} />
-                                  <span className="text-slate-500 w-14 flex-shrink-0">{date}</span>
-                                  <span className="text-slate-300 flex-1 truncate">{m.isHome ? 'vs' : '@'} {m.opponent}</span>
-                                  <span className="font-bold text-white">{m.score}</span>
-                                </div>
-                              )
-                            })}
+                        {/* Season record */}
+                        <div className="flex items-center justify-between bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3">
+                          <div className="text-center">
+                            <p className="text-white font-black text-lg leading-none">{hs.wins}W {hs.draws}D {hs.losses}L</p>
+                            <p className="text-slate-500 text-[10px] mt-0.5">{hs.played} played</p>
+                          </div>
+                          <p className="text-slate-600 text-xs">vs</p>
+                          <div className="text-center">
+                            <p className="text-white font-black text-lg leading-none">{as_.wins}W {as_.draws}D {as_.losses}L</p>
+                            <p className="text-slate-500 text-[10px] mt-0.5">{as_.played} played</p>
+                          </div>
+                        </div>
+
+                        {/* Stat rows */}
+                        <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 divide-y divide-white/[0.04]">
+                          <StatRow label="Win Rate" home={hs.win_rate} away={as_.win_rate} isPercent />
+                          <StatRow label="Goals Scored / Game" home={hs.goals_for_avg} away={as_.goals_for_avg} highlight />
+                          <StatRow label="Goals Conceded / Game" home={hs.goals_against_avg} away={as_.goals_against_avg} />
+                          <StatRow label="Clean Sheet %" home={hs.clean_sheet_pct} away={as_.clean_sheet_pct} isPercent />
+                          <StatRow label="Failed to Score %" home={hs.failed_to_score_pct} away={as_.failed_to_score_pct} isPercent />
+                          <StatRow label="Yellow Cards / Game" home={hs.yellow_cards_avg} away={as_.yellow_cards_avg} />
+                          <StatRow label="Red Cards (Total)" home={hs.red_cards_total} away={as_.red_cards_total} />
+                          <StatRow label="Penalties Scored" home={hs.penalties_scored} away={as_.penalties_scored} />
+                        </div>
+
+                        {/* Home/Away splits */}
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* Home record */}
+                          <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3">
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <img src={data.home.logo} alt="" className="w-4 h-4 object-contain" />
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Home Record</p>
+                            </div>
+                            <p className="text-white font-black text-sm">{hs.home.wins}W · {hs.home.draws}D · {hs.home.losses}L</p>
+                            <p className="text-emerald-400 text-xs mt-1">{hs.home.goals_for} scored · {hs.home.goals_against} conceded</p>
+                          </div>
+                          {/* Away record */}
+                          <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3">
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <img src={data.away.logo} alt="" className="w-4 h-4 object-contain" />
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Away Record</p>
+                            </div>
+                            <p className="text-white font-black text-sm">{as_.away.wins}W · {as_.away.draws}D · {as_.away.losses}L</p>
+                            <p className="text-emerald-400 text-xs mt-1">{as_.away.goals_for} scored · {as_.away.goals_against} conceded</p>
+                          </div>
+                        </div>
+
+                        {/* Biggest results */}
+                        {(hs.biggest_win || as_.biggest_win) && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3 text-center">
+                              <p className="text-[10px] text-slate-500 mb-1">Biggest Win</p>
+                              <p className="text-emerald-400 font-black text-lg">{hs.biggest_win || '—'}</p>
+                            </div>
+                            <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3 text-center">
+                              <p className="text-[10px] text-slate-500 mb-1">Biggest Win</p>
+                              <p className="text-emerald-400 font-black text-lg">{as_.biggest_win || '—'}</p>
+                            </div>
                           </div>
                         )}
-                      </div>
+
+                        {/* Note about live stats */}
+                        <p className="text-[10px] text-slate-600 text-center">Live in-match stats (possession, shots, corners) appear once kick-off begins</p>
+                      </>
                     )
-                  })}
+                  })()}
                 </div>
               )}
             </div>

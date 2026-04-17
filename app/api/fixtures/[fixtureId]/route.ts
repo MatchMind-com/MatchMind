@@ -44,7 +44,7 @@ export async function GET(
   const leagueId = fixture.league?.id
 
   // Fetch all detail data in parallel
-  const [injuries, h2h, homeForm, awayForm, homeSquad, awaySquad, predictions, matchStats] = await Promise.all([
+  const [injuries, h2h, homeForm, awayForm, homeSquad, awaySquad, predictions, matchStats, homeSeasonStats, awaySeasonStats] = await Promise.all([
     apiFetch(`/injuries?fixture=${fixtureId}`),
     apiFetch(`/fixtures/headtohead?h2h=${homeTeamId}-${awayTeamId}&last=5`),
     apiFetch(`/fixtures?team=${homeTeamId}&league=${leagueId}&season=${season}&last=5&status=FT`),
@@ -53,6 +53,8 @@ export async function GET(
     apiFetch(`/players/squads?team=${awayTeamId}`),
     apiFetch(`/predictions?fixture=${fixtureId}`),
     apiFetch(`/fixtures/statistics?fixture=${fixtureId}`),
+    apiFetch(`/teams/statistics?league=${leagueId}&season=${season}&team=${homeTeamId}`),
+    apiFetch(`/teams/statistics?league=${leagueId}&season=${season}&team=${awayTeamId}`),
   ])
 
   // Process injuries by team
@@ -148,6 +150,76 @@ export async function GET(
     }
   }
 
+  // Process season team statistics for pre-match Stats tab
+  function extractTeamSeasonStats(raw: any) {
+    if (!raw) return null
+    const fx = raw.fixtures || {}
+    const goals = raw.goals || {}
+    const played = fx.played?.total || 0
+    const wins = fx.wins?.total || 0
+    const draws = fx.draws?.total || 0
+    const losses = fx.loses?.total || 0
+
+    // Goals
+    const goalsFor = goals.for?.total?.total || 0
+    const goalsAgainst = goals.against?.total?.total || 0
+    const goalsForAvg = parseFloat(goals.for?.average?.total || '0')
+    const goalsAgainstAvg = parseFloat(goals.against?.average?.total || '0')
+
+    // Home vs Away
+    const homeGoalsFor = goals.for?.total?.home || 0
+    const homeGoalsAgainst = goals.against?.total?.home || 0
+    const awayGoalsFor = goals.for?.total?.away || 0
+    const awayGoalsAgainst = goals.against?.total?.away || 0
+
+    // Cards
+    const cards = raw.cards || {}
+    const totalYellow = Object.values(cards.yellow || {}).reduce((sum: number, v: any) => sum + (v?.total || 0), 0) as number
+    const totalRed = Object.values(cards.red || {}).reduce((sum: number, v: any) => sum + (v?.total || 0), 0) as number
+
+    // Clean sheets & failed to score
+    const cleanSheets = raw.clean_sheet?.total || 0
+    const failedToScore = raw.failed_to_score?.total || 0
+
+    // Biggest values
+    const biggestWin = raw.biggest?.wins?.home || raw.biggest?.wins?.away || null
+    const biggestLoss = raw.biggest?.loses?.home || raw.biggest?.loses?.away || null
+
+    // Penalties
+    const penScored = raw.penalty?.scored?.total || 0
+    const penMissed = raw.penalty?.missed?.total || 0
+
+    // Lineups (most common formation)
+    const topFormation = raw.lineups?.sort((a: any, b: any) => b.played - a.played)?.[0]?.formation || null
+
+    return {
+      played, wins, draws, losses,
+      win_rate: played > 0 ? Math.round((wins / played) * 100) : 0,
+      goals_for: goalsFor,
+      goals_against: goalsAgainst,
+      goals_for_avg: goalsForAvg,
+      goals_against_avg: goalsAgainstAvg,
+      home: { goals_for: homeGoalsFor, goals_against: homeGoalsAgainst, wins: fx.wins?.home || 0, draws: fx.draws?.home || 0, losses: fx.loses?.home || 0 },
+      away: { goals_for: awayGoalsFor, goals_against: awayGoalsAgainst, wins: fx.wins?.away || 0, draws: fx.draws?.away || 0, losses: fx.loses?.away || 0 },
+      clean_sheets: cleanSheets,
+      clean_sheet_pct: played > 0 ? Math.round((cleanSheets / played) * 100) : 0,
+      failed_to_score: failedToScore,
+      failed_to_score_pct: played > 0 ? Math.round((failedToScore / played) * 100) : 0,
+      yellow_cards_total: totalYellow,
+      yellow_cards_avg: played > 0 ? Math.round((totalYellow / played) * 10) / 10 : 0,
+      red_cards_total: totalRed,
+      biggest_win: biggestWin,
+      biggest_loss: biggestLoss,
+      penalties_scored: penScored,
+      penalties_missed: penMissed,
+      top_formation: topFormation,
+      form: raw.form || null,
+    }
+  }
+
+  const homeStats = extractTeamSeasonStats(homeSeasonStats)
+  const awayStats = extractTeamSeasonStats(awaySeasonStats)
+
   // Get prediction data
   const pred = predictions?.[0]
   const aiPrediction = pred ? {
@@ -195,5 +267,7 @@ export async function GET(
     h2h: h2hMatches,
     prediction: aiPrediction,
     statistics,
+    home_stats: homeStats,
+    away_stats: awayStats,
   })
 }
