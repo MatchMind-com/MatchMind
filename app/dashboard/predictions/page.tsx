@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { FORCE_PRO_TIER } from '@/lib/dev-config'
 
 interface BookmakerOdds {
   home: number | null
@@ -232,7 +233,7 @@ export default function PredictionsPage() {
     })
   }
 
-  const isPro = subscriptionTier === 'pro' || subscriptionTier === 'elite'
+  const isPro = FORCE_PRO_TIER || subscriptionTier === 'pro' || subscriptionTier === 'elite'
   const visiblePredictions = isPro ? predictions : predictions.slice(0, 3)
   const lockedCount = predictions.length - visiblePredictions.length
   const valueBets = predictions.filter(p => p.is_value_bet).sort((a, b) => (b.value_score ?? 0) - (a.value_score ?? 0))

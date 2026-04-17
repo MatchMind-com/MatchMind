@@ -8,6 +8,7 @@ import BetHistory from './BetHistory'
 import PerformanceChart from './PerformanceChart'
 import AICoaching from './AICoaching'
 import InsightsBanner from '@/components/conversion/InsightsBanner'
+import { FORCE_PRO_TIER } from '@/lib/dev-config'
 import ExitIntentPopup from '@/components/conversion/ExitIntentPopup'
 import UpgradeModal from '@/components/conversion/UpgradeModal'
 
@@ -56,7 +57,7 @@ export default function DashboardClient({ userId, email }: { userId: string; ema
 
   // Called by BetSlipForm before submitting — intercept if free user at limit
   const handleBetAttempt = useCallback((): boolean => {
-    if (subscriptionTier === 'free' && bets.length >= FREE_BET_LIMIT) {
+    if (!FORCE_PRO_TIER && subscriptionTier === 'free' && bets.length >= FREE_BET_LIMIT) {
       setShowPaywall(true)
       return false // block the submission
     }
@@ -74,7 +75,7 @@ export default function DashboardClient({ userId, email }: { userId: string; ema
     )
   }
 
-  const isAtPaywall = subscriptionTier === 'free' && bets.length >= FREE_BET_LIMIT
+  const isAtPaywall = !FORCE_PRO_TIER && subscriptionTier === 'free' && bets.length >= FREE_BET_LIMIT
 
   return (
     <>
