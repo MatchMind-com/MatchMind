@@ -16,10 +16,25 @@ interface OCRResult {
 interface BetSlipFormProps {
   userId: string
   onBetAdded: () => void
-  onBetAttempt?: () => boolean  // returns false to block submission
+  onBetAttempt?: () => boolean
   isAtPaywall?: boolean
   onShowPaywall?: () => void
 }
+
+const BOOKMAKERS = [
+  'Bet365', 'William Hill', 'Betfair', 'Paddy Power', 'Ladbrokes',
+  'Coral', 'Unibet', 'Sky Bet', 'Betway', 'BoyleSports',
+  'Pinnacle', '888sport', 'Betfred', 'Other',
+]
+
+const QUICK_BET_TYPES = [
+  { label: '1X2', value: 'Match Result (1X2)' },
+  { label: 'O/U', value: 'Over / Under' },
+  { label: 'BTTS', value: 'Both Teams to Score' },
+  { label: 'ACCA', value: 'Accumulator' },
+  { label: 'CS', value: 'Correct Score' },
+  { label: 'HT', value: 'Half-Time Result' },
+]
 
 export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPaywall, onShowPaywall }: BetSlipFormProps) {
   const supabase = createClient()
@@ -32,6 +47,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
     selection: '',
     odds: '',
     stake: '',
+    bookmaker: '',
     match_date: '',
     notes: '',
   })
@@ -44,20 +60,16 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
 
   const odds = parseFloat(form.odds) || 0
   const stake = parseFloat(form.stake) || 0
-  const potentialReturn = odds > 0 && stake > 0 ? (odds * stake).toFixed(2) : '—'
-  const potentialProfit = odds > 0 && stake > 0 ? ((odds - 1) * stake).toFixed(2) : '—'
+  const potentialReturn = odds > 1 && stake > 0 ? odds * stake : 0
+  const potentialProfit = odds > 1 && stake > 0 ? (odds - 1) * stake : 0
 
   async function handlePhotoUpload(file: File) {
-    if (!file.type.startsWith('image/')) {
-      setError('Please upload an image file')
-      return
-    }
+    if (!file.type.startsWith('image/')) { setError('Please upload an image file'); return }
     setOcrLoading(true)
     setError('')
     const reader = new FileReader()
     reader.onload = (e) => setUploadedImage(e.target?.result as string)
     reader.readAsDataURL(file)
-
     try {
       const formData = new FormData()
       formData.append('image', file)
@@ -77,7 +89,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
         setSuccess(true)
         setTimeout(() => setSuccess(false), 3000)
       } else {
-        setError('Could not read bet slip. Please fill in manually.')
+        setError('Could not read bet slip — please fill in manually.')
       }
     } catch {
       setError('Photo upload failed. Please fill in manually.')
@@ -87,10 +99,9 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    // Check paywall before anything else
     if (onBetAttempt && !onBetAttempt()) return
     if (!form.match_name || !form.selection || !form.odds || !form.stake) {
-      setError('Please fill in match, selection, odds and stake.')
+      setError('Match, selection, odds and stake are required.')
       return
     }
     setLoading(true)
@@ -105,6 +116,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
       selection: form.selection,
       odds: oddsNum,
       stake: stakeNum,
+      bookmaker: form.bookmaker || null,
       potential_return: oddsNum * stakeNum,
       result: 'pending',
       profit_loss: 0,
@@ -114,7 +126,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
     if (dbError) {
       setError(dbError.message)
     } else {
-      setForm({ match_name: '', league: '', bet_type: 'Match Result (1X2)', selection: '', odds: '', stake: '', match_date: '', notes: '' })
+      setForm({ match_name: '', league: '', bet_type: 'Match Result (1X2)', selection: '', odds: '', stake: '', bookmaker: '', match_date: '', notes: '' })
       setUploadedImage(null)
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
@@ -123,188 +135,247 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
     setLoading(false)
   }
 
+  const f = (v: string) => setForm(p => ({ ...p, ...JSON.parse(v) }))
+
   return (
-    <div className="relative bg-[#13131F] border border-white/5 rounded-2xl p-6">
-      {/* Paywall overlay on form */}
+    <div className="relative bg-[#0E1628] border border-white/[0.07] rounded-2xl overflow-hidden">
+      {/* Paywall overlay */}
       {isAtPaywall && (
         <div
           className="absolute inset-0 z-10 rounded-2xl flex flex-col items-center justify-center cursor-pointer"
-          style={{ background: 'rgba(10,10,20,0.85)', backdropFilter: 'blur(4px)' }}
+          style={{ background: 'rgba(6,9,20,0.9)', backdropFilter: 'blur(4px)' }}
           onClick={onShowPaywall}
         >
-          <div className="text-4xl mb-3">🔒</div>
+          <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-3">
+            <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
           <p className="text-white font-bold text-sm mb-1">Free limit reached</p>
           <p className="text-slate-400 text-xs mb-4 text-center max-w-[200px]">Upgrade to Pro to continue logging bets</p>
-          <button className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
+          <button className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors">
             Upgrade to Pro →
           </button>
         </div>
       )}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-9 h-9 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-400">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-white/[0.07] flex items-center gap-3">
+        <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
         </div>
         <div>
-          <h2 className="text-white font-semibold">Add Bet Slip</h2>
+          <h2 className="text-white font-bold text-sm">Add Bet Slip</h2>
           <p className="text-slate-500 text-xs">Upload a photo or enter manually</p>
         </div>
       </div>
 
-      {/* Photo Upload Zone */}
-      <div
-        className={`relative border-2 border-dashed rounded-xl p-4 mb-5 text-center cursor-pointer transition-all ${
-          dragOver ? 'border-violet-500 bg-violet-500/10' : 'border-white/10 hover:border-white/20 hover:bg-white/2'
-        }`}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handlePhotoUpload(f) }}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f) }} />
-        {ocrLoading ? (
-          <div className="flex items-center justify-center gap-2 py-2">
-            <div className="w-4 h-4 border-2 border-violet-400 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-violet-400 text-sm">Reading bet slip with AI...</span>
-          </div>
-        ) : uploadedImage ? (
-          <div className="flex items-center gap-3">
-            <img src={uploadedImage} alt="Bet slip" className="w-12 h-12 rounded-lg object-cover" />
-            <div className="text-left">
-              <p className="text-emerald-400 text-sm font-medium">✓ Bet slip scanned!</p>
-              <p className="text-slate-500 text-xs">Form pre-filled. Review and submit.</p>
+      <div className="p-5">
+        {/* Photo Upload Zone */}
+        <div
+          className={`relative border-2 border-dashed rounded-xl p-4 mb-5 text-center cursor-pointer transition-all ${
+            dragOver ? 'border-blue-500/60 bg-blue-500/8' : 'border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.02]'
+          }`}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handlePhotoUpload(f) }}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f) }} />
+          {ocrLoading ? (
+            <div className="flex items-center justify-center gap-2 py-1">
+              <div className="w-4 h-4 border-2 border-blue-400/40 border-t-blue-400 rounded-full animate-spin" />
+              <span className="text-blue-400 text-sm font-medium">Reading bet slip with AI…</span>
             </div>
-          </div>
-        ) : (
-          <div className="py-1">
-            <svg className="w-7 h-7 text-slate-500 mx-auto mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-            </svg>
-            <p className="text-slate-400 text-sm">Drop a bet slip photo or <span className="text-violet-400">click to upload</span></p>
-            <p className="text-slate-600 text-xs mt-1">AI will auto-fill the form</p>
-          </div>
-        )}
-      </div>
+          ) : uploadedImage ? (
+            <div className="flex items-center gap-3">
+              <img src={uploadedImage} alt="Bet slip" className="w-12 h-12 rounded-lg object-cover border border-white/10" />
+              <div className="text-left">
+                <p className="text-emerald-400 text-sm font-bold">Bet slip scanned!</p>
+                <p className="text-slate-500 text-xs">Form pre-filled. Review and submit.</p>
+              </div>
+              <button type="button" onClick={(e) => { e.stopPropagation(); setUploadedImage(null) }}
+                className="ml-auto text-slate-600 hover:text-slate-400 text-xs">✕</button>
+            </div>
+          ) : (
+            <div className="py-1">
+              <svg className="w-6 h-6 text-slate-600 mx-auto mb-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="text-slate-400 text-sm">Drop a bet slip photo or <span className="text-blue-400 font-semibold">click to upload</span></p>
+              <p className="text-slate-600 text-xs mt-0.5">AI reads and auto-fills the form</p>
+            </div>
+          )}
+        </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2">
-            <label className="text-slate-400 text-xs font-medium block mb-1.5">Match *</label>
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          {/* Match name */}
+          <div>
+            <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Match *</label>
             <input
               type="text"
               placeholder="e.g. Arsenal vs Chelsea"
               value={form.match_name}
               onChange={e => setForm(p => ({ ...p, match_name: e.target.value }))}
-              className="w-full bg-[#0B0B14] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-violet-500/50 transition-colors"
+              className="w-full bg-white/[0.03] border border-white/[0.07] rounded-xl px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-blue-500/40 transition-colors"
             />
           </div>
-          <div>
-            <label className="text-slate-400 text-xs font-medium block mb-1.5">League</label>
-            <select
-              value={form.league}
-              onChange={e => setForm(p => ({ ...p, league: e.target.value }))}
-              className="w-full bg-[#0B0B14] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-violet-500/50 transition-colors"
-            >
-              <option value="">Select league...</option>
-              {LEAGUES.map(l => <option key={l} value={l}>{l}</option>)}
-            </select>
+
+          {/* League + Bookmaker */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">League</label>
+              <select
+                value={form.league}
+                onChange={e => setForm(p => ({ ...p, league: e.target.value }))}
+                className="w-full bg-white/[0.03] border border-white/[0.07] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40 transition-colors"
+              >
+                <option value="">Any league</option>
+                {LEAGUES.map(l => <option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Bookmaker</label>
+              <select
+                value={form.bookmaker}
+                onChange={e => setForm(p => ({ ...p, bookmaker: e.target.value }))}
+                className="w-full bg-white/[0.03] border border-white/[0.07] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40 transition-colors"
+              >
+                <option value="">Select bookie</option>
+                {BOOKMAKERS.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
           </div>
+
+          {/* Bet type — quick buttons + full dropdown */}
           <div>
-            <label className="text-slate-400 text-xs font-medium block mb-1.5">Bet Type *</label>
+            <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Bet Type *</label>
+            <div className="flex gap-1.5 flex-wrap mb-2">
+              {QUICK_BET_TYPES.map(qt => (
+                <button
+                  key={qt.value}
+                  type="button"
+                  onClick={() => setForm(p => ({ ...p, bet_type: qt.value }))}
+                  className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-all ${
+                    form.bet_type === qt.value
+                      ? 'bg-blue-500/20 border-blue-500/40 text-blue-300'
+                      : 'bg-white/[0.03] border-white/[0.07] text-slate-500 hover:text-slate-300 hover:border-white/[0.15]'
+                  }`}
+                >
+                  {qt.label}
+                </button>
+              ))}
+            </div>
             <select
               value={form.bet_type}
               onChange={e => setForm(p => ({ ...p, bet_type: e.target.value }))}
-              className="w-full bg-[#0B0B14] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-violet-500/50 transition-colors"
+              className="w-full bg-white/[0.03] border border-white/[0.07] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40 transition-colors"
             >
               {BET_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
-          <div className="sm:col-span-2">
-            <label className="text-slate-400 text-xs font-medium block mb-1.5">Your Selection *</label>
+
+          {/* Selection */}
+          <div>
+            <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Your Selection *</label>
             <input
               type="text"
-              placeholder="e.g. Arsenal to Win, Over 2.5, BTTS Yes"
+              placeholder="e.g. Arsenal Win, Over 2.5, BTTS Yes"
               value={form.selection}
               onChange={e => setForm(p => ({ ...p, selection: e.target.value }))}
-              className="w-full bg-[#0B0B14] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-violet-500/50 transition-colors"
+              className="w-full bg-white/[0.03] border border-white/[0.07] rounded-xl px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-blue-500/40 transition-colors"
             />
           </div>
-          <div>
-            <label className="text-slate-400 text-xs font-medium block mb-1.5">Odds *</label>
-            <input
-              type="number"
-              step="0.01"
-              min="1"
-              placeholder="e.g. 2.50"
-              value={form.odds}
-              onChange={e => setForm(p => ({ ...p, odds: e.target.value }))}
-              className="w-full bg-[#0B0B14] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-violet-500/50 transition-colors"
-            />
-          </div>
-          <div>
-            <label className="text-slate-400 text-xs font-medium block mb-1.5">Stake *</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="e.g. 10.00"
-              value={form.stake}
-              onChange={e => setForm(p => ({ ...p, stake: e.target.value }))}
-              className="w-full bg-[#0B0B14] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-violet-500/50 transition-colors"
-            />
-          </div>
-          <div>
-            <label className="text-slate-400 text-xs font-medium block mb-1.5">Match Date</label>
-            <input
-              type="date"
-              value={form.match_date}
-              onChange={e => setForm(p => ({ ...p, match_date: e.target.value }))}
-              className="w-full bg-[#0B0B14] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-violet-500/50 transition-colors"
-            />
-          </div>
-          <div>
-            <label className="text-slate-400 text-xs font-medium block mb-1.5">Notes</label>
-            <input
-              type="text"
-              placeholder="Optional notes..."
-              value={form.notes}
-              onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
-              className="w-full bg-[#0B0B14] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-violet-500/50 transition-colors"
-            />
-          </div>
-        </div>
 
-        {/* P&L Preview */}
-        {odds > 1 && stake > 0 && (
-          <div className="bg-[#0B0B14] rounded-xl p-3 flex justify-between items-center border border-white/5">
-            <div className="text-center">
-              <div className="text-slate-500 text-xs">Stake</div>
-              <div className="text-white font-semibold">{stake.toFixed(2)}</div>
+          {/* Odds + Stake side by side */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Odds *</label>
+              <input
+                type="number" step="0.01" min="1"
+                placeholder="2.50"
+                value={form.odds}
+                onChange={e => setForm(p => ({ ...p, odds: e.target.value }))}
+                className="w-full bg-white/[0.03] border border-white/[0.07] rounded-xl px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-blue-500/40 transition-colors"
+              />
             </div>
-            <div className="text-slate-600">→</div>
-            <div className="text-center">
-              <div className="text-slate-500 text-xs">Potential Return</div>
-              <div className="text-emerald-400 font-semibold">{potentialReturn}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-slate-500 text-xs">Potential Profit</div>
-              <div className="text-emerald-400 font-bold">+{potentialProfit}</div>
+            <div>
+              <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Stake (£) *</label>
+              <input
+                type="number" step="0.01" min="0"
+                placeholder="10.00"
+                value={form.stake}
+                onChange={e => setForm(p => ({ ...p, stake: e.target.value }))}
+                className="w-full bg-white/[0.03] border border-white/[0.07] rounded-xl px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-blue-500/40 transition-colors"
+              />
             </div>
           </div>
-        )}
 
-        {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-red-400 text-sm">{error}</div>}
-        {success && <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-emerald-400 text-sm">✓ Bet slip saved!</div>}
+          {/* Date + Notes */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Match Date</label>
+              <input
+                type="date"
+                value={form.match_date}
+                onChange={e => setForm(p => ({ ...p, match_date: e.target.value }))}
+                className="w-full bg-white/[0.03] border border-white/[0.07] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Notes</label>
+              <input
+                type="text"
+                placeholder="Optional…"
+                value={form.notes}
+                onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
+                className="w-full bg-white/[0.03] border border-white/[0.07] rounded-xl px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-blue-500/40 transition-colors"
+              />
+            </div>
+          </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-violet-500/20"
-        >
-          {loading ? 'Saving...' : '+ Add Bet Slip'}
-        </button>
-      </form>
+          {/* Live P&L Calculator */}
+          {odds > 1 && stake > 0 && (
+            <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl overflow-hidden">
+              <div className="grid grid-cols-3 divide-x divide-white/[0.07]">
+                <div className="px-4 py-3 text-center">
+                  <p className="text-slate-500 text-[10px] uppercase tracking-wide mb-1">Stake</p>
+                  <p className="text-white font-bold">£{stake.toFixed(2)}</p>
+                </div>
+                <div className="px-4 py-3 text-center">
+                  <p className="text-slate-500 text-[10px] uppercase tracking-wide mb-1">Return</p>
+                  <p className="text-white font-bold">£{potentialReturn.toFixed(2)}</p>
+                </div>
+                <div className="px-4 py-3 text-center">
+                  <p className="text-slate-500 text-[10px] uppercase tracking-wide mb-1">Profit</p>
+                  <p className="text-emerald-400 font-black">+£{potentialProfit.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-red-400 text-xs font-medium">{error}</div>
+          )}
+          {success && (
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-emerald-400 text-xs font-medium flex items-center gap-2">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+              Bet slip saved!
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors text-sm"
+          >
+            {loading ? 'Saving…' : '+ Add Bet Slip'}
+          </button>
+        </form>
+      </div>
     </div>
   )
 }

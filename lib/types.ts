@@ -20,6 +20,7 @@ export interface BetSlip {
   selection: string
   odds: number
   stake: number
+  bookmaker?: string
   potential_return?: number
   result: 'win' | 'loss' | 'void' | 'pending'
   profit_loss: number
