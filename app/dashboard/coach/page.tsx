@@ -10,7 +10,7 @@ export default async function FootballCoachPage() {
   const { data: profile } = await supabase
     .from('profiles')
     .select('subscription_tier, full_name')
-    .eq('id', user.id)
+    .eq('user_id', user.id)
     .single()
 
   return <CoachPageWithData user={user} profile={profile} />

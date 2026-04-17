@@ -11,10 +11,6 @@
     {
       "path": "/api/cron/onboarding-emails",
       "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/social-post",
-      "schedule": "0 5 * * *"
     }
   ]
 }

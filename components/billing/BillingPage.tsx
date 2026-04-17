@@ -9,17 +9,15 @@ const PLANS = [
     price: '£0',
     period: 'forever',
     description: 'Get started with the basics',
-    color: 'border-white/10',
-    badge: null,
     features: [
-      '✅ Track up to 10 bets',
-      '✅ Basic win/loss statistics',
-      '✅ Manual bet entry',
-      '✅ 3 AI predictions daily',
-      '❌ AI Football Coach',
-      '❌ Full predictions + value bets',
-      '❌ Bankroll tracker',
-      '❌ Weekly AI Report Card',
+      { text: 'Track up to 10 bets', included: true },
+      { text: 'Basic win/loss statistics', included: true },
+      { text: 'Manual bet entry', included: true },
+      { text: '3 AI predictions daily', included: true },
+      { text: 'AI Football Coach', included: false },
+      { text: 'Full predictions + value bets', included: false },
+      { text: 'Bankroll tracker', included: false },
+      { text: 'Weekly AI Report Card', included: false },
     ],
   },
   {
@@ -28,21 +26,37 @@ const PLANS = [
     price: '£9.99',
     period: 'per month',
     description: 'Everything you need to bet smarter',
-    color: 'border-violet-500',
-    badge: '🔥 7-Day Free Trial',
+    badge: '7-Day Free Trial',
     trial: '7-day free trial',
     features: [
-      '✅ Unlimited bet tracking',
-      '✅ Full AI predictions (10+ leagues daily)',
-      '✅ Pinnacle value bet finder + EV scores',
-      '✅ Real Bet365 odds comparison',
-      '✅ Daily AI accumulator builder',
-      '✅ AI Football Coach (GPT-4o)',
-      '✅ Bankroll tracker + P&L chart',
-      '✅ Full leaderboard access',
+      { text: 'Unlimited bet tracking', included: true },
+      { text: 'Full AI predictions (10+ leagues daily)', included: true },
+      { text: 'Pinnacle value bet finder + EV scores', included: true },
+      { text: 'Real Bet365 odds comparison', included: true },
+      { text: 'Daily AI accumulator builder', included: true },
+      { text: 'AI Football Coach (GPT-4o)', included: true },
+      { text: 'Bankroll tracker + P&L chart', included: true },
+      { text: 'Full leaderboard access', included: true },
     ],
   },
 ]
+
+function CheckIcon({ size = 'sm' }: { size?: 'sm' | 'xs' }) {
+  const cls = size === 'xs' ? 'w-3 h-3' : 'w-3.5 h-3.5'
+  return (
+    <svg className={cls} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+    </svg>
+  )
+}
+
+function XIcon() {
+  return (
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  )
+}
 
 export default function BillingPage({ profile }: { profile: any }) {
   const [loading, setLoading] = useState<string | null>(null)
@@ -59,14 +73,12 @@ export default function BillingPage({ profile }: { profile: any }) {
     setLoading(planId)
 
     if (profile?.stripe_customer_id && tier !== 'free') {
-      // Already subscribed — open billing portal to change plan
       const res = await fetch('/api/stripe/portal', { method: 'POST' })
       const { url } = await res.json()
       window.location.href = url
       return
     }
 
-    // create-checkout is a GET route that redirects directly to Stripe
     window.location.href = `/api/stripe/create-checkout?plan=${planId}`
   }
 
@@ -78,38 +90,40 @@ export default function BillingPage({ profile }: { profile: any }) {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white mb-1">Billing & Plans</h1>
-        <p className="text-gray-400 text-sm">
+    <div className="p-5 lg:p-7 max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div>
+        <p className="text-slate-500 text-xs uppercase tracking-widest mb-1 font-medium">Account</p>
+        <h1 className="text-3xl font-black text-white tracking-tight">Billing & Plans</h1>
+        <p className="text-slate-500 text-sm mt-1">
           {tier === 'free'
             ? 'Upgrade to unlock the full power of MatchMind'
             : `You're on the ${tier.charAt(0).toUpperCase() + tier.slice(1)} plan${periodEnd ? ` — renews ${periodEnd}` : ''}`}
         </p>
       </div>
 
-      {/* Current plan banner */}
+      {/* Active plan banner */}
       {tier !== 'free' && (
-        <div className="mb-6 p-4 rounded-xl bg-violet-600/10 border border-violet-500/30 flex items-center justify-between">
+        <div className="p-5 rounded-2xl bg-[#0E1628] border border-blue-500/25 flex items-center justify-between gap-4">
           <div>
-            <div className="text-sm font-medium text-white">
-              {tier.charAt(0).toUpperCase() + tier.slice(1)} Plan
-              <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
-                status === 'trialing' ? 'bg-amber-500/20 text-amber-300' :
-                status === 'active' ? 'bg-emerald-500/20 text-emerald-300' :
-                'bg-red-500/20 text-red-300'
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-sm font-bold text-white">{tier.charAt(0).toUpperCase() + tier.slice(1)} Plan</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                status === 'trialing' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/25' :
+                status === 'active' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/25' :
+                'bg-red-500/20 text-red-300 border border-red-500/25'
               }`}>
-                {status === 'trialing' ? '🎁 Trial' : status === 'active' ? '✅ Active' : status}
+                {status === 'trialing' ? 'Trial' : status === 'active' ? 'Active' : status}
               </span>
             </div>
-            {periodEnd && <div className="text-xs text-gray-400 mt-0.5">Next billing: {periodEnd}</div>}
+            {periodEnd && <div className="text-xs text-slate-500">Next billing: {periodEnd}</div>}
           </div>
           <button
             onClick={handleManage}
             disabled={loading === 'manage'}
-            className="px-4 py-2 bg-white/5 hover:bg-white/10 text-sm text-white rounded-lg border border-white/10 transition-colors"
+            className="px-4 py-2 bg-white/[0.04] hover:bg-white/[0.07] text-sm font-semibold text-white rounded-xl border border-white/[0.07] transition-colors"
           >
-            {loading === 'manage' ? 'Loading...' : 'Manage Subscription'}
+            {loading === 'manage' ? 'Loading…' : 'Manage Subscription'}
           </button>
         </div>
       )}
@@ -118,39 +132,50 @@ export default function BillingPage({ profile }: { profile: any }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
         {PLANS.map((plan) => {
           const isCurrent = plan.id === tier
-          const isPopular = plan.id === 'pro'
+          const isPro = plan.id === 'pro'
 
           return (
             <div
               key={plan.id}
-              className={`relative rounded-2xl border-2 p-6 flex flex-col ${plan.color} ${
-                isCurrent ? 'bg-white/5' : 'bg-[#12121F]'
+              className={`relative rounded-2xl p-6 flex flex-col border transition-all ${
+                isPro
+                  ? 'bg-[#0E1628] border-blue-500/30'
+                  : 'bg-[#0E1628] border-white/[0.07]'
               }`}
             >
+              {/* Popular badge */}
               {plan.badge && (
-                <div className={`absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full ${
-                  plan.id === 'pro' ? 'bg-violet-600 text-white' : 'bg-amber-500 text-black'
-                }`}>
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-black px-3 py-1 rounded-full bg-blue-600 text-white uppercase tracking-wide whitespace-nowrap">
                   {plan.badge}
                 </div>
               )}
 
-              <div className="mb-4">
-                <h3 className="text-lg font-bold text-white">{plan.name}</h3>
-                <div className="mt-1">
-                  <span className="text-3xl font-black text-white">{plan.price}</span>
-                  <span className="text-gray-400 text-sm ml-1">/{plan.period}</span>
+              <div className="mb-5">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-black text-white tracking-tight">{plan.name}</h3>
+                  {isCurrent && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-slate-300 border border-white/[0.1]">
+                      Current
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <span className="text-4xl font-black text-white">{plan.price}</span>
+                  <span className="text-slate-500 text-sm ml-1">/{plan.period}</span>
                 </div>
                 {plan.trial && (
-                  <div className="mt-1 text-xs text-emerald-400 font-medium">🎁 {plan.trial}</div>
+                  <div className="mt-1.5 text-xs text-emerald-400 font-semibold">{plan.trial} included</div>
                 )}
-                <p className="text-gray-400 text-xs mt-2">{plan.description}</p>
+                <p className="text-slate-500 text-xs mt-2">{plan.description}</p>
               </div>
 
-              <ul className="space-y-2 mb-6 flex-1">
-                {plan.features.map((f) => (
-                  <li key={f} className={`text-xs ${f.startsWith('✅') ? 'text-gray-200' : 'text-gray-500'}`}>
-                    {f}
+              <ul className="space-y-2.5 mb-6 flex-1">
+                {plan.features.map((f, i) => (
+                  <li key={i} className="flex items-center gap-2.5 text-xs">
+                    <span className={`flex-shrink-0 ${f.included ? 'text-emerald-400' : 'text-slate-700'}`}>
+                      {f.included ? <CheckIcon /> : <XIcon />}
+                    </span>
+                    <span className={f.included ? 'text-slate-300' : 'text-slate-600'}>{f.text}</span>
                   </li>
                 ))}
               </ul>
@@ -158,30 +183,28 @@ export default function BillingPage({ profile }: { profile: any }) {
               <button
                 onClick={() => handleUpgrade(plan.id)}
                 disabled={isCurrent || loading === plan.id}
-                className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                className={`w-full py-3 rounded-xl text-sm font-bold transition-all ${
                   isCurrent
-                    ? 'bg-white/5 text-gray-400 cursor-default'
-                    : plan.id === 'pro'
-                    ? 'bg-violet-600 hover:bg-violet-500 text-white'
-                    : plan.id === 'elite'
-                    ? 'bg-amber-500 hover:bg-amber-400 text-black'
-                    : 'bg-white/5 text-gray-400 cursor-default'
+                    ? 'bg-white/[0.04] text-slate-500 cursor-default border border-white/[0.07]'
+                    : isPro
+                    ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                    : 'bg-white/[0.04] text-slate-500 cursor-default border border-white/[0.07]'
                 }`}
               >
                 {loading === plan.id
-                  ? 'Loading...'
+                  ? 'Loading…'
                   : isCurrent
                   ? '✓ Current Plan'
                   : plan.id === 'free'
                   ? 'Free Forever'
-                  : `Start 7-Day Trial →`}
+                  : 'Start 7-Day Free Trial →'}
               </button>
             </div>
           )
         })}
       </div>
 
-      <p className="text-center text-xs text-gray-500 mt-6">
+      <p className="text-center text-xs text-slate-600">
         All payments secured by Stripe · Cancel anytime · No hidden fees
       </p>
     </div>
