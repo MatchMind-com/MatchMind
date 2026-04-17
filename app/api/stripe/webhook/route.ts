@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-03-25.dahlia' })
@@ -22,21 +21,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 400 })
   }
 
-  const supabase = await createClient()
-
   // ── Platform subscription (MatchMind Pro) ──────────────────────────────────────
   async function updatePlatformSubscription(subscription: Stripe.Subscription) {
-    const userId = subscription.metadata?.supabase_user_id
-    const tier = subscription.metadata?.tier || 'free'
+    // create-checkout sends: metadata.user_id and metadata.plan
+    const userId = subscription.metadata?.user_id
+    const tier = subscription.metadata?.plan || 'free'
     if (!userId) return
 
     const isActive = ['active', 'trialing'].includes(subscription.status)
-    await supabase.from('profiles').update({
+    // Use supabaseAdmin (service role) — webhooks have no user session, so RLS would block
+    await supabaseAdmin.from('profiles').update({
       subscription_tier: isActive ? tier : 'free',
       stripe_subscription_id: subscription.id,
+      stripe_customer_id: subscription.customer as string,
       subscription_status: subscription.status,
       subscription_current_period_end: new Date(((subscription as any).current_period_end ?? 0) * 1000).toISOString(),
-    }).eq('id', userId)
+    }).eq('user_id', userId)
   }
 
   // ── Tipster subscription ────────────────────────────────────────────────────
@@ -89,13 +89,13 @@ export async function POST(req: NextRequest) {
       if (isTipsterSub(sub)) {
         await handleTipsterSubscription(sub, 'canceled')
       } else {
-        const userId = sub.metadata?.supabase_user_id
+        const userId = sub.metadata?.user_id
         if (userId) {
-          await supabase.from('profiles').update({
+          await supabaseAdmin.from('profiles').update({
             subscription_tier: 'free',
             subscription_status: 'canceled',
             stripe_subscription_id: null,
-          }).eq('id', userId)
+          }).eq('user_id', userId)
         }
       }
       break

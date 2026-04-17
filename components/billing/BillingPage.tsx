@@ -12,14 +12,14 @@ const PLANS = [
     color: 'border-white/10',
     badge: null,
     features: [
-      '✅ Track up to 20 bets/month',
+      '✅ Track up to 10 bets',
       '✅ Basic win/loss statistics',
       '✅ Manual bet entry',
+      '✅ 3 AI predictions daily',
       '❌ AI Football Coach',
-      '❌ Live fixture data',
+      '❌ Full predictions + value bets',
       '❌ Bankroll tracker',
-      '❌ Weekly Report Card',
-      '❌ Auto result detection',
+      '❌ Weekly AI Report Card',
     ],
   },
   {
@@ -27,39 +27,19 @@ const PLANS = [
     name: 'Pro',
     price: '£9.99',
     period: 'per month',
-    description: 'For serious bettors',
+    description: 'Everything you need to bet smarter',
     color: 'border-violet-500',
-    badge: '🔥 Most Popular',
+    badge: '🔥 7-Day Free Trial',
     trial: '7-day free trial',
     features: [
       '✅ Unlimited bet tracking',
-      '✅ Full statistics & analytics',
+      '✅ Full AI predictions (10+ leagues daily)',
+      '✅ Pinnacle value bet finder + EV scores',
+      '✅ Real Bet365 odds comparison',
+      '✅ Daily AI accumulator builder',
       '✅ AI Football Coach (GPT-4o)',
-      '✅ Live fixtures & standings',
-      '✅ Bankroll tracker + chart',
-      '✅ Weekly AI Report Card',
-      '✅ Auto result detection',
-      '❌ Kelly Criterion calculator',
-    ],
-  },
-  {
-    id: 'elite',
-    name: 'Elite',
-    price: '£19.99',
-    period: 'per month',
-    description: 'For professional bettors',
-    color: 'border-amber-500',
-    badge: '⭐ Best Value',
-    trial: '7-day free trial',
-    features: [
-      '✅ Everything in Pro',
-      '✅ Kelly Criterion stake sizing',
-      '✅ Advanced pattern detection',
-      '✅ Multi-league live data',
-      '✅ Priority AI responses',
-      '✅ Injury & team news alerts',
-      '✅ Export data to CSV',
-      '✅ Priority email support',
+      '✅ Bankroll tracker + P&L chart',
+      '✅ Full leaderboard access',
     ],
   },
 ]
@@ -86,14 +66,8 @@ export default function BillingPage({ profile }: { profile: any }) {
       return
     }
 
-    const res = await fetch('/api/stripe/create-checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tier: planId }),
-    })
-    const { url, error } = await res.json()
-    if (error) { alert(error); setLoading(null); return }
-    window.location.href = url
+    // create-checkout is a GET route that redirects directly to Stripe
+    window.location.href = `/api/stripe/create-checkout?plan=${planId}`
   }
 
   async function handleManage() {
@@ -141,7 +115,7 @@ export default function BillingPage({ profile }: { profile: any }) {
       )}
 
       {/* Plans grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
         {PLANS.map((plan) => {
           const isCurrent = plan.id === tier
           const isPopular = plan.id === 'pro'
