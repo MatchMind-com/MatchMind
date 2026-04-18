@@ -578,36 +578,97 @@ export default function PredictionsPage() {
       {!loading && !error && predictions.length > 0 && (
         <div className="space-y-5">
 
-          {/* Pinnacle Value Bets — Pro */}
-          {isPro && valueBets.length > 0 && (
-            <div className="bg-[#0E1628] border border-emerald-500/25 rounded-2xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-emerald-500/15 flex items-center gap-2"
-                style={{ background: 'linear-gradient(90deg, rgba(16,185,129,0.07) 0%, transparent 100%)' }}>
-                <span className="text-emerald-400"><FireIcon /></span>
-                <div>
-                  <span className="text-white font-bold text-sm">Pinnacle Value Bets Today</span>
-                  <span className="text-emerald-400/60 text-xs ml-2">Sharp money disagrees with Bet365</span>
-                </div>
-              </div>
-              <div className="divide-y divide-white/[0.05]">
-                {valueBets.map((p, i) => (
-                  <div key={p.id || i} className="flex items-center justify-between px-5 py-3.5 hover:bg-white/[0.02] transition-colors">
-                    <div className="flex items-center gap-3">
-                      <span className="text-slate-600 text-xs font-bold w-5">#{i + 1}</span>
-                      <div>
-                        <p className="text-white font-semibold text-sm">{p.home_team} vs {p.away_team}</p>
-                        <p className="text-slate-500 text-xs">{p.leagueFlag} {p.league} · <span className="text-emerald-400 font-semibold">{p.best_value?.label}</span> @ {p.best_value?.odds.toFixed(2)}</p>
+          {/* Value Bets — 3 tiers by odds range (Easy/Medium/Hard) */}
+          {isPro && (() => {
+            type TieredBet = {
+              pred: Prediction
+              market: 'Home Win' | 'Away Win' | 'Over 2.5' | 'BTTS'
+              odds: number
+              ev: number
+            }
+            const MARKETS: { label: TieredBet['market']; evKey: keyof Prediction['ev']; oddsKey: 'home' | 'away' | 'over25' | 'btts' }[] = [
+              { label: 'Home Win', evKey: 'home',   oddsKey: 'home' },
+              { label: 'Away Win', evKey: 'away',   oddsKey: 'away' },
+              { label: 'Over 2.5', evKey: 'over25', oddsKey: 'over25' },
+              { label: 'BTTS',     evKey: 'btts',   oddsKey: 'btts' },
+            ]
+            // Collect every +EV market across every match
+            const allBets: TieredBet[] = []
+            for (const p of predictions) {
+              if (!p.bookmaker) continue
+              for (const m of MARKETS) {
+                const ev = p.ev?.[m.evKey]
+                const odds = p.bookmaker[m.oddsKey]
+                if (ev != null && ev > 0 && ev <= 25 && odds != null && odds <= 4.0) {
+                  allBets.push({ pred: p, market: m.label, odds, ev })
+                }
+              }
+            }
+            // Bucket by odds range
+            const tiers = [
+              {
+                key: 'easy',   label: 'Easy',   subtitle: 'Low odds, high hit rate',     range: 'odds 1.40–1.80',
+                accent: 'emerald', border: 'border-emerald-500/25', headerBg: 'rgba(16,185,129,0.07)', textEV: 'text-emerald-400',
+                filter: (b: TieredBet) => b.odds >= 1.40 && b.odds < 1.80,
+              },
+              {
+                key: 'medium', label: 'Medium', subtitle: 'Balanced risk / reward',      range: 'odds 1.80–2.50',
+                accent: 'orange',  border: 'border-orange-500/25',  headerBg: 'rgba(249,115,22,0.07)', textEV: 'text-orange-400',
+                filter: (b: TieredBet) => b.odds >= 1.80 && b.odds < 2.50,
+              },
+              {
+                key: 'hard',   label: 'Hard',   subtitle: 'Bigger payout, lower hit rate', range: 'odds 2.50–4.00',
+                accent: 'red',     border: 'border-red-500/25',     headerBg: 'rgba(239,68,68,0.07)',  textEV: 'text-red-400',
+                filter: (b: TieredBet) => b.odds >= 2.50 && b.odds <= 4.0,
+              },
+            ]
+            return (
+              <div className="space-y-4">
+                {tiers.map(tier => {
+                  const picks = allBets
+                    .filter(tier.filter)
+                    .sort((a, b) => b.ev - a.ev)
+                    .slice(0, 3)
+                  return (
+                    <div key={tier.key} className={`bg-[#0E1628] border ${tier.border} rounded-2xl overflow-hidden`}>
+                      <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between"
+                        style={{ background: `linear-gradient(90deg, ${tier.headerBg} 0%, transparent 100%)` }}>
+                        <div className="flex items-center gap-2">
+                          <span className={tier.textEV}><FireIcon /></span>
+                          <div>
+                            <span className="text-white font-bold text-sm">{tier.label}</span>
+                            <span className="text-slate-400 text-xs ml-2">{tier.subtitle}</span>
+                          </div>
+                        </div>
+                        <span className="text-slate-500 text-[11px] uppercase tracking-wider font-semibold">{tier.range}</span>
                       </div>
+                      {picks.length === 0 ? (
+                        <div className="px-5 py-5 text-slate-500 text-xs text-center">No +EV picks in this tier today.</div>
+                      ) : (
+                        <div className="divide-y divide-white/[0.05]">
+                          {picks.map((b, i) => (
+                            <div key={`${tier.key}-${b.pred.id}-${b.market}`} className="flex items-center justify-between px-5 py-3.5 hover:bg-white/[0.02] transition-colors">
+                              <div className="flex items-center gap-3">
+                                <span className="text-slate-600 text-xs font-bold w-5">#{i + 1}</span>
+                                <div>
+                                  <p className="text-white font-semibold text-sm">{b.pred.home_team} vs {b.pred.away_team}</p>
+                                  <p className="text-slate-500 text-xs">{b.pred.leagueFlag} {b.pred.league} · <span className={`${tier.textEV} font-semibold`}>{b.market}</span> @ {b.odds.toFixed(2)}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <span className={`${tier.textEV} font-black text-lg`}>+{b.ev}%</span>
+                                <p className="text-slate-600 text-[10px]">EV edge</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <div className="text-right">
-                      <span className="text-emerald-400 font-black text-lg">+{p.value_score}%</span>
-                      <p className="text-slate-600 text-[10px]">EV edge</p>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
-            </div>
-          )}
+            )
+          })()}
 
           {/* Value bet teaser — Free */}
           {!isPro && (
