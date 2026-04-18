@@ -56,8 +56,24 @@ export default async function LandingPage() {
   const predictions = livePreds.length > 0 ? livePreds : SAMPLE_PREDS
   const isLiveData = livePreds.length > 0
 
+  // Organization schema — gives Google a knowledge-panel snippet + logo
+  const orgSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'MatchMind',
+    url: 'https://www.matchmindcom.com',
+    logo: 'https://www.matchmindcom.com/icon-512.png',
+    description: 'AI-powered football predictions, value bets with Pinnacle edge detection, and an AI betting coach.',
+    sameAs: [
+      'https://www.tiktok.com/@match.mindai',
+      'https://instagram.com/match.mindai',
+      'https://twitter.com/Match_Mind_AI',
+    ],
+  }
+
   return (
     <div className="min-h-screen bg-[#0B0B14] text-white overflow-x-hidden">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />
 
       {/* ── NAVBAR ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B0B14]/80 backdrop-blur-xl border-b border-white/5">

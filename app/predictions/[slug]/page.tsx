@@ -104,8 +104,29 @@ export default async function MatchPredictionPage({ params }: { params: { slug: 
   })
   const timeStr = kickOff.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 
+  // SportsEvent JSON-LD — gives Google rich sports cards in search
+  const eventStatus = isSettled ? 'EventCompleted'
+    : kickOff < new Date() ? 'EventMovedOnline'
+    : 'EventScheduled'
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SportsEvent',
+    name: `${match.home_team} vs ${match.away_team}`,
+    description: `AI football prediction for ${match.home_team} vs ${match.away_team} in ${match.league} on ${dateStr}`,
+    startDate: match.kick_off,
+    sport: 'Football',
+    eventStatus: `https://schema.org/${eventStatus}`,
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    homeTeam: { '@type': 'SportsTeam', name: match.home_team },
+    awayTeam: { '@type': 'SportsTeam', name: match.away_team },
+    location: { '@type': 'Place', name: match.league },
+    organizer: { '@type': 'Organization', name: 'MatchMind', url: APP_URL },
+    url: `${APP_URL}/predictions/${params.slug}`,
+  }
+
   return (
     <div className="min-h-screen bg-[#0B0B14] text-white">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       {/* Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B0B14]/80 backdrop-blur-xl border-b border-white/5">
