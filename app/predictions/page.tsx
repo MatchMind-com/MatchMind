@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import PublicFooter from '@/components/layout/PublicFooter'
 
 export const metadata: Metadata = {
   title: "Today's AI Football Predictions — Free Match Tips | MatchMind",
@@ -158,6 +159,7 @@ export default async function PredictionsIndexPage() {
           </Link>
         </div>
       </div>
+      <PublicFooter />
     </div>
   )
 }

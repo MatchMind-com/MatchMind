@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import EmailCapture from '@/components/landing/EmailCapture'
 import ActivityStrip from '@/components/landing/ActivityStrip'
+import PublicFooter from '@/components/layout/PublicFooter'
 
 async function getLiveStats() {
   try {
@@ -783,24 +784,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
-      <footer className="border-t border-white/5 py-10 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm">B</div>
-            <span className="text-white/60 font-bold">MatchMind</span>
-          </div>
-          <p className="text-white/20 text-xs text-center">
-            For analytics and entertainment purposes only. Please gamble responsibly. 18+ only.
-          </p>
-          <div className="flex items-center gap-5 text-white/30 text-sm">
-            <a href="#pricing" className="hover:text-white/60 transition-colors">Pricing</a>
-            <Link href="/track-record" className="hover:text-white/60 transition-colors">Track Record</Link>
-            <Link href="/login" className="hover:text-white/60 transition-colors">Sign In</Link>
-            <Link href="/signup" className="hover:text-white/60 transition-colors">Sign Up</Link>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   )
 }

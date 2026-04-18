@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import { rateLimit, getClientKey, rateLimitResponse } from '@/lib/rate-limit'
 
 export const revalidate = 300 // 5 min cache
 
@@ -9,7 +10,10 @@ const supabaseAdmin = createAdmin(
 )
 
 // Public endpoint — returns today's top value bets (no odds shown, blurred in UI)
-export async function GET() {
+export async function GET(request: Request) {
+  const rl = rateLimit(`public-predictions:${getClientKey(request)}`, 60, 60_000)
+  if (!rl.ok) return rateLimitResponse(rl.resetMs)
+
   try {
     const todayStart = new Date()
     todayStart.setHours(0, 0, 0, 0)

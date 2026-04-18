@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import { rateLimit, getClientKey, rateLimitResponse } from '@/lib/rate-limit'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const API_KEY = process.env.API_FOOTBALL_KEY!
@@ -173,9 +174,23 @@ const TOP_LEAGUES = [
   { id: 144, name: 'Pro League',        flag: '🇧🇪' },
   { id: 113, name: 'Allsvenskan',       flag: '🇸🇪' },
   { id: 262, name: 'Liga MX',           flag: '🇲🇽' },
+  { id: 253, name: 'MLS',               flag: '🇺🇸' },
+  { id: 71,  name: 'Brasileirão',       flag: '🇧🇷' },
+  { id: 128, name: 'Argentine Primera', flag: '🇦🇷' },
+  { id: 13,  name: 'Copa Libertadores', flag: '🏆' },
+  { id: 11,  name: 'Copa Sudamericana', flag: '🥈' },
+  { id: 307, name: 'Saudi Pro League',  flag: '🇸🇦' },
+  { id: 98,  name: 'J1 League',         flag: '🇯🇵' },
+  { id: 179, name: 'Scottish Premiership', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿' },
+  { id: 106, name: 'Ekstraklasa',       flag: '🇵🇱' },
+  { id: 1,   name: 'World Cup',         flag: '🌍' },
 ]
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Rate limit: 20 calls per minute per IP — this endpoint burns OpenAI credits
+  const rl = rateLimit(`predictions:${getClientKey(request)}`, 20, 60_000)
+  if (!rl.ok) return rateLimitResponse(rl.resetMs)
+
   try {
     const season = getCurrentSeason()
     const today = new Date().toISOString().split('T')[0]

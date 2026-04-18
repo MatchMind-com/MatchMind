@@ -152,7 +152,7 @@ export default function CommandCenter({ userId, email, initialBets }: Props) {
             {streak > 0 ? streak : '—'}
           </p>
           <p className="text-xs text-white/25">
-            {streak > 0 ? `${streak} ${streakType}${streak > 1 ? 's' : ''} in a row` : 'No data yet'}
+            {streak > 0 ? `${streak} ${streakType}${streak > 1 ? 's' : ''} in a row` : 'Log your first bet to start'}
           </p>
           {streak >= 3 && streakType === 'win' && (
             <span className="absolute top-3 right-3 text-[10px] font-black text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full">HOT</span>

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import PublicFooter from '@/components/layout/PublicFooter'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.company'
 
@@ -243,12 +244,8 @@ export default async function MatchPredictionPage({ params }: { params: { slug: 
           </Link>
         </div>
 
-        {/* Responsible gambling */}
-        <p className="text-white/20 text-xs text-center">
-          18+ only. Gambling involves risk. AI predictions are for educational purposes — not financial advice.{' '}
-          <a href="https://www.begambleaware.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-white/40">BeGambleAware.org</a>
-        </p>
       </div>
+      <PublicFooter />
     </div>
   )
 }

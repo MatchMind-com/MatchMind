@@ -207,6 +207,13 @@ export default function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
             )}
           </p>
         </div>
+
+        {/* Responsible gambling */}
+        <p className="text-center text-white/30 text-[11px] mt-6 leading-relaxed">
+          <span className="bg-red-500/15 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded mr-1.5 font-semibold">18+</span>
+          Gambling involves risk. For analytics only — not financial advice.{' '}
+          <a href="https://www.begambleaware.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-white/60">BeGambleAware.org</a>
+        </p>
       </div>
     </div>
   )

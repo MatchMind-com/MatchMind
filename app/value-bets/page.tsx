@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
+import PublicFooter from '@/components/layout/PublicFooter'
 
 export const metadata: Metadata = {
   title: "Today's AI Football Value Bets — Free Picks with EV Analysis",
@@ -192,10 +193,8 @@ export default async function ValueBetsPage() {
           ))}
         </div>
 
-        <p className="text-white/15 text-xs text-center mt-10">
-          18+ only. Gambling involves risk. MatchMind picks are for entertainment and educational purposes — not financial advice. Please bet responsibly. <a href="https://www.begambleaware.org" className="underline" target="_blank" rel="noopener noreferrer">BeGambleAware.org</a>
-        </p>
       </div>
+      <PublicFooter />
     </div>
   )
 }

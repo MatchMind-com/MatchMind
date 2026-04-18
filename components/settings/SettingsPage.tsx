@@ -220,6 +220,25 @@ export default function SettingsPage({ profile, email }: SettingsProps) {
         </div>
       </section>
 
+      {/* Your Data (GDPR) */}
+      <section className="bg-[#0E1628] border border-white/[0.07] rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-white/[0.07]">
+          <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Your Data (GDPR)</h2>
+        </div>
+        <div className="flex items-center justify-between px-5 py-4">
+          <div>
+            <div className="text-sm font-semibold text-white">Export your data</div>
+            <div className="text-xs text-slate-500 mt-0.5">Download a JSON bundle of everything we have on you</div>
+          </div>
+          <a
+            href="/api/account/export"
+            className="px-4 py-2 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.07] rounded-xl text-sm text-slate-300 font-semibold transition-colors"
+          >
+            Download
+          </a>
+        </div>
+      </section>
+
       {/* Danger Zone */}
       <section className="bg-[#0E1628] border border-red-500/20 rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-red-500/15">
@@ -228,14 +247,24 @@ export default function SettingsPage({ profile, email }: SettingsProps) {
         <div className="flex items-center justify-between px-5 py-4">
           <div>
             <div className="text-sm font-semibold text-white">Delete account</div>
-            <div className="text-xs text-slate-500 mt-0.5">Permanently delete your account and all data</div>
+            <div className="text-xs text-slate-500 mt-0.5">Permanently deletes your account and all data</div>
           </div>
-          <a
-            href={`mailto:support@matchmindcom.com?subject=Delete my account&body=Please delete my account: ${email}`}
+          <button
+            onClick={async () => {
+              const confirmed = window.prompt('This will permanently delete your account and all data. Type DELETE to confirm:')
+              if (confirmed !== 'DELETE') return
+              const res = await fetch('/api/account/delete', { method: 'POST' })
+              if (res.ok) {
+                alert('Account deleted.')
+                window.location.href = '/'
+              } else {
+                alert('Could not delete account. Please email support@matchmindcom.com.')
+              }
+            }}
             className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 rounded-xl text-sm text-red-400 font-semibold transition-colors"
           >
-            Request Deletion
-          </a>
+            Delete Account
+          </button>
         </div>
       </section>
     </div>

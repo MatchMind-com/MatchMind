@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import { rateLimit, getClientKey, rateLimitResponse } from '@/lib/rate-limit'
 
 export const revalidate = 300
 
@@ -24,6 +25,9 @@ function makeSlug(home: string, away: string, kickOff: string) {
 }
 
 export async function GET(request: Request) {
+  const rl = rateLimit(`match-prediction:${getClientKey(request)}`, 60, 60_000)
+  if (!rl.ok) return rateLimitResponse(rl.resetMs)
+
   const { searchParams } = new URL(request.url)
   const slug = searchParams.get('slug')
   if (!slug) return NextResponse.json({ error: 'slug required' }, { status: 400 })

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import PublicFooter from '@/components/layout/PublicFooter'
 
 async function getTrackRecord() {
   try {
@@ -258,6 +259,7 @@ export default async function TrackRecordPage() {
           </div>
         </div>
       </div>
+      <PublicFooter />
     </div>
   )
 }
