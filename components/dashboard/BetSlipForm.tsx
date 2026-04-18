@@ -54,6 +54,25 @@ const QUICK_BET_TYPES = [
   { label: 'HT', value: 'Half-Time Result' },
 ]
 
+interface BetOption {
+  label: string        // display: "Newcastle Win @ 2.06"
+  selection: string    // form.selection value: "Newcastle Win"
+  bet_type: string     // form.bet_type value
+  odds: number
+}
+
+function buildBetOptions(fixture: UpcomingFixture): BetOption[] {
+  if (!fixture.odds) return []
+  const o = fixture.odds
+  const opts: BetOption[] = []
+  if (o.home)   opts.push({ label: `${fixture.home_team} Win  ·  ${o.home.toFixed(2)}`, selection: `${fixture.home_team} to Win`, bet_type: 'Match Result (1X2)', odds: o.home })
+  if (o.draw)   opts.push({ label: `Draw  ·  ${o.draw.toFixed(2)}`, selection: 'Draw', bet_type: 'Match Result (1X2)', odds: o.draw })
+  if (o.away)   opts.push({ label: `${fixture.away_team} Win  ·  ${o.away.toFixed(2)}`, selection: `${fixture.away_team} to Win`, bet_type: 'Match Result (1X2)', odds: o.away })
+  if (o.over25) opts.push({ label: `Over 2.5 Goals  ·  ${o.over25.toFixed(2)}`, selection: 'Over 2.5 Goals', bet_type: 'Over / Under', odds: o.over25 })
+  if (o.btts)   opts.push({ label: `BTTS Yes  ·  ${o.btts.toFixed(2)}`, selection: 'Both Teams to Score - Yes', bet_type: 'Both Teams to Score', odds: o.btts })
+  return opts
+}
+
 function groupByDate(fixtures: UpcomingFixture[]) {
   const today = new Date().toISOString().split('T')[0]
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
@@ -97,6 +116,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
   const [pickerSearch, setPickerSearch] = useState('')
   const [selectedFixture, setSelectedFixture] = useState<UpcomingFixture | null>(null)
   const [pickerFetched, setPickerFetched] = useState(false)
+  const [selectedBetOption, setSelectedBetOption] = useState<BetOption | null>(null)
 
   const odds = parseFloat(form.odds) || 0
   const stake = parseFloat(form.stake) || 0
@@ -140,12 +160,23 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
       match_date: matchDate,
     }))
     setSelectedFixture(f)
+    setSelectedBetOption(null)
     setShowPicker(false)
     setPickerSearch('')
   }
 
   function applyOddsChip(value: number) {
     setForm(prev => ({ ...prev, odds: String(value) }))
+  }
+
+  function applyBetOption(opt: BetOption) {
+    setSelectedBetOption(opt)
+    setForm(prev => ({
+      ...prev,
+      bet_type: opt.bet_type,
+      selection: opt.selection,
+      odds: String(opt.odds),
+    }))
   }
 
   // Filter fixtures by search
@@ -223,6 +254,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
       setForm({ match_name: '', league: '', bet_type: 'Match Result (1X2)', selection: '', odds: '', stake: '', bookmaker: '', match_date: '', notes: '' })
       setUploadedImage(null)
       setSelectedFixture(null)
+      setSelectedBetOption(null)
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
       onBetAdded()
@@ -457,45 +489,81 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
             </div>
           </div>
 
-          {/* Bet type — quick buttons + full dropdown */}
-          <div>
-            <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Bet Type *</label>
-            <div className="flex gap-1.5 flex-wrap mb-2">
-              {QUICK_BET_TYPES.map(qt => (
-                <button
-                  key={qt.value}
-                  type="button"
-                  onClick={() => setForm(p => ({ ...p, bet_type: qt.value }))}
-                  className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-all ${
-                    form.bet_type === qt.value
-                      ? 'bg-blue-500/20 border-blue-500/40 text-blue-300'
-                      : 'bg-white/[0.03] border-white/[0.07] text-slate-500 hover:text-slate-300 hover:border-white/[0.15]'
-                  }`}
-                >
-                  {qt.label}
-                </button>
-              ))}
+          {/* ── BET SELECTOR — shown when a fixture with odds is selected ── */}
+          {selectedFixture && selectedFixture.odds ? (() => {
+            const betOptions = buildBetOptions(selectedFixture)
+            return betOptions.length > 0 ? (
+              <div>
+                <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">
+                  Select Your Bet *
+                </label>
+                <div className="space-y-1.5">
+                  {betOptions.map(opt => (
+                    <button
+                      key={opt.label}
+                      type="button"
+                      onClick={() => applyBetOption(opt)}
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${
+                        selectedBetOption?.label === opt.label
+                          ? 'bg-blue-500/20 border-blue-500/50 text-white'
+                          : 'bg-white/[0.03] border-white/[0.07] text-slate-400 hover:bg-white/[0.06] hover:text-white hover:border-white/[0.15]'
+                      }`}
+                    >
+                      <span>{opt.selection}</span>
+                      <span className={`text-base font-black ${selectedBetOption?.label === opt.label ? 'text-blue-300' : 'text-slate-300'}`}>
+                        {opt.odds.toFixed(2)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {selectedBetOption && (
+                  <p className="text-slate-600 text-[10px] mt-1.5">Adjust odds below if your bookie differs slightly</p>
+                )}
+              </div>
+            ) : null
+          })() : (
+            /* Manual bet type when no fixture selected */
+            <div>
+              <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Bet Type *</label>
+              <div className="flex gap-1.5 flex-wrap mb-2">
+                {QUICK_BET_TYPES.map(qt => (
+                  <button
+                    key={qt.value}
+                    type="button"
+                    onClick={() => setForm(p => ({ ...p, bet_type: qt.value }))}
+                    className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-all ${
+                      form.bet_type === qt.value
+                        ? 'bg-blue-500/20 border-blue-500/40 text-blue-300'
+                        : 'bg-white/[0.03] border-white/[0.07] text-slate-500 hover:text-slate-300 hover:border-white/[0.15]'
+                    }`}
+                  >
+                    {qt.label}
+                  </button>
+                ))}
+              </div>
+              <select
+                value={form.bet_type}
+                onChange={e => setForm(p => ({ ...p, bet_type: e.target.value }))}
+                className="w-full bg-white/[0.03] border border-white/[0.07] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40 transition-colors"
+              >
+                {BET_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
             </div>
-            <select
-              value={form.bet_type}
-              onChange={e => setForm(p => ({ ...p, bet_type: e.target.value }))}
-              className="w-full bg-white/[0.03] border border-white/[0.07] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40 transition-colors"
-            >
-              {BET_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
+          )}
 
-          {/* Selection */}
-          <div>
-            <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Your Selection *</label>
-            <input
-              type="text"
-              placeholder="e.g. Arsenal Win, Over 2.5, BTTS Yes"
-              value={form.selection}
-              onChange={e => setForm(p => ({ ...p, selection: e.target.value }))}
-              className="w-full bg-white/[0.03] border border-white/[0.07] rounded-xl px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-blue-500/40 transition-colors"
-            />
-          </div>
+          {/* Selection — always shown, auto-filled when bet option chosen */}
+          {(!selectedFixture || !selectedFixture.odds) && (
+            <div>
+              <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Your Selection *</label>
+              <input
+                type="text"
+                placeholder="e.g. Arsenal Win, Over 2.5, BTTS Yes"
+                value={form.selection}
+                onChange={e => setForm(p => ({ ...p, selection: e.target.value }))}
+                className="w-full bg-white/[0.03] border border-white/[0.07] rounded-xl px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-blue-500/40 transition-colors"
+              />
+            </div>
+          )}
 
           {/* Odds + Stake */}
           <div>
@@ -507,7 +575,9 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                   placeholder="2.50"
                   value={form.odds}
                   onChange={e => setForm(p => ({ ...p, odds: e.target.value }))}
-                  className="w-full bg-white/[0.03] border border-white/[0.07] rounded-xl px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-blue-500/40 transition-colors"
+                  className={`w-full bg-white/[0.03] border rounded-xl px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none transition-colors ${
+                    selectedBetOption ? 'border-blue-500/30 focus:border-blue-500/60' : 'border-white/[0.07] focus:border-blue-500/40'
+                  }`}
                 />
               </div>
               <div>
@@ -521,29 +591,6 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                 />
               </div>
             </div>
-
-            {/* Bet365 odds chips — only shown when a game is selected and has odds */}
-            {oddsChips.length > 0 && (
-              <div className="mt-2">
-                <p className="text-slate-600 text-[10px] mb-1.5">Bet365 odds — tap to use:</p>
-                <div className="flex gap-1.5 flex-wrap">
-                  {oddsChips.map(chip => (
-                    <button
-                      key={chip.label}
-                      type="button"
-                      onClick={() => applyOddsChip(chip.value)}
-                      className={`text-xs px-2.5 py-1 rounded-lg border font-bold transition-all ${
-                        parseFloat(form.odds) === chip.value
-                          ? 'bg-blue-500/25 border-blue-500/50 text-blue-200'
-                          : 'bg-white/[0.04] border-white/[0.1] text-slate-300 hover:border-blue-500/30 hover:text-blue-300'
-                      }`}
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Date + Notes */}
