@@ -8,7 +8,7 @@ const supabaseAdmin = createClient(
 )
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.company'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
@@ -128,7 +128,7 @@ export async function GET(req: NextRequest) {
     if (!profile.email) continue
     try {
       await resend.emails.send({
-        from: 'MatchMind <alerts@matchmindcom.company>',
+        from: 'MatchMind <alerts@matchmindcom.com>',
         to: profile.email,
         subject: `🔥 ${picks.length} AI Value Bet${picks.length>1?'s':''} for Today — ${dateLabel}`,
         html,

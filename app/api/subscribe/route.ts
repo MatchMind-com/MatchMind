@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
         </div>`
 
     await resend.emails.send({
-      from: 'MatchMind <reports@matchmindcom.company>',
+      from: 'MatchMind <reports@matchmindcom.com>',
       to: normalised,
       subject: hasRealBets ? `⚡ Today's top ${topBets!.length} value bet${topBets!.length > 1 ? 's' : ''} — MatchMind` : '⚡ You\'re on the MatchMind list — MatchMind',
       html: `

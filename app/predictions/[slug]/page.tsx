@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import PublicFooter from '@/components/layout/PublicFooter'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.company'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 
 const supabaseAdmin = createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
       })
 
       const { error: emailError } = await resend.emails.send({
-        from: 'MatchMind <picks@matchmindcom.company>',
+        from: 'MatchMind <picks@matchmindcom.com>',
         to: profile.email,
         subject,
         html,
