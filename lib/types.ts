@@ -27,6 +27,7 @@ export interface BetSlip {
   match_date?: string
   created_at: string
   notes?: string
+  fixture_id?: number | null
 }
 
 export interface AISession {
