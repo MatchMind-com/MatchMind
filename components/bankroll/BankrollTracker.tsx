@@ -54,6 +54,25 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
 
   // Variance simulator state
   const [showSim, setShowSim] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
+  const [resetting, setResetting] = useState(false)
+
+  async function resetBankroll() {
+    const confirmText = window.prompt(
+      'This will permanently delete all your bankroll snapshots and reset your starting bankroll.\n\nType RESET to confirm.'
+    )
+    if (confirmText !== 'RESET') return
+    setResetting(true)
+    const res = await fetch('/api/bankroll/reset', { method: 'POST' })
+    if (!res.ok) {
+      alert('Reset failed. Please try again.')
+      setResetting(false)
+      return
+    }
+    // Hard reload so the server component re-reads the now-zeroed starting_bankroll
+    // and sends us back into the setup flow.
+    window.location.reload()
+  }
   const [simParams, setSimParams] = useState<SimParams>({
     bankroll: currentBalance,
     avgEdgePct: 8,
@@ -232,6 +251,81 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
             {stats.currentDrawdownPct === 0 ? 'at peak' : `${stats.currentDrawdownPct}% from peak`}
           </p>
         </div>
+      </div>
+
+      {/* HOW THIS WORKS — collapsible explainer */}
+      <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl overflow-hidden">
+        <button onClick={() => setShowHelp(!showHelp)} className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/[0.02] transition-colors">
+          <div className="flex items-center gap-3">
+            <span className="text-orange-400">💡</span>
+            <div className="text-left">
+              <p className="text-white font-bold text-sm">How this works</p>
+              <p className="text-slate-500 text-xs">Bankroll tracking, Kelly stakes, unit sizing, and auto-sync explained</p>
+            </div>
+          </div>
+          <span className={`text-orange-400 transition-transform ${showHelp ? 'rotate-45' : ''}`}>+</span>
+        </button>
+        {showHelp && (
+          <div className="px-5 py-5 border-t border-white/[0.06] space-y-5 text-sm">
+            {/* Bankroll tracking */}
+            <div>
+              <p className="text-white font-bold mb-1">📊 Bankroll tracking</p>
+              <p className="text-slate-400 leading-relaxed text-xs">
+                Your <span className="text-white">starting bankroll</span> is what you began with. Every time a tracked bet settles, we add a <span className="text-white">snapshot</span> of your new balance. The chart above plots these over time. You can also manually record a snapshot anytime (e.g. after a deposit or withdrawal).
+              </p>
+            </div>
+
+            {/* Kelly */}
+            <div>
+              <p className="text-white font-bold mb-1">🎯 Kelly stake calculator</p>
+              <p className="text-slate-400 leading-relaxed text-xs mb-2">
+                The <span className="text-white">Kelly Criterion</span> is the mathematically optimal fraction of your bankroll to stake on a bet with a known edge. Formula:
+              </p>
+              <p className="text-orange-300 font-mono text-[11px] bg-white/[0.03] px-3 py-2 rounded-lg border border-white/[0.06]">
+                stake = bankroll × ((odds − 1) × true_prob − (1 − true_prob)) / (odds − 1)
+              </p>
+              <p className="text-slate-400 leading-relaxed text-xs mt-2">
+                Full Kelly is mathematically perfect but emotionally brutal — a few bad runs in a row can halve your bankroll. <span className="text-white">Half-Kelly</span> (default) cuts variance dramatically while keeping most of the long-term growth. Pros almost always use fractional Kelly. We also hard-cap at 10% of bankroll on any single bet, no matter what the formula says.
+              </p>
+            </div>
+
+            {/* Unit sizing */}
+            <div>
+              <p className="text-white font-bold mb-1">🧮 Unit sizing</p>
+              <p className="text-slate-400 leading-relaxed text-xs">
+                If you don&apos;t want to think about Kelly every bet, set a fixed <span className="text-white">unit size</span> (e.g. 2% of bankroll) and stake 1 unit per pick. Safer and simpler than Kelly if you&apos;re not confident in the EV numbers. Most sharp bettors stake <span className="text-white">1-3%</span> per bet.
+              </p>
+            </div>
+
+            {/* Suggested stake on predictions */}
+            <div>
+              <p className="text-white font-bold mb-1">🔥 Suggested stake on AI Predictions</p>
+              <p className="text-slate-400 leading-relaxed text-xs">
+                On the <a href="/dashboard/predictions" className="text-orange-400 underline">Predictions</a> page, every value bet now shows a <span className="text-white">Suggested stake</span> sized using half-Kelly against your current bankroll + the pick&apos;s EV + odds. If you haven&apos;t set a bankroll, it falls back to your unit size. This is the number you should actually stake — not a round £10.
+              </p>
+            </div>
+
+            {/* Auto-sync */}
+            <div>
+              <p className="text-white font-bold mb-1">🔄 Auto-sync from settled bets</p>
+              <p className="text-slate-400 leading-relaxed text-xs">
+                When a bet you&apos;ve tracked in the <a href="/dashboard" className="text-orange-400 underline">bet tracker</a> settles (win or loss), the settlement cron (9pm UTC daily) adds a new snapshot to your bankroll chart automatically. No manual work.
+              </p>
+            </div>
+
+            {/* Variance */}
+            <div>
+              <p className="text-white font-bold mb-1">🎲 Variance simulator</p>
+              <p className="text-slate-400 leading-relaxed text-xs">
+                Runs 1,000 simulated &quot;seasons&quot; using your chosen inputs to show the realistic range of outcomes. <span className="text-white">Bust probability</span> tells you how often you go broke; <span className="text-white">double probability</span> tells you how often your bankroll doubles. If bust &gt; 15%, your stakes are too aggressive for the edge you&apos;re claiming.
+              </p>
+            </div>
+
+            <p className="text-slate-600 text-[11px] italic pt-1">
+              Betting involves risk. These tools help you make informed decisions but don&apos;t guarantee profit. Positive EV wins over hundreds of bets, not any single one.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* UNIT SIZING + KELLY CALCULATOR — 2-col on desktop */}
@@ -425,6 +519,26 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
           </div>
         </div>
       )}
+
+      {/* DANGER ZONE — reset everything */}
+      <div className="bg-[#0E1628] border border-red-500/20 rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-red-500/15">
+          <h3 className="text-xs font-semibold text-red-400 uppercase tracking-widest">Danger Zone</h3>
+        </div>
+        <div className="flex items-center justify-between px-5 py-4 gap-4 flex-wrap">
+          <div>
+            <p className="text-sm font-semibold text-white">Reset bankroll</p>
+            <p className="text-xs text-slate-500 mt-0.5">Permanently deletes all snapshots and sends you back to the setup flow. Useful if you&apos;re changing strategy or starting fresh.</p>
+          </div>
+          <button
+            onClick={resetBankroll}
+            disabled={resetting}
+            className="shrink-0 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 rounded-xl text-sm text-red-400 font-semibold transition-colors disabled:opacity-50"
+          >
+            {resetting ? 'Resetting…' : 'Reset bankroll'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
