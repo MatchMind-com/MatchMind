@@ -13,7 +13,10 @@ const supabaseAdmin = createAdmin(
 )
 
 // 30-minute cache now that we have 7,500 req/day
-export const revalidate = 1800
+// Picks should stay stable for the betting day, not shuffle every 30 min.
+// 4-hour cache means the morning prediction batch holds until after lunch,
+// then again until end of day. Reduces OpenAI cost ~8x as a side effect.
+export const revalidate = 14400
 
 function getCurrentSeason(): number {
   const now = new Date()
@@ -331,6 +334,10 @@ export async function GET(request: Request) {
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
+      // temperature 0 + seed makes GPT deterministic for the same input,
+      // so picks don't shuffle on every page refresh.
+      temperature: 0,
+      seed: 42,
       response_format: { type: 'json_object' },
       messages: [{
         role: 'system',
@@ -422,9 +429,12 @@ Return JSON with this exact structure:
       // be poorly calibrated).
       const MAX_REAL_EV = 25
       const MAX_REAL_ODDS = 4.0
+      // Draws are excluded from value-bet ranking. Draw markets have high
+      // variance vs. edge — a small probability advantage gets eaten by noise.
+      // Sharp bettors avoid them unless they have a calibrated model with
+      // deep draw-specific signal, which we don't have yet.
       const valueBets = [
         { label: 'Home Win',  ev: homeEV,   odds: o?.home,   aiPct: homeWinPct },
-        { label: 'Draw',      ev: drawEV,   odds: o?.draw,   aiPct: drawPct },
         { label: 'Away Win',  ev: awayEV,   odds: o?.away,   aiPct: awayWinPct },
         { label: 'Over 2.5',  ev: over25EV, odds: o?.over25, aiPct: over25Pct },
         { label: 'BTTS',      ev: bttsEV,   odds: o?.btts,   aiPct: bttsPct },

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
-export const revalidate = 1800
+// Stable for 4 hours — the ACCA shouldn't reshuffle on every refresh.
+export const revalidate = 14400
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const API_KEY = process.env.API_FOOTBALL_KEY!
@@ -160,13 +161,16 @@ export async function GET() {
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
+      // temperature 0 + seed — same inputs should give the same ACCA across refreshes
+      temperature: 0,
+      seed: 42,
       response_format: { type: 'json_object' },
       messages: [{
         role: 'system',
-        content: 'You are an elite football betting analyst. Build a 3-leg accumulator with genuine positive expected value. Use the form data and odds to find where the market is mispriced. Return valid JSON only.'
+        content: 'You are an elite football betting analyst. Build a 3-leg accumulator with genuine positive expected value. Use the form data and odds to find where the market is mispriced. NEVER pick a Draw as a leg — draw markets have too much variance for accumulator use. Stick to Home Win, Away Win, Over 2.5 Goals, or BTTS. Return valid JSON only.'
       }, {
         role: 'user',
-        content: `Build a 3-leg accumulator from these upcoming fixtures. Pick legs from 3 DIFFERENT leagues. Prioritise positive EV based on form data vs the odds offered.
+        content: `Build a 3-leg accumulator from these upcoming fixtures. Pick legs from 3 DIFFERENT leagues. Prioritise positive EV based on form data vs the odds offered. Do NOT include any Draw legs — use Home Win / Away Win / Over 2.5 / BTTS only.
 
 Fixtures:
 ${fixtureList}
@@ -189,7 +193,11 @@ Return JSON:
     })
 
     const gptData = JSON.parse(completion.choices[0]?.message?.content || '{"legs":[]}')
-    const legs = gptData.legs || []
+    // Belt-and-braces: even with the prompt instruction, reject any Draw legs
+    // GPT may still sneak through. No draws allowed in accas.
+    const legs = (gptData.legs || []).filter((leg: any) =>
+      !String(leg.bet_type || '').toLowerCase().includes('draw')
+    )
 
     if (legs.length < 2) {
       return NextResponse.json({ success: true, acca: null, message: 'AI could not identify a confident accumulator' })
