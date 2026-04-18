@@ -117,6 +117,8 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
   const [selectedFixture, setSelectedFixture] = useState<UpcomingFixture | null>(null)
   const [pickerFetched, setPickerFetched] = useState(false)
   const [selectedBetOption, setSelectedBetOption] = useState<BetOption | null>(null)
+  const [liveOdds, setLiveOdds] = useState<ReturnType<typeof buildBetOptions> | null>(null)
+  const [oddsLoading, setOddsLoading] = useState(false)
 
   const odds = parseFloat(form.odds) || 0
   const stake = parseFloat(form.stake) || 0
@@ -178,6 +180,40 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
       odds: String(opt.odds),
     }))
   }
+
+  // Fetch live bookmaker odds whenever fixture + bookmaker are both set
+  useEffect(() => {
+    if (!selectedFixture || !form.bookmaker) {
+      setLiveOdds(null)
+      return
+    }
+    setOddsLoading(true)
+    setSelectedBetOption(null)
+    setForm(prev => ({ ...prev, selection: '', odds: '' }))
+    fetch(`/api/fixtures/bookmaker-odds?fixtureId=${selectedFixture.id}&bookmaker=${encodeURIComponent(form.bookmaker)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.odds) {
+          const o = data.odds
+          const home = selectedFixture.home_team
+          const away = selectedFixture.away_team
+          const opts: BetOption[] = []
+          if (o.home)     opts.push({ label: `${home} Win  ·  ${o.home.toFixed(2)}`,       selection: `${home} to Win`,             bet_type: 'Match Result (1X2)',    odds: o.home })
+          if (o.draw)     opts.push({ label: `Draw  ·  ${o.draw.toFixed(2)}`,               selection: 'Draw',                       bet_type: 'Match Result (1X2)',    odds: o.draw })
+          if (o.away)     opts.push({ label: `${away} Win  ·  ${o.away.toFixed(2)}`,       selection: `${away} to Win`,             bet_type: 'Match Result (1X2)',    odds: o.away })
+          if (o.over25)   opts.push({ label: `Over 2.5 Goals  ·  ${o.over25.toFixed(2)}`,  selection: 'Over 2.5 Goals',             bet_type: 'Over / Under',          odds: o.over25 })
+          if (o.under25)  opts.push({ label: `Under 2.5 Goals  ·  ${o.under25.toFixed(2)}`,selection: 'Under 2.5 Goals',            bet_type: 'Over / Under',          odds: o.under25 })
+          if (o.btts_yes) opts.push({ label: `BTTS Yes  ·  ${o.btts_yes.toFixed(2)}`,      selection: 'Both Teams to Score - Yes',  bet_type: 'Both Teams to Score',   odds: o.btts_yes })
+          if (o.btts_no)  opts.push({ label: `BTTS No  ·  ${o.btts_no.toFixed(2)}`,        selection: 'Both Teams to Score - No',   bet_type: 'Both Teams to Score',   odds: o.btts_no })
+          setLiveOdds(opts.length > 0 ? opts : null)
+        } else {
+          setLiveOdds(null)
+        }
+      })
+      .catch(() => setLiveOdds(null))
+      .finally(() => setOddsLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFixture?.id, form.bookmaker])
 
   // Filter fixtures by search
   const filteredFixtures = pickerSearch
@@ -489,39 +525,64 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
             </div>
           </div>
 
-          {/* ── BET SELECTOR — shown when a fixture with odds is selected ── */}
-          {selectedFixture && selectedFixture.odds ? (() => {
-            const betOptions = buildBetOptions(selectedFixture)
-            return betOptions.length > 0 ? (
-              <div>
-                <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">
-                  Select Your Bet *
-                </label>
-                <div className="space-y-1.5">
-                  {betOptions.map(opt => (
-                    <button
-                      key={opt.label}
-                      type="button"
-                      onClick={() => applyBetOption(opt)}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${
-                        selectedBetOption?.label === opt.label
-                          ? 'bg-blue-500/20 border-blue-500/50 text-white'
-                          : 'bg-white/[0.03] border-white/[0.07] text-slate-400 hover:bg-white/[0.06] hover:text-white hover:border-white/[0.15]'
-                      }`}
-                    >
-                      <span>{opt.selection}</span>
-                      <span className={`text-base font-black ${selectedBetOption?.label === opt.label ? 'text-blue-300' : 'text-slate-300'}`}>
-                        {opt.odds.toFixed(2)}
-                      </span>
-                    </button>
-                  ))}
+          {/* ── BET SELECTOR ──────────────────────────────────────────────── */}
+          {selectedFixture ? (
+            <div>
+              <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">
+                Select Your Bet *
+              </label>
+
+              {/* Prompt to pick bookmaker first */}
+              {!form.bookmaker && (
+                <div className="bg-white/[0.02] border border-white/[0.07] rounded-xl px-4 py-3 text-slate-500 text-xs text-center">
+                  ↑ Select a bookmaker above to see live odds
                 </div>
-                {selectedBetOption && (
-                  <p className="text-slate-600 text-[10px] mt-1.5">Adjust odds below if your bookie differs slightly</p>
-                )}
-              </div>
-            ) : null
-          })() : (
+              )}
+
+              {/* Loading state */}
+              {form.bookmaker && oddsLoading && (
+                <div className="flex items-center justify-center gap-2 bg-white/[0.02] border border-white/[0.07] rounded-xl px-4 py-4">
+                  <div className="w-3.5 h-3.5 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
+                  <span className="text-slate-500 text-xs">Fetching {form.bookmaker} odds…</span>
+                </div>
+              )}
+
+              {/* Live odds buttons */}
+              {form.bookmaker && !oddsLoading && liveOdds && liveOdds.length > 0 && (
+                <>
+                  <div className="space-y-1.5">
+                    {liveOdds.map(opt => (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        onClick={() => applyBetOption(opt)}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${
+                          selectedBetOption?.label === opt.label
+                            ? 'bg-blue-500/20 border-blue-500/50 text-white'
+                            : 'bg-white/[0.03] border-white/[0.07] text-slate-400 hover:bg-white/[0.06] hover:text-white hover:border-white/[0.15]'
+                        }`}
+                      >
+                        <span>{opt.selection}</span>
+                        <span className={`text-base font-black tabular-nums ${selectedBetOption?.label === opt.label ? 'text-blue-300' : 'text-slate-300'}`}>
+                          {opt.odds.toFixed(2)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {selectedBetOption && (
+                    <p className="text-slate-600 text-[10px] mt-1.5">Adjust odds below if they&apos;ve moved since loading</p>
+                  )}
+                </>
+              )}
+
+              {/* No odds available fallback */}
+              {form.bookmaker && !oddsLoading && (!liveOdds || liveOdds.length === 0) && (
+                <div className="bg-white/[0.02] border border-white/[0.07] rounded-xl px-4 py-3 text-slate-500 text-xs text-center">
+                  No odds found for {form.bookmaker} on this fixture — enter manually below
+                </div>
+              )}
+            </div>
+          ) : (
             /* Manual bet type when no fixture selected */
             <div>
               <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Bet Type *</label>
@@ -551,8 +612,8 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
             </div>
           )}
 
-          {/* Selection — always shown, auto-filled when bet option chosen */}
-          {(!selectedFixture || !selectedFixture.odds) && (
+          {/* Selection — shown when no fixture, or when fixture has no live odds, or as confirmation */}
+          {(!selectedFixture || (!oddsLoading && (!liveOdds || liveOdds.length === 0))) && (
             <div>
               <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Your Selection *</label>
               <input
