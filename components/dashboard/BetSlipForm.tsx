@@ -282,6 +282,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
       bookmaker: form.bookmaker || null, potential_return: oddsNum * stakeNum,
       result: 'pending', profit_loss: 0,
       match_date: form.match_date || null, notes: form.notes || null,
+      fixture_id: selectedFixture?.id ?? null,
     })
     if (dbError) { setError(dbError.message) } else {
       setForm({ match_name: '', league: '', bet_type: 'Match Result (1X2)', selection: '', odds: '', stake: '', bookmaker: '', match_date: '', notes: '' })
@@ -331,10 +332,10 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
     : pickerFixtures
 
   return (
-    <div className="relative bg-[#0E1628] border border-white/[0.07] rounded-2xl overflow-hidden">
+    <div className="relative bg-[#0E1628] border border-white/[0.07] rounded-2xl">
       {/* Paywall overlay */}
       {isAtPaywall && (
-        <div className="absolute inset-0 z-10 rounded-2xl flex flex-col items-center justify-center cursor-pointer"
+        <div className="absolute inset-0 z-10 rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer"
           style={{ background: 'rgba(6,9,20,0.9)', backdropFilter: 'blur(4px)' }}
           onClick={onShowPaywall}>
           <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-3">
