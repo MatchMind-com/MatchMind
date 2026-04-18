@@ -6,6 +6,32 @@ const supabaseAdmin = createAdmin(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+/**
+ * Auto-add a bankroll snapshot when a user's bet settles. Only runs if the
+ * user has an active bankroll (starting_bankroll > 0). Reads latest balance
+ * and applies the delta; noop on £0 delta (void bets).
+ */
+async function syncBankrollFromBet(userId: string, deltaPL: number, note: string) {
+  if (!userId || !Number.isFinite(deltaPL) || deltaPL === 0) return
+  try {
+    const [{ data: profile }, { data: latest }] = await Promise.all([
+      supabaseAdmin.from('profiles').select('starting_bankroll').eq('user_id', userId).single(),
+      supabaseAdmin.from('bankroll_snapshots').select('balance').eq('user_id', userId).order('recorded_at', { ascending: false }).limit(1).maybeSingle(),
+    ])
+    const starting = Number(profile?.starting_bankroll ?? 0)
+    if (starting <= 0) return // user hasn't opted into bankroll tracking
+    const prevBalance = latest?.balance != null ? Number(latest.balance) : starting
+    const newBalance = Math.round((prevBalance + deltaPL) * 100) / 100
+    await supabaseAdmin.from('bankroll_snapshots').insert({
+      user_id: userId,
+      balance: Math.max(0, newBalance),
+      note,
+    })
+  } catch (e) {
+    console.error('[check-bet-slips] syncBankroll failed:', (e as Error).message)
+  }
+}
+
 const API_KEY = process.env.API_FOOTBALL_KEY!
 const BASE = 'https://v3.football.api-sports.io'
 
@@ -188,6 +214,8 @@ export async function GET(req: NextRequest) {
             result: accaResult, profit_loss: profitLoss,
           }).eq('id', bet.id)
 
+          await syncBankrollFromBet(bet.user_id, profitLoss, `Acca ${accaResult} (${legs.length} legs)`)
+
           if (accaResult === 'win') wins++
           else if (accaResult === 'loss') losses++
           else voided++
@@ -220,6 +248,8 @@ export async function GET(req: NextRequest) {
         profit_loss: profitLoss,
         notes: bet.notes ? bet.notes : `${matchResult.homeScore}-${matchResult.awayScore}`,
       }).eq('id', bet.id)
+
+      await syncBankrollFromBet(bet.user_id, profitLoss, `${bet.match_name || 'Bet'} ${result}`)
 
       if (result === 'win') wins++
       else if (result === 'loss') losses++

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { PRIMARY_AFFILIATE } from '@/lib/affiliates'
+import { kellyStake } from '@/lib/bankroll'
 
 const FORCE_PRO_TIER = true // temp: set false to restore paywall
 
@@ -465,6 +466,8 @@ export default function PredictionsPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [trackingBet, setTrackingBet] = useState<TrackingBet | null>(null)
   const [tab, setTab] = useState<'accas' | 'bets' | 'matches'>('accas')
+  const [bankroll, setBankroll] = useState<number>(0)
+  const [unitPct, setUnitPct] = useState<number>(2)
 
   useEffect(() => {
     const supabase = createClient()
@@ -477,6 +480,18 @@ export default function PredictionsPage() {
           })
       }
     })
+
+    // Current bankroll for Kelly-sized suggested stakes
+    fetch('/api/bankroll')
+      .then(r => r.json())
+      .then(d => { if (typeof d.current_bankroll === 'number') setBankroll(d.current_bankroll) })
+      .catch(() => {})
+
+    // Unit sizing (same localStorage key the bankroll page uses)
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('mm_unit_pct')
+      if (saved) setUnitPct(Number(saved) || 2)
+    }
 
     fetch('/api/predictions')
       .then(r => r.json())
@@ -755,21 +770,34 @@ export default function PredictionsPage() {
                         <div className="px-5 py-5 text-slate-500 text-xs text-center">No +EV picks in this tier today.</div>
                       ) : (
                         <div className="divide-y divide-white/[0.05]">
-                          {picks.map((b, i) => (
-                            <div key={`${tier.key}-${b.pred.id}-${b.market}`} className="flex items-center justify-between px-5 py-3.5 hover:bg-white/[0.02] transition-colors">
-                              <div className="flex items-center gap-3">
-                                <span className="text-slate-600 text-xs font-bold w-5">#{i + 1}</span>
-                                <div>
-                                  <p className="text-white font-semibold text-sm">{b.pred.home_team} vs {b.pred.away_team}</p>
-                                  <p className="text-slate-500 text-xs">{b.pred.leagueFlag} {b.pred.league} · <span className={`${tier.textEV} font-semibold`}>{b.market}</span> @ {b.odds.toFixed(2)}</p>
+                          {picks.map((b, i) => {
+                            // Kelly-sized suggested stake (half-Kelly, capped).
+                            // Fallback to user's configured unit size if bankroll unset.
+                            const kStake = bankroll > 0 ? kellyStake(bankroll, b.ev, b.odds, 0.5) : 0
+                            const unitStake = bankroll > 0 ? Math.round(bankroll * (unitPct / 100) * 100) / 100 : 0
+                            const suggested = kStake > 0 ? kStake : unitStake
+                            return (
+                              <div key={`${tier.key}-${b.pred.id}-${b.market}`} className="flex items-center justify-between px-5 py-3.5 hover:bg-white/[0.02] transition-colors">
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                  <span className="text-slate-600 text-xs font-bold w-5 shrink-0">#{i + 1}</span>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-white font-semibold text-sm truncate">{b.pred.home_team} vs {b.pred.away_team}</p>
+                                    <p className="text-slate-500 text-xs">{b.pred.leagueFlag} {b.pred.league} · <span className={`${tier.textEV} font-semibold`}>{b.market}</span> @ {b.odds.toFixed(2)}</p>
+                                    {suggested > 0 && (
+                                      <p className="text-slate-400 text-[11px] mt-1">
+                                        Suggested stake: <span className="text-white font-semibold">£{suggested.toFixed(2)}</span>
+                                        <span className="text-slate-600"> · {kStake > 0 ? 'Kelly' : `${unitPct}% unit`}</span>
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <span className={`${tier.textEV} font-black text-lg`}>+{b.ev}%</span>
+                                  <p className="text-slate-600 text-[10px]">EV edge</p>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <span className={`${tier.textEV} font-black text-lg`}>+{b.ev}%</span>
-                                <p className="text-slate-600 text-[10px]">EV edge</p>
-                              </div>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       )}
                     </div>

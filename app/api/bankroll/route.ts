@@ -6,12 +6,17 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data } = await supabase
-    .from('bankroll_snapshots')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('recorded_at', { ascending: true })
-  return NextResponse.json({ snapshots: data ?? [] })
+  const [{ data: snapshots }, { data: profile }] = await Promise.all([
+    supabase.from('bankroll_snapshots').select('*').eq('user_id', user.id).order('recorded_at', { ascending: true }),
+    supabase.from('profiles').select('starting_bankroll').eq('user_id', user.id).single(),
+  ])
+  const starting = Number(profile?.starting_bankroll ?? 0)
+  const last = snapshots && snapshots.length > 0 ? Number(snapshots[snapshots.length - 1].balance) : starting
+  return NextResponse.json({
+    snapshots: snapshots ?? [],
+    starting_bankroll: starting,
+    current_bankroll: last,
+  })
 }
 
 export async function POST(req: NextRequest) {
