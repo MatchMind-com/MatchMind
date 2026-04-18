@@ -303,12 +303,19 @@ export async function GET(request: Request) {
     )
 
     // Build prompt with real odds, injuries, form, and H2H
+    // Include implied market probabilities so the AI anchors to them instead of hallucinating
+    const impliedProb = (odds: number | null | undefined) => odds && odds > 1 ? Math.round(100 / odds) : null
     const fixtureList = allFixtures.map((f: any, i: number) => {
       const home = f.teams?.home?.name
       const away = f.teams?.away?.name
       const date = new Date(f.fixture?.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
       const o = f._odds
-      const oddsStr = o?.home ? ` | Bet365: H ${o.home} / D ${o.draw} / A ${o.away}` : ''
+      const hImp = impliedProb(o?.home)
+      const dImp = impliedProb(o?.draw)
+      const aImp = impliedProb(o?.away)
+      const oddsStr = o?.home
+        ? ` | Bet365 odds: H ${o.home} (${hImp}% implied) / D ${o.draw} (${dImp}% implied) / A ${o.away} (${aImp}% implied)`
+        : ''
       const homeInj = f._homeInjuries?.length ? `\n   ${home} injuries: ${f._homeInjuries.slice(0, 3).join(', ')}` : ''
       const awayInj = f._awayInjuries?.length ? `\n   ${away} injuries: ${f._awayInjuries.slice(0, 3).join(', ')}` : ''
       const fd = formData[i]
@@ -327,10 +334,19 @@ export async function GET(request: Request) {
       response_format: { type: 'json_object' },
       messages: [{
         role: 'system',
-        content: 'You are an expert football betting analyst. You are given real data: last-5 form results, H2H history, live Bet365 odds, and injury reports. Analyse this data carefully and generate precise, data-driven predictions. Return valid JSON only.'
+        content: `You are a calibrated football betting analyst. You must output probability estimates that are CLOSE to the implied market probabilities (derived from Bet365 odds), not aspirational guesses.
+
+CALIBRATION RULES — these are absolute:
+1. The Bet365 odds encode years of expert modelling and sharp money. The market is usually within 2-5 percentage points of true probability.
+2. Your home_win_pct / draw_pct / away_win_pct MUST sum to between 100 and 108 (slight overround is fine).
+3. Your probabilities MUST be within ±8 percentage points of the implied market probabilities UNLESS you have a specific, concrete reason (e.g., a key striker injured, a manager just fired, team playing in a dead rubber). State that reason explicitly in key_factors.
+4. Do NOT inflate underdog probabilities. If the market prices away win at 6.40 (≈16% implied), your away_win_pct should be 14-22% at most, not 35%+.
+5. A real value bet edge is typically 2-8%. EV above +20% is almost always a calibration error, not a real opportunity. Be suspicious of your own big edges.
+
+Return valid JSON only.`
       }, {
         role: 'user',
-        content: `Generate predictions for these ${season}/${String(season + 1).slice(2)} season matches. Real form data, H2H, injuries, and Bet365 odds are provided — base your analysis on this actual data, not assumptions.
+        content: `Generate CALIBRATED predictions for these ${season}/${String(season + 1).slice(2)} season matches. Real form data, H2H, injuries, and Bet365 odds (with implied probabilities) are provided. Your probabilities must be anchored to the market odds unless you cite a concrete reason to deviate.
 
 Matches:
 ${fixtureList}
@@ -399,15 +415,22 @@ Return JSON with this exact structure:
       const over25EV = o?.over25 ? calcEV(over25Pct, o.over25)  : null
       const bttsEV   = o?.btts   ? calcEV(bttsPct, o.btts)      : null
 
-      // Rank value bets by EV (positive EV only)
+      // Rank value bets by EV.
+      // SANITY CAP: reject anything above +25% — that's almost always a model
+      // calibration error, not a real edge. Real sharp bettors find +2-8% edges.
+      // Also reject picks on odds > 4.0 (underdog longshots where AI tends to
+      // be poorly calibrated).
+      const MAX_REAL_EV = 25
+      const MAX_REAL_ODDS = 4.0
       const valueBets = [
-        { label: 'Home Win',  ev: homeEV,   odds: o?.home },
-        { label: 'Draw',      ev: drawEV,   odds: o?.draw },
-        { label: 'Away Win',  ev: awayEV,   odds: o?.away },
-        { label: 'Over 2.5',  ev: over25EV, odds: o?.over25 },
-        { label: 'BTTS',      ev: bttsEV,   odds: o?.btts },
+        { label: 'Home Win',  ev: homeEV,   odds: o?.home,   aiPct: homeWinPct },
+        { label: 'Draw',      ev: drawEV,   odds: o?.draw,   aiPct: drawPct },
+        { label: 'Away Win',  ev: awayEV,   odds: o?.away,   aiPct: awayWinPct },
+        { label: 'Over 2.5',  ev: over25EV, odds: o?.over25, aiPct: over25Pct },
+        { label: 'BTTS',      ev: bttsEV,   odds: o?.btts,   aiPct: bttsPct },
       ]
-        .filter(x => x.ev !== null && x.ev > 0)
+        .filter(x => x.ev !== null && x.ev > 0 && x.ev <= MAX_REAL_EV)
+        .filter(x => !x.odds || x.odds <= MAX_REAL_ODDS)
         .sort((a, b) => (b.ev ?? 0) - (a.ev ?? 0))
 
       const bestValue = valueBets[0] ?? null
@@ -477,7 +500,9 @@ Return JSON with this exact structure:
           season,
           bet_type: p.best_value!.label,
           prediction: p.best_value!.label.toLowerCase().replace(/ /g, '_'),
-          ai_probability: p.home_win_pct, // best approximation
+          // Store the probability for the ACTUAL pick, not always home_win_pct.
+          // Keys into the valueBets entries built upstream.
+          ai_probability: (p.best_value as any).aiPct ?? null,
           odds: p.best_value!.odds ?? null,
           ev_percent: p.best_value!.ev ?? null,
           is_value_bet: p.is_value_bet,
