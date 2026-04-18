@@ -49,7 +49,7 @@ async function getPredictions() {
       .order('kick_off', { ascending: true })
 
     // Deduplicate by fixture (show one card per match, the best pick)
-    const fixtures: Record<string, typeof data[0]> = {}
+    const fixtures: Record<string, NonNullable<typeof data>[number]> = {}
     for (const row of (data || [])) {
       const key = `${row.home_team}|${row.away_team}|${row.kick_off?.slice(0, 10)}`
       if (!fixtures[key] || (row.ev_percent ?? 0) > (fixtures[key].ev_percent ?? 0)) {
