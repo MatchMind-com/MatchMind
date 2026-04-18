@@ -134,28 +134,6 @@ function OddsChip({ label, odds, ev }: { label: string; odds: number | null; ev:
   )
 }
 
-interface AccaLeg {
-  home_team: string
-  away_team: string
-  league: string
-  leagueFlag: string
-  kick_off: string
-  bet_type: string
-  odds: number | null
-  ai_probability: number
-  ev_percent: number | null
-  reasoning: string
-  confidence: string
-}
-
-interface Acca {
-  legs: AccaLeg[]
-  combined_odds: number
-  combined_ev: number
-  reasoning: string
-  generated_at: string
-}
-
 // SVG Icons
 function BrainIcon() {
   return (
@@ -376,17 +354,117 @@ function TrackBetModal({
   )
 }
 
+// Tier definitions — shared between value-bet sections AND the 3 accumulators
+const TIERS = [
+  {
+    key: 'easy'    as const,
+    label: 'Safe',
+    shortLabel: 'Easy',
+    subtitle: 'Low odds, high hit rate',
+    range: '1.40–1.80',
+    accent: 'emerald',
+    border: 'border-emerald-500/25',
+    headerBg: 'rgba(16,185,129,0.07)',
+    textAccent: 'text-emerald-400',
+    badgeBg: 'bg-emerald-500/15',
+    badgeBorder: 'border-emerald-500/25',
+    filter: (odds: number) => odds >= 1.40 && odds < 1.80,
+  },
+  {
+    key: 'medium'  as const,
+    label: 'Balanced',
+    shortLabel: 'Medium',
+    subtitle: 'Balanced risk / reward',
+    range: '1.80–2.50',
+    accent: 'orange',
+    border: 'border-orange-500/25',
+    headerBg: 'rgba(249,115,22,0.07)',
+    textAccent: 'text-orange-400',
+    badgeBg: 'bg-orange-500/15',
+    badgeBorder: 'border-orange-500/25',
+    filter: (odds: number) => odds >= 1.80 && odds < 2.50,
+  },
+  {
+    key: 'hard'    as const,
+    label: 'Big Win',
+    shortLabel: 'Hard',
+    subtitle: 'Bigger payout, lower hit rate',
+    range: '2.50–4.00',
+    accent: 'red',
+    border: 'border-red-500/25',
+    headerBg: 'rgba(239,68,68,0.07)',
+    textAccent: 'text-red-400',
+    badgeBg: 'bg-red-500/15',
+    badgeBorder: 'border-red-500/25',
+    filter: (odds: number) => odds >= 2.50 && odds <= 4.0,
+  },
+]
+
+type TieredBet = {
+  pred: Prediction
+  market: 'Home Win' | 'Away Win' | 'Over 2.5' | 'BTTS'
+  odds: number
+  ev: number
+}
+
+// Collect every +EV market across every match, tier-agnostic. Client-side so
+// we don't need to round-trip the API for the same data we already have.
+function collectAllBets(predictions: Prediction[]): TieredBet[] {
+  const MARKETS: { label: TieredBet['market']; evKey: keyof Prediction['ev']; oddsKey: 'home' | 'away' | 'over25' | 'btts' }[] = [
+    { label: 'Home Win', evKey: 'home',   oddsKey: 'home' },
+    { label: 'Away Win', evKey: 'away',   oddsKey: 'away' },
+    { label: 'Over 2.5', evKey: 'over25', oddsKey: 'over25' },
+    { label: 'BTTS',     evKey: 'btts',   oddsKey: 'btts' },
+  ]
+  const out: TieredBet[] = []
+  for (const p of predictions) {
+    if (!p.bookmaker) continue
+    for (const m of MARKETS) {
+      const ev = p.ev?.[m.evKey]
+      const odds = p.bookmaker[m.oddsKey]
+      if (ev != null && ev > 0 && ev <= 25 && odds != null && odds <= 4.0) {
+        out.push({ pred: p, market: m.label, odds, ev })
+      }
+    }
+  }
+  return out
+}
+
+// Build a 3-leg accumulator for a given tier. Prefers diversity: picks from
+// 3 different leagues when possible. Falls back to best-EV otherwise.
+function buildTierAcca(allBets: TieredBet[], filter: (odds: number) => boolean): TieredBet[] {
+  const tierBets = allBets.filter(b => filter(b.odds)).sort((a, b) => b.ev - a.ev)
+  const picked: TieredBet[] = []
+  const usedLeagues = new Set<string>()
+  const usedFixtures = new Set<number>()
+  // Pass 1: unique leagues
+  for (const b of tierBets) {
+    if (picked.length >= 3) break
+    if (usedLeagues.has(b.pred.league) || usedFixtures.has(b.pred.id)) continue
+    picked.push(b)
+    usedLeagues.add(b.pred.league)
+    usedFixtures.add(b.pred.id)
+  }
+  // Pass 2: fill with best-EV remaining (relax league constraint), still no duplicate fixtures
+  for (const b of tierBets) {
+    if (picked.length >= 3) break
+    if (usedFixtures.has(b.pred.id)) continue
+    picked.push(b)
+    usedFixtures.add(b.pred.id)
+  }
+  return picked
+}
+
 export default function PredictionsPage() {
   const [predictions, setPredictions] = useState<Prediction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro' | 'elite'>('free')
   const [expanded, setExpanded] = useState<number | null>(null)
-  const [acca, setAcca] = useState<Acca | null>(null)
-  const [accaLoading, setAccaLoading] = useState(true)
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [trackingBet, setTrackingBet] = useState<TrackingBet | null>(null)
+  const [tab, setTab] = useState<'accas' | 'bets' | 'matches'>('accas')
 
   useEffect(() => {
     const supabase = createClient()
@@ -408,24 +486,7 @@ export default function PredictionsPage() {
       })
       .catch(() => setError('Failed to load predictions'))
       .finally(() => setLoading(false))
-
-    fetch('/api/acca')
-      .then(r => r.json())
-      .then(d => { if (d.success && d.acca) setAcca(d.acca) })
-      .catch(() => {})
-      .finally(() => setAccaLoading(false))
   }, [])
-
-  function copyAcca() {
-    if (!acca) return
-    const text = acca.legs.map((l, i) =>
-      `${i + 1}. ${l.home_team} vs ${l.away_team} — ${l.bet_type} @ ${l.odds}`
-    ).join('\n') + `\n\nCombined odds: ${acca.combined_odds} | Combined EV: +${acca.combined_ev}%\nBuilt by MatchMind AI`
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
-  }
 
   const isPro = FORCE_PRO_TIER || subscriptionTier === 'pro' || subscriptionTier === 'elite'
   const visiblePredictions = isPro ? predictions : predictions.slice(0, 3)
@@ -473,113 +534,161 @@ export default function PredictionsPage() {
         </div>
       )}
 
-      {/* AI ACCA BUILDER — Pro */}
-      {isPro && (
-        <div>
-          {accaLoading ? (
-            <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl h-48 animate-pulse" />
-          ) : acca ? (
-            <div className="bg-[#0E1628] border border-blue-500/25 rounded-2xl overflow-hidden">
-              {/* Acca header strip */}
-              <div className="px-5 py-3 border-b border-blue-500/15 flex items-center justify-between"
-                style={{ background: 'linear-gradient(90deg, rgba(59,130,246,0.08) 0%, transparent 100%)' }}>
-                <div className="flex items-center gap-2">
-                  <span className="text-blue-400"><TargetIcon /></span>
-                  <span className="text-white font-bold text-sm">Today&apos;s AI Accumulator</span>
-                  <span className="text-[10px] font-black text-blue-300 bg-blue-500/15 border border-blue-500/25 px-2 py-0.5 rounded-full uppercase tracking-wide">Daily</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-blue-300 font-black text-xl">@ {acca.combined_odds}</span>
-                  <span className="text-emerald-400 text-xs font-bold ml-2">+{acca.combined_ev}% EV</span>
-                </div>
-              </div>
-
-              <div className="p-5">
-                <p className="text-slate-500 text-xs mb-4">{acca.legs.length} legs · All positive EV · Across different leagues</p>
-
-                {/* Legs */}
-                <div className="space-y-2 mb-4">
-                  {acca.legs.map((leg, i) => (
-                    <div key={i} className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-xl p-3">
-                      <div className="w-6 h-6 rounded-lg bg-blue-500/20 border border-blue-500/25 flex items-center justify-center text-xs text-blue-300 font-black shrink-0">{i + 1}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white text-xs font-bold truncate">{leg.home_team} vs {leg.away_team}</p>
-                        <p className="text-slate-500 text-[10px]">{leg.leagueFlag} {leg.league}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-white text-xs font-bold">{leg.bet_type} @ {leg.odds?.toFixed(2)}</p>
-                        {leg.ev_percent !== null && (
-                          <p className="text-emerald-400 text-[10px] font-bold">+{leg.ev_percent}% EV</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {acca.reasoning && (
-                  <p className="text-slate-500 text-xs mb-4 italic border-l-2 border-blue-500/25 pl-3">{acca.reasoning}</p>
+      {/* TAB NAV — only when we have data to show */}
+      {!loading && !error && predictions.length > 0 && (
+        <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.07] p-1 rounded-2xl overflow-x-auto">
+          {[
+            { id: 'accas'   as const, label: 'Accumulators', icon: <TargetIcon /> },
+            { id: 'bets'    as const, label: 'Value Bets',   icon: <FireIcon /> },
+            { id: 'matches' as const, label: `All Matches`,  icon: <span className="text-xs">⚽</span>, count: predictions.length },
+          ].map(t => {
+            const active = tab === t.id
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  active
+                    ? 'bg-orange-500/15 border border-orange-500/30 text-orange-300'
+                    : 'border border-transparent text-slate-400 hover:text-white hover:bg-white/[0.03]'
+                }`}
+              >
+                {t.icon}
+                <span>{t.label}</span>
+                {t.count != null && (
+                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${active ? 'bg-orange-500/20 text-orange-200' : 'bg-white/10 text-slate-400'}`}>
+                    {t.count}
+                  </span>
                 )}
-
-                <div className="flex items-center justify-between gap-3">
-                  <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-2 text-sm flex-shrink-0">
-                    <span className="text-slate-500">£10 → </span>
-                    <span className="text-white font-black">£{(10 * acca.combined_odds).toFixed(2)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={copyAcca}
-                      className="flex items-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/25 text-blue-300 font-bold px-3 py-2 rounded-xl text-sm transition-all"
-                    >
-                      {copied ? <><CheckIcon /> Copied!</> : <><CopyIcon /> Copy</>}
-                    </button>
-                    <a
-                      href={PRIMARY_AFFILIATE.url}
-                      target="_blank"
-                      rel="noopener noreferrer sponsored"
-                      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-sm transition-all"
-                    >
-                      Place on {PRIMARY_AFFILIATE.short}
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </a>
-                  </div>
-                </div>
-                <p className="text-slate-600 text-[10px] mt-2">18+ | Gamble responsibly | begambleaware.org</p>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5 text-center">
-              <p className="text-white font-bold mb-1">AI Accumulator</p>
-              <p className="text-slate-500 text-xs">No fixtures with sufficient odds available today. Check back tomorrow.</p>
-            </div>
-          )}
+              </button>
+            )
+          })}
         </div>
       )}
 
-      {/* Acca teaser — Free */}
-      {!isPro && (
-        <div className="bg-[#0E1628] border border-blue-500/20 rounded-2xl p-5 flex items-center justify-between gap-4">
+      {/* ═══════════ ACCUMULATORS TAB ═══════════ */}
+      {tab === 'accas' && !loading && !error && predictions.length > 0 && isPro && (() => {
+        const allBets = collectAllBets(predictions)
+        return (
+          <div className="space-y-4">
+            {TIERS.map(tier => {
+              const legs = buildTierAcca(allBets, tier.filter)
+              const combinedOdds = legs.length > 0 ? legs.reduce((a, b) => a * b.odds, 1) : 0
+              const combinedEV = legs.length > 0 ? Math.round(legs.reduce((a, b) => a + b.ev, 0)) : 0
+              const accaId = `acca-${tier.key}`
+              const shareText = () => legs.map((l, i) =>
+                `${i + 1}. ${l.pred.home_team} vs ${l.pred.away_team} — ${l.market} @ ${l.odds.toFixed(2)}`
+              ).join('\n') + `\n\n${tier.label} Acca · Combined @ ${combinedOdds.toFixed(2)} · Combined EV +${combinedEV}%\nBuilt by MatchMind`
+
+              return (
+                <div key={tier.key} className={`bg-[#0E1628] border ${tier.border} rounded-2xl overflow-hidden`}>
+                  {/* Tier header */}
+                  <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between flex-wrap gap-2"
+                    style={{ background: `linear-gradient(90deg, ${tier.headerBg} 0%, transparent 100%)` }}>
+                    <div className="flex items-center gap-2">
+                      <span className={tier.textAccent}><TargetIcon /></span>
+                      <span className="text-white font-bold text-sm">{tier.label} Accumulator</span>
+                      <span className={`text-[10px] font-black ${tier.textAccent} ${tier.badgeBg} border ${tier.badgeBorder} px-2 py-0.5 rounded-full uppercase tracking-wide`}>odds {tier.range}</span>
+                    </div>
+                    {legs.length > 0 ? (
+                      <div className="text-right">
+                        <span className={`${tier.textAccent} font-black text-xl`}>@ {combinedOdds.toFixed(2)}</span>
+                        <span className="text-emerald-400 text-xs font-bold ml-2">+{combinedEV}% EV</span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-500 text-xs">—</span>
+                    )}
+                  </div>
+
+                  {legs.length === 0 ? (
+                    <div className="p-5 text-center text-slate-500 text-xs">
+                      No +EV picks in this odds range today.
+                    </div>
+                  ) : (
+                    <div className="p-5">
+                      <p className="text-slate-500 text-xs mb-4">{legs.length} legs · All positive EV · {new Set(legs.map(l => l.pred.league)).size} {new Set(legs.map(l => l.pred.league)).size === 1 ? 'league' : 'different leagues'}</p>
+
+                      {/* Legs */}
+                      <div className="space-y-2 mb-4">
+                        {legs.map((l, i) => (
+                          <div key={i} className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-xl p-3">
+                            <div className={`w-6 h-6 rounded-lg ${tier.badgeBg} border ${tier.badgeBorder} flex items-center justify-center text-xs ${tier.textAccent} font-black shrink-0`}>{i + 1}</div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-xs font-bold truncate">{l.pred.home_team} vs {l.pred.away_team}</p>
+                              <p className="text-slate-500 text-[10px]">{l.pred.leagueFlag} {l.pred.league}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-white text-xs font-bold">{l.market} @ {l.odds.toFixed(2)}</p>
+                              <p className={`${tier.textAccent} text-[10px] font-bold`}>+{l.ev}% EV</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-2 text-sm flex-shrink-0">
+                          <span className="text-slate-500">£10 → </span>
+                          <span className="text-white font-black">£{(10 * combinedOdds).toFixed(2)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(shareText()).then(() => {
+                                setCopied(accaId)
+                                setTimeout(() => setCopied(null), 2000)
+                              })
+                            }}
+                            className={`flex items-center gap-2 ${tier.badgeBg} hover:brightness-110 border ${tier.badgeBorder} ${tier.textAccent} font-bold px-3 py-2 rounded-xl text-sm transition-all`}
+                          >
+                            {copied === accaId ? <><CheckIcon /> Copied!</> : <><CopyIcon /> Copy</>}
+                          </button>
+                          <a
+                            href={PRIMARY_AFFILIATE.url}
+                            target="_blank"
+                            rel="noopener noreferrer sponsored"
+                            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-sm transition-all"
+                          >
+                            Place on {PRIMARY_AFFILIATE.short}
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+            <p className="text-slate-600 text-[10px] text-center">18+ | Gamble responsibly | begambleaware.org</p>
+          </div>
+        )
+      })()}
+
+      {/* Acca teaser — Free users on the accas tab */}
+      {tab === 'accas' && !loading && !error && predictions.length > 0 && !isPro && (
+        <div className="bg-[#0E1628] border border-orange-500/20 rounded-2xl p-5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+            <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
               <TargetIcon />
             </div>
             <div>
-              <p className="text-white font-bold text-sm">AI Accumulator Builder</p>
-              <p className="text-slate-500 text-xs">Daily AI-built accas with positive EV on every leg — Pro only</p>
+              <p className="text-white font-bold text-sm">3 AI Accumulators — Safe / Balanced / Big Win</p>
+              <p className="text-slate-500 text-xs">Three daily accas at different risk tiers — Pro only</p>
             </div>
           </div>
-          <a href="/dashboard/billing" className="shrink-0 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors">
+          <a href="/dashboard/billing" className="shrink-0 bg-orange-500 hover:bg-orange-400 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors">
             Upgrade →
           </a>
         </div>
       )}
 
-      {!loading && !error && predictions.length > 0 && (
+      {/* ═══════════ VALUE BETS + ALL MATCHES TABS ═══════════ */}
+      {!loading && !error && predictions.length > 0 && tab !== 'accas' && (
         <div className="space-y-5">
 
           {/* Value Bets — 3 tiers by odds range (Easy/Medium/Hard) */}
-          {isPro && (() => {
+          {tab === 'bets' && isPro && (() => {
             type TieredBet = {
               pred: Prediction
               market: 'Home Win' | 'Away Win' | 'Over 2.5' | 'BTTS'
@@ -670,11 +779,11 @@ export default function PredictionsPage() {
             )
           })()}
 
-          {/* Value bet teaser — Free */}
-          {!isPro && (
-            <div className="bg-[#0E1628] border border-emerald-500/20 rounded-2xl p-5 flex items-center justify-between">
+          {/* Value bet teaser — Free (only shown on Value Bets tab) */}
+          {tab === 'bets' && !isPro && (
+            <div className="bg-[#0E1628] border border-orange-500/20 rounded-2xl p-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
                   <FireIcon />
                 </div>
                 <div>
@@ -682,13 +791,14 @@ export default function PredictionsPage() {
                   <p className="text-slate-500 text-xs">Real Bet365 odds vs AI probabilities — find +EV bets</p>
                 </div>
               </div>
-              <a href="/api/stripe/create-checkout?plan=pro" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors whitespace-nowrap">
+              <a href="/dashboard/billing" className="bg-orange-500 hover:bg-orange-400 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors whitespace-nowrap">
                 Unlock Pro
               </a>
             </div>
           )}
 
-          {/* All Predictions */}
+          {/* All Predictions — only on the All Matches tab */}
+          {tab === 'matches' && (
           <div className="space-y-3">
             {visiblePredictions.map((pred, idx) => {
               const isExpanded = expanded === idx
@@ -1139,17 +1249,18 @@ export default function PredictionsPage() {
                 <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-8 text-center opacity-30 select-none">
                   <p className="text-slate-400">More predictions locked…</p>
                 </div>
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#060914]/85 rounded-2xl border border-blue-500/25">
-                  <div className="text-blue-400 mb-3"><LockIcon /></div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#060914]/85 rounded-2xl border border-orange-500/25">
+                  <div className="text-orange-400 mb-3"><LockIcon /></div>
                   <p className="text-white font-bold mb-1">{lockedCount} more predictions + Value Bets</p>
                   <p className="text-slate-400 text-sm mb-4">Upgrade to Pro for all predictions, real odds & EV scores</p>
-                  <a href="/api/stripe/create-checkout?plan=pro" className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-colors">
+                  <a href="/dashboard/billing" className="bg-orange-500 hover:bg-orange-400 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-colors">
                     Unlock with Pro — £9.99/mo
                   </a>
                 </div>
               </div>
             )}
           </div>
+          )}
         </div>
       )}
 
