@@ -21,6 +21,5 @@ export async function POST(req: NextRequest) {
 
   const { balance, note } = await req.json()
   await supabase.from('bankroll_snapshots').insert({ user_id: user.id, balance, note: note || null })
-  await supabase.from('profiles').update({ current_bankroll: balance }).eq('id', user.id)
   return NextResponse.json({ ok: true })
 }

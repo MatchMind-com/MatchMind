@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
   const { data: profiles, error } = await supabaseAdmin
     .from('profiles')
-    .select('user_id, email, full_name, created_at, subscription_tier')
+    .select('user_id, email, username, created_at, subscription_tier')
     .gte('created_at', sevenDaysAgo.toISOString())
 
   if (error || !profiles) {
@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Build the right email
-    const name = profile.full_name?.split(' ')[0] || undefined
+    const name = profile.username?.split(/[\s._-]/)[0] || undefined
     let email: { subject: string; html: string }
 
     if (targetDay === 1) email = buildDay1Email({ email: profile.email, name })

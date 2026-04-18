@@ -7,11 +7,23 @@ export default async function BankrollPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('current_bankroll, starting_bankroll')
-    .eq('user_id', user.id)
-    .single()
+  const [{ data: profile }, { data: latestSnapshot }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('starting_bankroll')
+      .eq('user_id', user.id)
+      .single(),
+    supabase
+      .from('bankroll_snapshots')
+      .select('balance')
+      .eq('user_id', user.id)
+      .order('recorded_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
+
+  const startingBankroll = profile?.starting_bankroll ?? 0
+  const currentBankroll = latestSnapshot?.balance ?? startingBankroll
 
   return (
     <div className="p-5 lg:p-7 max-w-5xl mx-auto">
@@ -22,8 +34,8 @@ export default async function BankrollPage() {
       </div>
       <BankrollTracker
         userId={user.id}
-        initialBankroll={profile?.current_bankroll ?? 0}
-        startingBankroll={profile?.starting_bankroll ?? 0}
+        initialBankroll={currentBankroll}
+        startingBankroll={startingBankroll}
       />
     </div>
   )

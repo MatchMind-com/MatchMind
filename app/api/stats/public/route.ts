@@ -17,7 +17,7 @@ export async function GET() {
     ] = await Promise.all([
       supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }),
       supabaseAdmin.from('tipsters').select('*', { count: 'exact', head: true }).eq('is_active', true),
-      supabaseAdmin.from('bets').select('*', { count: 'exact', head: true }),
+      supabaseAdmin.from('bet_slips').select('*', { count: 'exact', head: true }),
     ])
 
     return NextResponse.json({

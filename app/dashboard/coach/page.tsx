@@ -9,7 +9,7 @@ export default async function FootballCoachPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('subscription_tier, full_name')
+    .select('subscription_tier, username')
     .eq('user_id', user.id)
     .single()
 

@@ -1,14 +1,23 @@
 export interface Profile {
   id: string
+  user_id: string
   email: string
-  full_name?: string
+  username?: string
+  referral_code?: string
+  referred_by?: string | null
+  referral_count?: number
+  subscription_tier: 'free' | 'pro' | 'elite'
+  subscription_status?: string | null
+  subscription_current_period_end?: string | null
+  stripe_customer_id?: string | null
+  stripe_subscription_id?: string | null
+  starting_bankroll?: number
+  loss_limit?: number | null
+  daily_alert_opt_in?: boolean
+  weekly_report_opt_in?: boolean
+  take_a_break_until?: string | null
   created_at: string
   updated_at: string
-  total_bets: number
-  winning_bets: number
-  total_profit: number
-  current_bankroll: number
-  subscription_tier: 'free' | 'pro' | 'elite'
 }
 
 export interface BetSlip {

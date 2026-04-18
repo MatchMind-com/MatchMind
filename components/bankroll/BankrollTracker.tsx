@@ -46,7 +46,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
     if (isNaN(amount) || amount <= 0) return
     setLoading(true)
     await supabase.from('profiles').update({
-      starting_bankroll: amount, current_bankroll: amount
+      starting_bankroll: amount
     }).eq('user_id', userId)
     await supabase.from('bankroll_snapshots').insert({
       user_id: userId, balance: amount, note: 'Starting bankroll'
@@ -62,7 +62,6 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
     const amount = parseFloat(newBalance)
     if (isNaN(amount) || amount < 0) return
     setLoading(true)
-    await supabase.from('profiles').update({ current_bankroll: amount }).eq('user_id', userId)
     await supabase.from('bankroll_snapshots').insert({
       user_id: userId, balance: amount, note: note || null
     })
