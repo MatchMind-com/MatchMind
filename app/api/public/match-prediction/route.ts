@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 
     const { data, error } = await supabaseAdmin
       .from('prediction_records')
-      .select('id, home_team, away_team, league, kick_off, bet_type, prediction, ai_probability, odds, ev_percent, is_value_bet, result, home_score, away_score, key_factors')
+      .select('id, home_team, away_team, league, kick_off, bet_type, prediction, ai_probability, odds, ev_percent, is_value_bet, result, home_score, away_score')
       .gte('kick_off', from.toISOString())
       .lte('kick_off', to.toISOString())
       .order('ev_percent', { ascending: false })
@@ -70,7 +70,6 @@ export async function GET(request: Request) {
         result: r.result,
         home_score: r.home_score,
         away_score: r.away_score,
-        key_factors: r.key_factors,
       })),
     })
   } catch (err) {

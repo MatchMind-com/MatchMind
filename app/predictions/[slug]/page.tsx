@@ -35,19 +35,21 @@ async function getMatchData(slug: string) {
     const to = new Date()
     to.setDate(to.getDate() + 7)
 
-    const { data } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('prediction_records')
-      .select('id, home_team, away_team, league, kick_off, bet_type, prediction, ai_probability, odds, ev_percent, is_value_bet, result, home_score, away_score, key_factors, home_win_pct, draw_pct, away_win_pct')
+      .select('id, home_team, away_team, league, kick_off, bet_type, prediction, ai_probability, odds, ev_percent, is_value_bet, result, home_score, away_score')
       .gte('kick_off', from.toISOString())
       .lte('kick_off', to.toISOString())
 
+    if (error) console.error('[slug] prediction_records query failed:', error.message)
     if (!data) return null
     const matching = data.filter(r => makeSlug(r.home_team, r.away_team, r.kick_off) === slug)
     if (matching.length === 0) return null
 
     const first = matching[0]
     return { match: first, picks: matching }
-  } catch {
+  } catch (e) {
+    console.error('[slug] getMatchData threw:', (e as Error).message)
     return null
   }
 }
@@ -155,19 +157,14 @@ export default async function MatchPredictionPage({ params }: { params: { slug: 
             </div>
           </div>
 
-          {/* Probability bar */}
-          {match.home_win_pct && match.draw_pct && match.away_win_pct && (
-            <div>
-              <div className="flex justify-between text-xs text-white/50 mb-1.5">
-                <span>Home {match.home_win_pct}%</span>
-                <span>Draw {match.draw_pct}%</span>
-                <span>Away {match.away_win_pct}%</span>
+          {/* AI confidence on best pick */}
+          {bestPick?.ai_probability && (
+            <div className="flex items-center gap-3 text-xs">
+              <span className="text-white/50">AI confidence on best pick:</span>
+              <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-500" style={{ width: `${bestPick.ai_probability}%` }} />
               </div>
-              <div className="flex h-2 rounded-full overflow-hidden gap-0.5">
-                <div className="bg-violet-500 rounded-l-full" style={{ width: `${match.home_win_pct}%` }} />
-                <div className="bg-white/20" style={{ width: `${match.draw_pct}%` }} />
-                <div className="bg-indigo-500 rounded-r-full" style={{ width: `${match.away_win_pct}%` }} />
-              </div>
+              <span className="text-white/70 font-semibold">{bestPick.ai_probability}%</span>
             </div>
           )}
         </div>
