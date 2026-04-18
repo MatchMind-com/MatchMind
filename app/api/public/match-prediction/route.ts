@@ -15,7 +15,7 @@ function slugify(str: string) {
     .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim()
 }
 
-export function makeSlug(home: string, away: string, kickOff: string) {
+function makeSlug(home: string, away: string, kickOff: string) {
   const date = new Date(kickOff)
   const day = date.getDate()
   const month = date.toLocaleString('en-US', { month: 'long' }).toLowerCase()

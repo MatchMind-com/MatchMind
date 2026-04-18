@@ -121,7 +121,7 @@ export async function GET() {
     if (candidates.length < 3) {
       // Fallback: use fixtures even without odds
       const allFixtures = leagueData.flatMap(({ league, fixtures }) =>
-        fixtures.slice(0, 2).map(f => ({
+        fixtures.slice(0, 2).map((f: any) => ({
           fixture: f, league,
           odds: { home: null, draw: null, away: null, over25: null, btts: null } as any,
         }))
