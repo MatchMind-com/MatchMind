@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import BankrollTracker from '@/components/bankroll/BankrollTracker'
 
@@ -7,7 +8,7 @@ export default async function BankrollPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, { data: latestSnapshot }] = await Promise.all([
+  const [{ data: profile }, { data: allSnapshots }] = await Promise.all([
     supabase
       .from('profiles')
       .select('starting_bankroll')
@@ -15,15 +16,34 @@ export default async function BankrollPage() {
       .single(),
     supabase
       .from('bankroll_snapshots')
-      .select('balance')
+      .select('balance, recorded_at')
       .eq('user_id', user.id)
-      .order('recorded_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+      .order('recorded_at', { ascending: true }),
   ])
 
-  const startingBankroll = profile?.starting_bankroll ?? 0
-  const currentBankroll = latestSnapshot?.balance ?? startingBankroll
+  const earliestSnapshot = allSnapshots?.[0]
+  const latestSnapshot = allSnapshots?.[allSnapshots.length - 1]
+
+  // Auto-recovery: if the profile's starting_bankroll is 0 but the user
+  // has snapshots (previous sessions where the RLS bug silently dropped
+  // the update), adopt the earliest snapshot's balance as the starting
+  // bankroll and persist it via service role so we don't keep showing
+  // the setup form.
+  let startingBankroll = profile?.starting_bankroll ?? 0
+  if (startingBankroll === 0 && earliestSnapshot?.balance) {
+    startingBankroll = Number(earliestSnapshot.balance)
+    try {
+      const admin = createAdmin(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+      await admin.from('profiles').update({ starting_bankroll: startingBankroll }).eq('user_id', user.id)
+    } catch (e) {
+      console.error('[bankroll] auto-recovery backfill failed:', (e as Error).message)
+    }
+  }
+
+  const currentBankroll = latestSnapshot?.balance != null ? Number(latestSnapshot.balance) : startingBankroll
 
   return (
     <div className="p-5 lg:p-7 max-w-5xl mx-auto">

@@ -45,12 +45,19 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
     const amount = parseFloat(startInput)
     if (isNaN(amount) || amount <= 0) return
     setLoading(true)
-    await supabase.from('profiles').update({
-      starting_bankroll: amount
-    }).eq('user_id', userId)
-    await supabase.from('bankroll_snapshots').insert({
-      user_id: userId, balance: amount, note: 'Starting bankroll'
+    // Route through API so service role can bypass RLS on profiles — client-
+    // side supabase.from('profiles').update() silently fails, which used to
+    // make the setup form reappear on every refresh.
+    const res = await fetch('/api/bankroll/starting', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount }),
     })
+    if (!res.ok) {
+      setLoading(false)
+      alert('Could not save starting bankroll. Please try again.')
+      return
+    }
     setStarting(amount)
     setCurrentBalance(amount)
     setSettingUp(false)
