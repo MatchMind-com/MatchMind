@@ -19,7 +19,6 @@ async function fetchFixtureResult(fixtureId: number) {
     if (!fixture) return null
 
     const status = fixture.fixture?.status?.short
-    // Only process finished matches
     if (!['FT', 'AET', 'PEN'].includes(status)) return null
 
     return {
@@ -27,6 +26,66 @@ async function fetchFixtureResult(fixtureId: number) {
       awayScore: fixture.goals?.away ?? 0,
       status,
     }
+  } catch { return null }
+}
+
+// Fetch Pinnacle closing odds for a fixture (bookmaker ID = 29)
+async function fetchPinnacleClosingOdds(
+  fixtureId: number,
+  prediction: string
+): Promise<number | null> {
+  try {
+    const res = await fetch(`${BASE}/odds?fixture=${fixtureId}&bookmaker=29`, {
+      headers: { 'x-apisports-key': API_KEY },
+    })
+    const json = await res.json()
+    const bookmaker = json.response?.[0]?.bookmakers?.[0]
+    if (!bookmaker) return null
+
+    // Map our prediction key → Pinnacle market + value label
+    // Bet IDs: 1=Match Winner, 5=Goals Over/Under, 8=Both Teams Score
+    let targetBetId: number
+    let targetValue: string
+
+    switch (prediction) {
+      case 'home_win':
+        targetBetId = 1; targetValue = 'Home'; break
+      case 'draw':
+        targetBetId = 1; targetValue = 'Draw'; break
+      case 'away_win':
+        targetBetId = 1; targetValue = 'Away'; break
+      case 'over_2.5_goals':
+      case 'over_2_5':
+      case 'over_2_5_goals':
+        targetBetId = 5; targetValue = 'Over 2.5'; break
+      case 'under_2.5_goals':
+      case 'under_2_5':
+        targetBetId = 5; targetValue = 'Under 2.5'; break
+      case 'btts':
+      case 'btts_yes':
+      case 'both_teams_score':
+        targetBetId = 8; targetValue = 'Yes'; break
+      case 'btts_no':
+        targetBetId = 8; targetValue = 'No'; break
+      default:
+        // Try to infer from label text
+        if (prediction.includes('home')) { targetBetId = 1; targetValue = 'Home' }
+        else if (prediction.includes('away')) { targetBetId = 1; targetValue = 'Away' }
+        else if (prediction.includes('draw')) { targetBetId = 1; targetValue = 'Draw' }
+        else if (prediction.includes('over')) { targetBetId = 5; targetValue = 'Over 2.5' }
+        else return null
+    }
+
+    const market = bookmaker.bets?.find((b: any) => b.id === targetBetId)
+    if (!market) return null
+
+    const oddEntry = market.values?.find(
+      (v: any) => v.value?.toLowerCase() === targetValue.toLowerCase()
+    )
+    if (!oddEntry) return null
+
+    const parsed = parseFloat(oddEntry.odd)
+    return isNaN(parsed) ? null : parsed
   } catch { return null }
 }
 
@@ -59,7 +118,6 @@ function determineResult(
     case 'btts_no':
       return !btts ? 'win' : 'loss'
     default:
-      // For any other label, try to parse from bet_type text
       if (prediction.includes('home')) return homeScore > awayScore ? 'win' : 'loss'
       if (prediction.includes('away')) return awayScore > homeScore ? 'win' : 'loss'
       if (prediction.includes('draw')) return homeScore === awayScore ? 'win' : 'loss'
@@ -69,7 +127,6 @@ function determineResult(
 }
 
 export async function GET(req: NextRequest) {
-  // Security: only allow Vercel cron or internal calls
   const authHeader = req.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}` &&
       req.headers.get('x-vercel-cron') !== '1') {
@@ -77,7 +134,6 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Fetch pending predictions where kick_off was more than 2 hours ago
     const cutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
     const { data: pending, error } = await supabaseAdmin
       .from('prediction_records')
@@ -94,10 +150,11 @@ export async function GET(req: NextRequest) {
     let checked = 0
     let wins = 0
     let losses = 0
+    let clvUpdated = 0
 
     for (const record of pending) {
       const matchResult = await fetchFixtureResult(record.fixture_id)
-      if (!matchResult) continue // match not finished yet
+      if (!matchResult) continue
 
       const { homeScore, awayScore } = matchResult
       const result = determineResult(record.prediction, homeScore, awayScore)
@@ -110,8 +167,18 @@ export async function GET(req: NextRequest) {
       } else if (result === 'loss') {
         profitLoss = -1
         losses++
-      } else {
-        profitLoss = 0
+      }
+
+      // Fetch Pinnacle closing odds and compute CLV
+      let closingOdds: number | null = null
+      let clvPercent: number | null = null
+
+      if (record.odds) {
+        closingOdds = await fetchPinnacleClosingOdds(record.fixture_id, record.prediction)
+        if (closingOdds && closingOdds > 1) {
+          clvPercent = Math.round(((record.odds / closingOdds) - 1) * 10000) / 100
+          clvUpdated++
+        }
       }
 
       await supabaseAdmin
@@ -122,6 +189,8 @@ export async function GET(req: NextRequest) {
           home_score: homeScore,
           away_score: awayScore,
           checked_at: new Date().toISOString(),
+          closing_odds: closingOdds,
+          clv_percent: clvPercent,
         })
         .eq('id', record.id)
 
@@ -131,6 +200,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       message: `Checked ${checked} predictions`,
       checked, wins, losses,
+      clv_updated: clvUpdated,
       pending_remaining: pending.length - checked,
     })
   } catch (err: any) {

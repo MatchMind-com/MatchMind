@@ -1,4 +1,4 @@
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.company'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 
 // ─── Day 1: Welcome ───────────────────────────────────────────────────────────
 

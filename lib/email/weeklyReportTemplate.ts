@@ -182,7 +182,7 @@ export function buildWeeklyReportEmail(opts: {
             <td style="padding: 20px 24px; text-align: center; border-top: 1px solid #1e2540;">
               <p style="margin: 0 0 4px; font-size: 12px; color: rgba(255,255,255,0.3);">MatchMind — AI Betting Coach ⚽</p>
               <p style="margin: 0; font-size: 11px; color: rgba(255,255,255,0.2);">
-                You received this because you have an account at matchmindcom.company.<br/>
+                You received this because you have an account at matchmindcom.com.<br/>
                 <a href="${appUrl}/settings" style="color: rgba(255,255,255,0.3); text-decoration: underline;">Manage email preferences</a>
               </p>
             </td>

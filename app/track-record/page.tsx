@@ -3,7 +3,7 @@ import Link from 'next/link'
 async function getTrackRecord() {
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'https://footballbetai.vercel.app'}/api/track-record`,
+      `${process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'}/api/track-record`,
       { next: { revalidate: 3600 } }
     )
     if (!res.ok) throw new Error()

@@ -32,6 +32,31 @@ export async function GET() {
       ? Math.round((records.reduce((s, r) => s + (r.odds || 0), 0) / records.length) * 100) / 100
       : 0
 
+    // ── CLV stats ──────────────────────────────────────────────────────────────
+    const withCLV = records.filter(r => r.clv_percent !== null && r.clv_percent !== undefined)
+    const positiveCLV = withCLV.filter(r => r.clv_percent > 0)
+    const avgCLV = withCLV.length > 0
+      ? Math.round((withCLV.reduce((s, r) => s + r.clv_percent, 0) / withCLV.length) * 100) / 100
+      : null
+    const clvBeatRate = withCLV.length > 0
+      ? Math.round((positiveCLV.length / withCLV.length) * 100)
+      : null
+    // Best CLV: top 5 individual predictions
+    const topCLV = [...withCLV]
+      .sort((a, b) => b.clv_percent - a.clv_percent)
+      .slice(0, 5)
+      .map(r => ({
+        id: r.id,
+        home_team: r.home_team,
+        away_team: r.away_team,
+        bet_type: r.bet_type,
+        odds: r.odds,
+        closing_odds: r.closing_odds,
+        clv_percent: r.clv_percent,
+        result: r.result,
+        kick_off: r.kick_off,
+      }))
+
     // Value bets subset
     const valueBets = records.filter(r => r.is_value_bet)
     const vbWins = valueBets.filter(r => r.result === 'win').length
@@ -108,6 +133,8 @@ export async function GET() {
       profit_loss: r.profit_loss,
       home_score: r.home_score,
       away_score: r.away_score,
+      closing_odds: r.closing_odds,
+      clv_percent: r.clv_percent,
     }))
 
     return NextResponse.json({
@@ -125,12 +152,18 @@ export async function GET() {
           winRate: vbWinRate,
           roi: vbROI,
           profit: Math.round(vbProfit * 100) / 100,
-        }
+        },
+        clv: {
+          tracked: withCLV.length,
+          avgCLV,
+          beatRate: clvBeatRate,
+        },
       },
       byLeague,
       byBetType,
       recent,
       chartData,
+      topCLV,
     })
   } catch (err: any) {
     console.error('Track record API error:', err)

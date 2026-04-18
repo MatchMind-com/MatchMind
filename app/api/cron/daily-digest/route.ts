@@ -9,7 +9,7 @@ const supabaseAdmin = createAdmin(
 )
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://footballbetai.vercel.app'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization')

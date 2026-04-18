@@ -12,7 +12,7 @@ const supabaseAdmin = createClient(
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const resend = new Resend(process.env.RESEND_API_KEY!)
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.company'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 
 // Vercel Cron hits this with Authorization: Bearer <CRON_SECRET>
 export async function GET(req: NextRequest) {
