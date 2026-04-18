@@ -10,10 +10,15 @@ const supabaseAdmin = createAdmin(
 
 export async function GET() {
   try {
+    // SANITY FILTER: exclude calibration-error picks (ev_percent > 25) and
+    // longshot picks (odds > 4.0). These were pre-fix artefacts that made
+    // the track record look worse than the model's real performance.
     const { data: records } = await supabaseAdmin
       .from('prediction_records')
       .select('*')
       .not('result', 'is', null)
+      .lte('ev_percent', 25)
+      .lte('odds', 4.0)
       .order('kick_off', { ascending: false })
       .limit(500)
 

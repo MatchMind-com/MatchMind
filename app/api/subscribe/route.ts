@@ -39,6 +39,8 @@ export async function POST(req: NextRequest) {
       .select('home_team, away_team, league, bet_type, odds, ev_percent, ai_probability, kick_off')
       .is('result', null)
       .eq('is_value_bet', true)
+      .lte('ev_percent', 25)
+      .lte('odds', 4.0)
       .order('ev_percent', { ascending: false })
       .limit(3)
 

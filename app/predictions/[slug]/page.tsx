@@ -41,6 +41,8 @@ async function getMatchData(slug: string) {
       .select('id, home_team, away_team, league, kick_off, bet_type, prediction, ai_probability, odds, ev_percent, is_value_bet, result, home_score, away_score')
       .gte('kick_off', from.toISOString())
       .lte('kick_off', to.toISOString())
+      .lte('ev_percent', 25)
+      .lte('odds', 4.0)
 
     if (error) console.error('[slug] prediction_records query failed:', error.message)
     if (!data) return null
@@ -241,14 +243,50 @@ export default async function MatchPredictionPage({ params }: { params: { slug: 
                 )}
               </div>
 
-              {/* EV explainer */}
-              {pick.ev_percent && pick.ev_percent >= 15 && (
-                <div className="mt-3 bg-emerald-500/5 border border-emerald-500/15 rounded-xl px-3 py-2">
-                  <p className="text-emerald-400/80 text-xs">
-                    <span className="font-semibold">+{pick.ev_percent}% EV</span> — this pick is statistically worth £{(pick.ev_percent / 100).toFixed(2)} profit per £1 staked over many bets at these odds.
-                  </p>
-                </div>
-              )}
+              {/* AI reasoning — mathematical explanation of the edge */}
+              {pick.ai_probability && pick.odds && pick.ev_percent && (() => {
+                const impliedProb = Math.round(100 / pick.odds)
+                const gap = pick.ai_probability - impliedProb
+                return (
+                  <div className="mt-4 space-y-3">
+                    {/* Probability comparison bar */}
+                    <div className="bg-white/[0.03] border border-white/8 rounded-xl p-3">
+                      <p className="text-[10px] text-white/40 uppercase tracking-wider mb-2 font-semibold">Why this has edge</p>
+                      <div className="grid grid-cols-2 gap-4 mb-3">
+                        <div>
+                          <p className="text-white/45 text-xs mb-1">Bet365 implied</p>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-white/80 font-bold text-xl">{impliedProb}%</span>
+                            <span className="text-white/35 text-xs">from {pick.odds.toFixed(2)} odds</span>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-emerald-400/70 text-xs mb-1">AI estimate</p>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-emerald-400 font-bold text-xl">{pick.ai_probability}%</span>
+                            <span className="text-emerald-400/50 text-xs">({gap > 0 ? '+' : ''}{gap} pts)</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="relative h-2 bg-white/5 rounded-full overflow-hidden">
+                        <div className="absolute inset-y-0 left-0 bg-white/30 rounded-full" style={{ width: `${impliedProb}%` }} />
+                        <div className="absolute inset-y-0 left-0 bg-emerald-500/60 rounded-full" style={{ width: `${pick.ai_probability}%` }} />
+                      </div>
+                      <p className="text-[11px] text-white/50 leading-relaxed mt-3">
+                        {gap >= 5
+                          ? `The bookmaker prices this at ${impliedProb}%. Our model estimates ${pick.ai_probability}% — a ${gap}-point gap in our favour. That's where the +${pick.ev_percent}% expected-value edge comes from.`
+                          : `Small edge here: market ${impliedProb}% vs AI ${pick.ai_probability}%. +${pick.ev_percent}% EV still mathematically profitable over many bets at these odds.`
+                        }
+                      </p>
+                    </div>
+
+                    {/* What EV means (beginner-friendly) */}
+                    <p className="text-[11px] text-white/40 leading-relaxed">
+                      <span className="text-emerald-400/80 font-semibold">+{pick.ev_percent}% EV</span> means this pick is statistically worth <span className="text-white/70">£{(pick.ev_percent / 100).toFixed(2)} profit per £1 staked</span> over thousands of bets at these odds. Single bets can win or lose — edge compounds over the long run.
+                    </p>
+                  </div>
+                )
+              })()}
             </div>
           ))}
         </div>

@@ -47,6 +47,8 @@ async function getPredictions() {
       .select('id, home_team, away_team, league, kick_off, bet_type, odds, ev_percent, is_value_bet, result')
       .gte('kick_off', from.toISOString())
       .lte('kick_off', to.toISOString())
+      .lte('ev_percent', 25)
+      .lte('odds', 4.0)
       .order('kick_off', { ascending: true })
 
     // Deduplicate by fixture (show one card per match, the best pick)

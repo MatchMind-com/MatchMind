@@ -48,6 +48,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .select('home_team, away_team, kick_off')
       .gte('kick_off', from.toISOString())
       .lte('kick_off', to.toISOString())
+      .lte('ev_percent', 25)
+      .lte('odds', 4.0)
 
     const seen = new Set<string>()
     const matchPages: MetadataRoute.Sitemap = []
