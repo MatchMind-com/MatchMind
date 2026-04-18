@@ -55,12 +55,14 @@ describe('public pages return 200', () => {
 
 describe('public APIs return 200 + valid shape', () => {
   for (const { path, shape } of PUBLIC_APIS) {
+    // /api/predictions hits GPT-4o + API-Football; cold start can be 10–20s
+    const timeout = path === '/api/predictions' ? 30_000 : 15_000
     it(path, async () => {
-      const res = await fetchWithTimeout(BASE + path)
+      const res = await fetchWithTimeout(BASE + path, timeout)
       expect(res.status).toBe(200)
       const json = await res.json()
       expect(shape(json), `shape check failed for ${path}: ${JSON.stringify(json).slice(0, 200)}`).toBe(true)
-    })
+    }, timeout + 5_000)
   }
 })
 
