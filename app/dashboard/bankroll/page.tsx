@@ -11,7 +11,7 @@ export default async function BankrollPage() {
   const [{ data: profile }, { data: allSnapshots }] = await Promise.all([
     supabase
       .from('profiles')
-      .select('starting_bankroll')
+      .select('starting_bankroll, loss_limit')
       .eq('user_id', user.id)
       .single(),
     supabase
@@ -56,6 +56,7 @@ export default async function BankrollPage() {
         userId={user.id}
         initialBankroll={currentBankroll}
         startingBankroll={startingBankroll}
+        lossLimit={profile?.loss_limit ?? null}
       />
     </div>
   )

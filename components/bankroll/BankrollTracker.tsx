@@ -1,10 +1,14 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, ReferenceLine
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, ReferenceLine, Cell,
 } from 'recharts'
+import {
+  kellyStake, computeStats, monthlyPnL, simulateVariance,
+  type SimParams, type Snapshot as LibSnapshot,
+} from '@/lib/bankroll'
 
 interface Snapshot {
   id: string
@@ -17,9 +21,10 @@ interface Props {
   userId: string
   initialBankroll: number
   startingBankroll: number
+  lossLimit?: number | null
 }
 
-export default function BankrollTracker({ userId, initialBankroll, startingBankroll }: Props) {
+export default function BankrollTracker({ userId, initialBankroll, startingBankroll, lossLimit }: Props) {
   const supabase = createClient()
   const [snapshots, setSnapshots] = useState<Snapshot[]>([])
   const [currentBalance, setCurrentBalance] = useState(initialBankroll)
@@ -30,7 +35,38 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
   const [loading, setLoading] = useState(false)
   const [settingUp, setSettingUp] = useState(startingBankroll === 0)
 
+  // Kelly calculator state
+  const [kEdge, setKEdge] = useState('10')
+  const [kOdds, setKOdds] = useState('2.00')
+  const [kFraction, setKFraction] = useState<0.25 | 0.5 | 1>(0.5)
+
+  // Unit sizing (localStorage so it sticks across sessions)
+  const [unitPct, setUnitPct] = useState<number>(2)
+  useEffect(() => {
+    const v = typeof window !== 'undefined' ? localStorage.getItem('mm_unit_pct') : null
+    if (v) setUnitPct(Number(v) || 2)
+  }, [])
+  function saveUnitPct(v: number) {
+    const clamped = Math.max(0.5, Math.min(10, v))
+    setUnitPct(clamped)
+    if (typeof window !== 'undefined') localStorage.setItem('mm_unit_pct', String(clamped))
+  }
+
+  // Variance simulator state
+  const [showSim, setShowSim] = useState(false)
+  const [simParams, setSimParams] = useState<SimParams>({
+    bankroll: currentBalance,
+    avgEdgePct: 8,
+    avgOdds: 2.0,
+    stakePct: 2,
+    betsPerWeek: 10,
+    weeks: 26,
+  })
+
   useEffect(() => { loadSnapshots() }, [])
+  useEffect(() => {
+    setSimParams(p => ({ ...p, bankroll: currentBalance, stakePct: unitPct }))
+  }, [currentBalance, unitPct])
 
   async function loadSnapshots() {
     const { data } = await supabase
@@ -45,9 +81,6 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
     const amount = parseFloat(startInput)
     if (isNaN(amount) || amount <= 0) return
     setLoading(true)
-    // Route through API so service role can bypass RLS on profiles — client-
-    // side supabase.from('profiles').update() silently fails, which used to
-    // make the setup form reappear on every refresh.
     const res = await fetch('/api/bankroll/starting', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -79,26 +112,43 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
     loadSnapshots()
   }
 
-  const pnl = currentBalance - starting
-  const pnlPct = starting > 0 ? ((pnl / starting) * 100).toFixed(1) : '0.0'
+  // ── Derived stats ──────────────────────────────────────────────────────────
+  const stats = useMemo(
+    () => computeStats(snapshots as LibSnapshot[], starting),
+    [snapshots, starting]
+  )
+  const months = useMemo(() => monthlyPnL(snapshots as LibSnapshot[]), [snapshots])
+  const kellyResult = useMemo(() => {
+    const ev = parseFloat(kEdge), odds = parseFloat(kOdds)
+    if (isNaN(ev) || isNaN(odds)) return 0
+    return kellyStake(currentBalance, ev, odds, kFraction)
+  }, [kEdge, kOdds, kFraction, currentBalance])
+  const unitSize = Math.round(currentBalance * (unitPct / 100) * 100) / 100
+
+  // Loss-limit warning
+  const lossLimitTriggered = lossLimit != null && lossLimit > 0 && currentBalance <= lossLimit
+  const lossLimitNear = lossLimit != null && lossLimit > 0 && !lossLimitTriggered && currentBalance <= lossLimit * 1.15
+
+  const pnl = stats.current - stats.startingBalance
   const chartData = snapshots.map(s => ({
     date: new Date(s.recorded_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
     balance: Number(s.balance),
     note: s.note,
   }))
 
+  // ── Setup flow ─────────────────────────────────────────────────────────────
   if (settingUp) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-8 max-w-md w-full text-center">
-          <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-7 h-7 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Set Your Starting Bankroll</h2>
           <p className="text-slate-500 mb-6 text-sm">
-            Enter the amount you&apos;re starting with to track your growth over time.
+            Enter the amount you&apos;re starting with to track growth, size stakes with Kelly, and simulate variance.
           </p>
           <input
             type="number"
@@ -106,14 +156,14 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
             onChange={e => setStartInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && setupBankroll()}
             placeholder="e.g. 500"
-            className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3 text-white text-xl text-center mb-4 focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.06] transition-colors"
+            className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3 text-white text-xl text-center mb-4 focus:outline-none focus:border-orange-500/50 focus:bg-white/[0.06] transition-colors"
           />
           <button
             onClick={setupBankroll}
             disabled={loading || !startInput}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50"
+            className="w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50"
           >
-            {loading ? 'Setting up...' : 'Start Tracking →'}
+            {loading ? 'Setting up…' : 'Start Tracking →'}
           </button>
         </div>
       </div>
@@ -127,7 +177,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
         <p className="text-slate-400 text-xs mb-1">{label}</p>
         <p className="text-white font-bold">£{Number(payload[0].value).toFixed(2)}</p>
         {payload[0].payload?.note && (
-          <p className="text-blue-400 text-xs mt-1">{payload[0].payload.note}</p>
+          <p className="text-orange-400 text-xs mt-1">{payload[0].payload.note}</p>
         )}
       </div>
     )
@@ -135,107 +185,212 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
 
   return (
     <div className="space-y-5">
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent" />
+
+      {/* LOSS LIMIT WARNING */}
+      {lossLimitTriggered && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex items-center gap-3">
+          <span className="text-red-400 text-xl">⚠</span>
+          <div>
+            <p className="text-red-300 font-bold text-sm">Loss limit reached — consider pausing</p>
+            <p className="text-red-400/70 text-xs">Your bankroll (£{currentBalance.toFixed(2)}) is at or below your configured limit (£{lossLimit}). Time to step away.</p>
+          </div>
+        </div>
+      )}
+      {lossLimitNear && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-center gap-3">
+          <span className="text-amber-400 text-xl">⚠</span>
+          <div>
+            <p className="text-amber-300 font-bold text-sm">Approaching your loss limit</p>
+            <p className="text-amber-400/70 text-xs">£{(currentBalance - lossLimit!).toFixed(2)} above your limit of £{lossLimit}. Bet responsibly.</p>
+          </div>
+        </div>
+      )}
+
+      {/* TOP STATS — 4 cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5">
           <p className="text-slate-500 text-[10px] uppercase tracking-widest font-semibold mb-3">Current Balance</p>
-          <p className="text-4xl font-black text-white leading-none">£{Number(currentBalance).toFixed(2)}</p>
+          <p className="text-3xl md:text-4xl font-black text-white leading-none">£{stats.current.toFixed(2)}</p>
         </div>
-        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent" />
-          <p className="text-slate-500 text-[10px] uppercase tracking-widest font-semibold mb-3">Starting Bankroll</p>
-          <p className="text-4xl font-black text-slate-400 leading-none">£{Number(starting).toFixed(2)}</p>
+        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5">
+          <p className="text-slate-500 text-[10px] uppercase tracking-widest font-semibold mb-3">Starting</p>
+          <p className="text-3xl md:text-4xl font-black text-slate-400 leading-none">£{stats.startingBalance.toFixed(2)}</p>
         </div>
-        <div className={`bg-[#0E1628] rounded-2xl p-5 relative overflow-hidden border ${pnl >= 0 ? 'border-emerald-500/20' : 'border-red-500/20'}`}>
-          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent" />
-          <p className="text-slate-500 text-[10px] uppercase tracking-widest font-semibold mb-3">Total Growth</p>
-          <p className={`text-4xl font-black leading-none ${pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+        <div className={`bg-[#0E1628] rounded-2xl p-5 border ${pnl >= 0 ? 'border-emerald-500/20' : 'border-red-500/20'}`}>
+          <p className="text-slate-500 text-[10px] uppercase tracking-widest font-semibold mb-3">Growth</p>
+          <p className={`text-3xl md:text-4xl font-black leading-none ${pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
             {pnl >= 0 ? '+' : ''}£{Math.abs(pnl).toFixed(2)}
           </p>
           <p className={`text-xs mt-1.5 ${pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-            {pnl >= 0 ? '▲' : '▼'} {Math.abs(Number(pnlPct))}% all time
+            {pnl >= 0 ? '▲' : '▼'} {Math.abs(stats.growthPct)}% all time
+          </p>
+        </div>
+        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5">
+          <p className="text-slate-500 text-[10px] uppercase tracking-widest font-semibold mb-3">Peak · Drawdown</p>
+          <p className="text-2xl md:text-3xl font-black text-orange-400 leading-none">£{stats.peak.toFixed(2)}</p>
+          <p className={`text-xs mt-1.5 ${stats.currentDrawdownPct < -5 ? 'text-red-400' : 'text-slate-500'}`}>
+            {stats.currentDrawdownPct === 0 ? 'at peak' : `${stats.currentDrawdownPct}% from peak`}
           </p>
         </div>
       </div>
 
-      {/* Chart */}
+      {/* UNIT SIZING + KELLY CALCULATOR — 2-col on desktop */}
+      <div className="grid md:grid-cols-2 gap-3">
+        {/* Unit sizing */}
+        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-white font-bold text-sm">Unit sizing</h3>
+            <span className="text-[10px] text-slate-500 uppercase tracking-wider">Browser-saved</span>
+          </div>
+          <p className="text-slate-500 text-xs mb-4">Set your standard stake as a % of bankroll. Used across the app.</p>
+          <div className="flex items-center gap-3">
+            <input
+              type="number" step="0.5" min="0.5" max="10"
+              value={unitPct}
+              onChange={e => saveUnitPct(Number(e.target.value) || 2)}
+              className="w-20 bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 py-2 text-white text-center focus:outline-none focus:border-orange-500/50"
+            />
+            <span className="text-slate-400 text-sm">% of bankroll</span>
+            <span className="text-slate-600 text-sm">=</span>
+            <span className="text-orange-400 font-bold text-lg">£{unitSize.toFixed(2)} / unit</span>
+          </div>
+          <div className="flex gap-2 mt-3">
+            {[1, 2, 3, 5].map(p => (
+              <button key={p} onClick={() => saveUnitPct(p)}
+                className={`text-[11px] font-semibold px-2.5 py-1 rounded-md transition-colors ${
+                  unitPct === p ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' : 'bg-white/[0.03] text-slate-500 hover:text-white border border-white/[0.06]'
+                }`}>
+                {p}%
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Kelly calculator */}
+        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-white font-bold text-sm">Kelly stake calculator</h3>
+            <div className="flex gap-1">
+              {([0.25, 0.5, 1] as const).map(f => (
+                <button key={f} onClick={() => setKFraction(f)}
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded transition-colors ${
+                    kFraction === f ? 'bg-orange-500/20 text-orange-300' : 'text-slate-500 hover:text-white'
+                  }`}>
+                  {f === 1 ? 'Full' : f === 0.5 ? 'Half' : 'Qtr'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="text-slate-500 text-xs mb-4">Optimal stake size given edge + odds. Half-Kelly recommended.</p>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div>
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider">Edge (EV%)</label>
+              <input type="number" value={kEdge} onChange={e => setKEdge(e.target.value)}
+                className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-orange-500/50"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider">Odds</label>
+              <input type="number" step="0.05" value={kOdds} onChange={e => setKOdds(e.target.value)}
+                className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-orange-500/50"
+              />
+            </div>
+          </div>
+          <div className="bg-orange-500/5 border border-orange-500/25 rounded-xl px-4 py-3 flex items-baseline justify-between">
+            <span className="text-orange-300/80 text-xs font-semibold">Suggested stake:</span>
+            <div>
+              <span className="text-orange-400 font-black text-2xl">£{kellyResult.toFixed(2)}</span>
+              <span className="text-slate-500 text-xs ml-2">({currentBalance > 0 ? ((kellyResult / currentBalance) * 100).toFixed(1) : 0}%)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* GROWTH CHART */}
       <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5">
-        <h3 className="text-white font-bold text-sm mb-5">Bankroll Growth</h3>
+        <h3 className="text-white font-bold text-sm mb-5">Bankroll growth</h3>
         {chartData.length > 1 ? (
           <ResponsiveContainer width="100%" height={260}>
             <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 10 }}>
               <defs>
                 <linearGradient id="bankrollGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#F97316" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#F97316" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-              <XAxis
-                dataKey="date"
-                stroke="#ffffff10"
-                tick={{ fill: '#64748b', fontSize: 11 }}
-                tickLine={false}
-              />
-              <YAxis
-                stroke="#ffffff10"
-                tick={{ fill: '#64748b', fontSize: 11 }}
-                tickFormatter={v => `£${v}`}
-                tickLine={false}
-              />
+              <XAxis dataKey="date" stroke="#ffffff10" tick={{ fill: '#64748b', fontSize: 11 }} tickLine={false} />
+              <YAxis stroke="#ffffff10" tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={v => `£${v}`} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
-              <ReferenceLine y={starting} stroke="#ffffff15" strokeDasharray="4 4" />
-              <Area
-                type="monotone"
-                dataKey="balance"
-                stroke="#3b82f6"
-                fill="url(#bankrollGrad)"
-                strokeWidth={2.5}
-                dot={{ fill: '#3b82f6', strokeWidth: 0, r: 3 }}
-                activeDot={{ fill: '#60a5fa', strokeWidth: 0, r: 5 }}
+              <ReferenceLine y={stats.startingBalance} stroke="#ffffff15" strokeDasharray="4 4" />
+              <Area type="monotone" dataKey="balance" stroke="#F97316" fill="url(#bankrollGrad)" strokeWidth={2.5}
+                dot={{ fill: '#F97316', strokeWidth: 0, r: 3 }}
+                activeDot={{ fill: '#FB923C', strokeWidth: 0, r: 5 }}
               />
             </AreaChart>
           </ResponsiveContainer>
         ) : (
           <div className="h-[260px] flex flex-col items-center justify-center gap-3">
-            <svg className="w-10 h-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
             <p className="text-slate-600 text-sm">Record more snapshots to see your growth chart</p>
           </div>
         )}
       </div>
 
-      {/* Record snapshot */}
+      {/* MONTHLY P&L */}
+      {months.length >= 1 && (
+        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5">
+          <h3 className="text-white font-bold text-sm mb-5">Monthly P&amp;L</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={months}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+              <XAxis dataKey="month" stroke="#ffffff10" tick={{ fill: '#64748b', fontSize: 11 }} tickLine={false} />
+              <YAxis stroke="#ffffff10" tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={v => `£${v}`} tickLine={false} />
+              <Tooltip
+                cursor={{ fill: '#ffffff05' }}
+                contentStyle={{ background: '#0E1628', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12 }}
+                formatter={(v: number) => [`£${v.toFixed(2)}`, 'P&L']}
+              />
+              <Bar dataKey="pnl" radius={[6, 6, 0, 0]}>
+                {months.map((m, i) => (
+                  <Cell key={i} fill={m.pnl >= 0 ? '#10B981' : '#EF4444'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* RECORD SNAPSHOT */}
       <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5">
-        <h3 className="text-white font-bold text-sm mb-4">Record Balance Snapshot</h3>
+        <h3 className="text-white font-bold text-sm mb-4">Record balance snapshot</h3>
         <div className="flex gap-3 flex-wrap">
-          <input
-            type="number"
-            value={newBalance}
-            onChange={e => setNewBalance(e.target.value)}
-            placeholder="Current balance (£)"
-            className="flex-1 min-w-[160px] bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500/50 transition-colors placeholder:text-slate-600"
-          />
-          <input
-            type="text"
-            value={note}
-            onChange={e => setNote(e.target.value)}
-            placeholder="Note (optional)"
-            className="flex-1 min-w-[160px] bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500/50 transition-colors placeholder:text-slate-600"
-          />
-          <button
-            onClick={recordBalance}
-            disabled={loading || !newBalance}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-2.5 rounded-xl transition-colors disabled:opacity-50 whitespace-nowrap"
-          >
+          <input type="number" value={newBalance} onChange={e => setNewBalance(e.target.value)} placeholder="Current balance (£)"
+            className="flex-1 min-w-[160px] bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-orange-500/50 placeholder:text-slate-600" />
+          <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Note (optional)"
+            className="flex-1 min-w-[160px] bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-orange-500/50 placeholder:text-slate-600" />
+          <button onClick={recordBalance} disabled={loading || !newBalance}
+            className="bg-orange-500 hover:bg-orange-400 text-white font-bold px-6 py-2.5 rounded-xl transition-colors disabled:opacity-50 whitespace-nowrap">
             {loading ? 'Saving…' : '+ Record'}
           </button>
         </div>
       </div>
 
-      {/* History */}
+      {/* VARIANCE SIMULATOR (collapsible) */}
+      <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl overflow-hidden">
+        <button onClick={() => setShowSim(!showSim)} className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/[0.02] transition-colors">
+          <div className="flex items-center gap-3">
+            <span className="text-orange-400">🎲</span>
+            <div className="text-left">
+              <p className="text-white font-bold text-sm">Variance simulator</p>
+              <p className="text-slate-500 text-xs">Monte Carlo — see the realistic range of outcomes over a season</p>
+            </div>
+          </div>
+          <span className={`text-orange-400 transition-transform ${showSim ? 'rotate-45' : ''}`}>+</span>
+        </button>
+        {showSim && <VarianceSim params={simParams} setParams={setSimParams} />}
+      </div>
+
+      {/* HISTORY */}
       {snapshots.length > 0 && (
         <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-white/[0.07]">
@@ -244,11 +399,11 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
           <div className="divide-y divide-white/[0.05] max-h-52 overflow-y-auto">
             {[...snapshots].reverse().map((s, i) => {
               const prev = [...snapshots].reverse()[i + 1]
-              const diff = prev ? s.balance - prev.balance : null
+              const diff = prev ? Number(s.balance) - Number(prev.balance) : null
               return (
                 <div key={s.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-white/[0.02] transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${i === 0 ? 'bg-blue-400' : 'bg-white/20'}`} />
+                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${i === 0 ? 'bg-orange-400' : 'bg-white/20'}`} />
                     <div>
                       <span className="text-slate-300 text-sm">
                         {new Date(s.recorded_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -270,6 +425,78 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Variance sim sub-component ──────────────────────────────────────────────
+function VarianceSim({ params, setParams }: { params: SimParams; setParams: (p: SimParams) => void }) {
+  const [result, setResult] = useState<ReturnType<typeof simulateVariance> | null>(null)
+  const [running, setRunning] = useState(false)
+
+  function run() {
+    setRunning(true)
+    // Let UI update first, then run the sim (blocking ~50-200ms for 1000 runs)
+    setTimeout(() => {
+      setResult(simulateVariance(params, 1000))
+      setRunning(false)
+    }, 20)
+  }
+
+  function Slider({ label, value, onChange, min, max, step, suffix }: { label: string; value: number; onChange: (n: number) => void; min: number; max: number; step: number; suffix?: string }) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-[11px] text-slate-500 uppercase tracking-wider">{label}</label>
+          <span className="text-orange-400 text-xs font-bold">{value}{suffix}</span>
+        </div>
+        <input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))}
+          className="w-full accent-orange-500" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="px-5 py-5 border-t border-white/[0.06] space-y-4">
+      <div className="grid md:grid-cols-2 gap-4">
+        <Slider label="Average edge" value={params.avgEdgePct} onChange={v => setParams({ ...params, avgEdgePct: v })} min={1} max={20} step={1} suffix="%" />
+        <Slider label="Average odds" value={params.avgOdds} onChange={v => setParams({ ...params, avgOdds: v })} min={1.3} max={4} step={0.1} />
+        <Slider label="Stake per bet" value={params.stakePct} onChange={v => setParams({ ...params, stakePct: v })} min={0.5} max={10} step={0.5} suffix="%" />
+        <Slider label="Bets per week" value={params.betsPerWeek} onChange={v => setParams({ ...params, betsPerWeek: v })} min={1} max={30} step={1} />
+        <Slider label="Weeks" value={params.weeks} onChange={v => setParams({ ...params, weeks: v })} min={4} max={52} step={1} />
+      </div>
+      <button onClick={run} disabled={running}
+        className="w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl transition-colors">
+        {running ? 'Simulating 1,000 seasons…' : 'Run simulation'}
+      </button>
+
+      {result && (
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 space-y-3">
+          <p className="text-slate-400 text-xs">
+            Starting from <span className="text-white font-semibold">£{params.bankroll.toFixed(2)}</span>, across <span className="text-white font-semibold">{params.weeks}</span> weeks of {params.betsPerWeek} bets/week at {params.stakePct}% stakes:
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <Stat label="Median outcome" value={`£${result.median.toFixed(0)}`} color="text-white" />
+            <Stat label="Pessimistic (10%)" value={`£${result.p10.toFixed(0)}`} color="text-red-400" />
+            <Stat label="Optimistic (10%)" value={`£${result.p90.toFixed(0)}`} color="text-emerald-400" />
+            <Stat label="Chance of bust" value={`${result.bustProb}%`} color={result.bustProb > 10 ? 'text-red-400' : 'text-slate-400'} />
+          </div>
+          <p className="text-slate-500 text-[11px] leading-relaxed">
+            {result.doubleProb}% of simulated seasons double your bankroll. {result.bustProb}% bust.
+            {result.bustProb > 15 && ' → Your stake size is too aggressive for this edge.'}
+            {result.bustProb < 5 && result.doubleProb > 40 && ' → Solid risk profile for this model.'}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Stat({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <div className="bg-[#0E1628] border border-white/[0.06] rounded-lg px-3 py-2 text-center">
+      <p className={`${color} font-bold text-base leading-none`}>{value}</p>
+      <p className="text-slate-600 text-[10px] uppercase tracking-wider mt-1">{label}</p>
     </div>
   )
 }
