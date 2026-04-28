@@ -18,6 +18,15 @@ const supabaseAdmin = createAdmin(
 // then again until end of day. Reduces OpenAI cost ~8x as a side effect.
 export const revalidate = 14400
 
+// Vercel function timeout — needs to be high because we make ~325 API-Football calls
+// (25 leagues × 5 fixture/odds/injuries/standings calls + 40 fixtures × 5 form/H2H/stats calls)
+// plus a GPT-4o completion. Pro plan allows up to 60s.
+export const maxDuration = 60
+
+// Track silent API-Football failures so we can surface them in the response
+type FetchDiag = { path: string; reason: string; status?: number }
+const fetchDiagnostics: FetchDiag[] = []
+
 function getCurrentSeason(): number {
   const now = new Date()
   const month = now.getMonth() + 1
@@ -31,16 +40,51 @@ function getDatePlusDays(days: number) {
   return d.toISOString().split('T')[0]
 }
 
-async function apiFetch(path: string) {
+async function apiFetch(path: string, diag?: FetchDiag[]) {
   try {
     const res = await fetch(`${BASE}${path}`, {
       headers: { 'x-apisports-key': API_KEY },
       next: { revalidate: 1800 },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      const reason = res.status === 429 ? 'rate_limited' : `http_${res.status}`
+      ;(diag || fetchDiagnostics).push({ path, reason, status: res.status })
+      console.warn(`[apiFetch] ${reason} ${res.status} ${path}`)
+      return null
+    }
     const json = await res.json()
+    // API-Football returns errors[] inside a 200 response when something is wrong
+    if (json?.errors && (Array.isArray(json.errors) ? json.errors.length : Object.keys(json.errors).length)) {
+      ;(diag || fetchDiagnostics).push({ path, reason: `api_error:${JSON.stringify(json.errors)}` })
+      console.warn(`[apiFetch] api_error ${path}`, json.errors)
+    }
     return json.response || null
-  } catch { return null }
+  } catch (e: any) {
+    ;(diag || fetchDiagnostics).push({ path, reason: `exception:${e.message}` })
+    console.warn(`[apiFetch] exception ${path}`, e.message)
+    return null
+  }
+}
+
+// Run a list of async tasks in parallel, but in chunks of `concurrency`.
+// Avoids the burst that trips API-Football's per-second rate-limit smoothing.
+// Optional `interBatchDelayMs` adds a fixed pause between batches.
+async function batchedAll<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>,
+  interBatchDelayMs: number = 0
+): Promise<R[]> {
+  const results: R[] = []
+  for (let i = 0; i < items.length; i += concurrency) {
+    const batch = items.slice(i, i + concurrency)
+    const batchResults = await Promise.all(batch.map(fn))
+    results.push(...batchResults)
+    if (interBatchDelayMs > 0 && i + concurrency < items.length) {
+      await new Promise(r => setTimeout(r, interBatchDelayMs))
+    }
+  }
+  return results
 }
 
 // Extract odds from Bet365 bookmaker response
@@ -201,15 +245,23 @@ export async function GET(request: Request) {
 
     const tomorrow = getDatePlusDays(1)
 
-    // Fetch fixtures + Bet365 odds per league in parallel
-    const leagueResults = await Promise.all(
-      TOP_LEAGUES.map(async (league) => {
+    // Reset diagnostics for this request
+    fetchDiagnostics.length = 0
+    const requestDiag: FetchDiag[] = []
+
+    // Fetch fixtures + Bet365 odds per league.
+    // Batched: 2 leagues at a time × 5 calls each = 10 in-flight max,
+    // with a 1000ms breather between batches.
+    // 25 leagues / 2 = 13 batches × ~1.5s = ~20s for league setup.
+    // ~6.7 calls/sec sustained — well under API-Football Pro's 7.5/sec average.
+    // Earlier attempts at concurrency=3+400ms still tripped per-minute smoothing.
+    const leagueResults = await batchedAll(TOP_LEAGUES, 2, async (league) => {
         const [fixtures, oddsToday, oddsTomorrow, injuries, standings] = await Promise.all([
-          apiFetch(`/fixtures?league=${league.id}&season=${season}&from=${today}&to=${in3days}&status=NS`),
-          apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}`),     // all bookmakers today
-          apiFetch(`/odds?league=${league.id}&season=${season}&date=${tomorrow}`),  // all bookmakers tomorrow
-          apiFetch(`/injuries?league=${league.id}&season=${season}&date=${today}`),
-          apiFetch(`/standings?league=${league.id}&season=${season}`),
+          apiFetch(`/fixtures?league=${league.id}&season=${season}&from=${today}&to=${in3days}&status=NS`, requestDiag),
+          apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}`, requestDiag),     // all bookmakers today
+          apiFetch(`/odds?league=${league.id}&season=${season}&date=${tomorrow}`, requestDiag),  // all bookmakers tomorrow
+          apiFetch(`/injuries?league=${league.id}&season=${season}&date=${today}`, requestDiag),
+          apiFetch(`/standings?league=${league.id}&season=${season}`, requestDiag),
         ])
 
         // Build teamId → league position map
@@ -273,10 +325,36 @@ export async function GET(request: Request) {
           _homePosition: standingMap[f.teams?.home?.id] ?? null,
           _awayPosition: standingMap[f.teams?.away?.id] ?? null,
         }))
-      })
-    )
+      }, 1000) // 1s breather between batches
 
-    const allFixtures = leagueResults.flat().slice(0, 40)
+    // Round-robin across leagues so every league with fixtures gets at least one slot
+    // before any league gets a second. Naive .flat().slice(0, N) takes everything
+    // from the first few leagues in TOP_LEAGUES order — Premier/LaLiga/SerieA/Bundesliga
+    // alone fill 16 slots and silently shut out UCL, Championship, Saudi, etc.
+    function roundRobinPick<T>(perLeague: T[][], cap: number): T[] {
+      const picked: T[] = []
+      let round = 0
+      while (picked.length < cap) {
+        let added = 0
+        for (const league of perLeague) {
+          if (round < league.length) {
+            picked.push(league[round])
+            added++
+            if (picked.length >= cap) break
+          }
+        }
+        if (added === 0) break // every league exhausted
+        round++
+      }
+      return picked
+    }
+    // Cap at 18 fixtures: 18 × 5 per-fixture calls = 90 calls in the form-fetch phase.
+    // With league-phase ~125 calls, total ≈ 215 calls in ≈30s — fits 450/min limit.
+    const allFixtures = roundRobinPick(leagueResults, 18)
+
+    // Inter-phase breather: lets the per-minute window slide before we burst again.
+    // Without this, league + form phases combine into one ~30s burst that crests 450/min.
+    if (allFixtures.length > 0) await new Promise(r => setTimeout(r, 2000))
 
     if (allFixtures.length === 0) {
       return NextResponse.json(
@@ -285,25 +363,26 @@ export async function GET(request: Request) {
       )
     }
 
-    // ── Fetch form, H2H + team stats per fixture in parallel ──────────────────
-    const formData = await Promise.all(
-      allFixtures.map(async (f: any) => {
-        const homeId = f.teams?.home?.id
-        const awayId = f.teams?.away?.id
-        const leagueId = f._leagueId
-        if (!homeId || !awayId) return { homeId: null, awayId: null, homeForm: null, awayForm: null, h2h: null, homeStats: null, awayStats: null }
-        const [homeForm, awayForm, h2h, homeStatsRaw, awayStatsRaw] = await Promise.all([
-          apiFetch(`/fixtures?team=${homeId}&last=5`),
-          apiFetch(`/fixtures?team=${awayId}&last=5`),
-          apiFetch(`/fixtures/headtohead?h2h=${homeId}-${awayId}&last=5`),
-          apiFetch(`/teams/statistics?league=${leagueId}&season=${season}&team=${homeId}`),
-          apiFetch(`/teams/statistics?league=${leagueId}&season=${season}&team=${awayId}`),
-        ])
-        const homeStats = extractTeamStats(homeStatsRaw, f._homePosition)
-        const awayStats = extractTeamStats(awayStatsRaw, f._awayPosition)
-        return { homeId, awayId, homeForm, awayForm, h2h, homeStats, awayStats }
-      })
-    )
+    // ── Fetch form, H2H + team stats per fixture (chunked) ────────────────────
+    // 2 fixtures at a time × 5 calls each = 10 in-flight, with 1000ms breathers.
+    // 16 fixtures / 2 = 8 batches × ~1.5s = ~12s for the form phase.
+    // Matches the league phase pacing to keep us under the 450/min ceiling.
+    const formData = await batchedAll(allFixtures, 2, async (f: any) => {
+      const homeId = f.teams?.home?.id
+      const awayId = f.teams?.away?.id
+      const leagueId = f._leagueId
+      if (!homeId || !awayId) return { homeId: null, awayId: null, homeForm: null, awayForm: null, h2h: null, homeStats: null, awayStats: null }
+      const [homeForm, awayForm, h2h, homeStatsRaw, awayStatsRaw] = await Promise.all([
+        apiFetch(`/fixtures?team=${homeId}&last=5`, requestDiag),
+        apiFetch(`/fixtures?team=${awayId}&last=5`, requestDiag),
+        apiFetch(`/fixtures/headtohead?h2h=${homeId}-${awayId}&last=5`, requestDiag),
+        apiFetch(`/teams/statistics?league=${leagueId}&season=${season}&team=${homeId}`, requestDiag),
+        apiFetch(`/teams/statistics?league=${leagueId}&season=${season}&team=${awayId}`, requestDiag),
+      ])
+      const homeStats = extractTeamStats(homeStatsRaw, f._homePosition)
+      const awayStats = extractTeamStats(awayStatsRaw, f._awayPosition)
+      return { homeId, awayId, homeForm, awayForm, h2h, homeStats, awayStats }
+    }, 1000)
 
     // Build prompt with real odds, injuries, form, and H2H
     // Include implied market probabilities so the AI anchors to them instead of hallucinating
@@ -528,7 +607,17 @@ Return JSON with this exact structure:
       console.error('Failed to save predictions to DB:', dbErr)
     }
 
-    return NextResponse.json({ success: true, predictions })
+    // Surface league coverage + silent API-Football failures for visibility
+    const leaguesWithFixtures = Array.from(new Set(allFixtures.map((f: any) => f._leagueName)))
+    const meta = {
+      leagues_attempted: TOP_LEAGUES.length,
+      leagues_with_fixtures: leaguesWithFixtures.length,
+      fixture_count: allFixtures.length,
+      league_names: leaguesWithFixtures,
+      api_failures: requestDiag.length,
+      api_failure_sample: requestDiag.slice(0, 10),
+    }
+    return NextResponse.json({ success: true, predictions, meta })
   } catch (err) {
     console.error('Predictions error:', err)
     return NextResponse.json({ success: false, error: 'Failed to generate predictions' }, { status: 500 })
