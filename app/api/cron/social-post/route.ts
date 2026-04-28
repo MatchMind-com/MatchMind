@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
+import { createClient as createAdmin } from '@supabase/supabase-js'
+import { buildDailyAcca, formatAccaTweet } from '@/lib/daily-acca'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
+
+const supabaseAdmin = createAdmin(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -409,11 +416,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, message: 'No predictions today — nothing posted' })
   }
 
-  const results: Record<string, { success: boolean; error?: string }> = {}
+  const results: Record<string, any> = {}
 
-  // ── Twitter ──
+  // ── Twitter (individual picks thread) ──
   const tweets = buildTweetThread(predictions)
   results.twitter = await postToTwitter(tweets)
+
+  // ── Daily Social ACCA ──
+  // Build the canonical Balanced-tier ACCA, persist it, then tweet it as a
+  // separate standalone tweet (more visibility than a thread reply). Grading
+  // is handled by /api/cron/check-predictions on its next run.
+  results.daily_acca = await runDailyAccaPipeline(predictions as any[])
 
   // ── Reddit ──
   const { title, text } = buildRedditPost(predictions)
@@ -434,4 +447,94 @@ export async function GET(request: Request) {
     predictions_count: predictions.length,
     results,
   })
+}
+
+// ─── Daily Social ACCA pipeline ───────────────────────────────────────────────
+
+async function runDailyAccaPipeline(predictions: any[]): Promise<{ success: boolean; error?: string; tweet_id?: string; combined_odds?: number; legs_count?: number }> {
+  const acca = buildDailyAcca(predictions)
+  if (!acca) return { success: false, error: 'Could not build ACCA — not enough +EV legs today' }
+
+  const today = new Date().toISOString().split('T')[0]
+
+  // 1. Persist FIRST (atomic-ish — if tweet fails we still have the row to retry later)
+  let accaId: string | null = null
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('daily_accas')
+      .upsert({
+        date: today,
+        tier: acca.tier,
+        legs: acca.legs,
+        combined_odds: acca.combined_odds,
+        combined_implied_prob: acca.combined_implied_prob,
+        legs_total: acca.legs.length,
+      }, { onConflict: 'date,tier' })
+      .select('id')
+      .single()
+    if (error) {
+      // Most likely cause: daily_accas table doesn't exist yet (migration not applied).
+      // Don't crash the whole cron — just skip ACCA flow and log.
+      console.warn('[daily-acca] persist failed (table missing?):', error.message)
+      return { success: false, error: `persist_failed: ${error.message}` }
+    }
+    accaId = data?.id
+  } catch (e: any) {
+    console.warn('[daily-acca] persist exception:', e.message)
+    return { success: false, error: `persist_exception: ${e.message}` }
+  }
+
+  // 2. Tweet it as a standalone post
+  const tweetText = formatAccaTweet(acca)
+  let tweetId: string | undefined
+  try {
+    const apiKey = process.env.TWITTER_API_KEY
+    const apiSecret = process.env.TWITTER_API_SECRET
+    const accessToken = process.env.TWITTER_ACCESS_TOKEN
+    const accessSecret = process.env.TWITTER_ACCESS_SECRET
+    if (!apiKey || !apiSecret || !accessToken || !accessSecret) {
+      return { success: false, error: 'twitter_credentials_missing', combined_odds: acca.combined_odds, legs_count: acca.legs.length }
+    }
+    const url = 'https://api.twitter.com/2/tweets'
+    const nonce = crypto.randomBytes(16).toString('hex')
+    const timestamp = Math.floor(Date.now() / 1000).toString()
+    const oauthParams: Record<string, string> = {
+      oauth_consumer_key: apiKey,
+      oauth_nonce: nonce,
+      oauth_signature_method: 'HMAC-SHA1',
+      oauth_timestamp: timestamp,
+      oauth_token: accessToken,
+      oauth_version: '1.0',
+    }
+    const sortedParams = Object.keys(oauthParams).sort()
+      .map(k => `${encodeURIComponent(k)}=${encodeURIComponent(oauthParams[k])}`)
+      .join('&')
+    const sigBase = `POST&${encodeURIComponent(url)}&${encodeURIComponent(sortedParams)}`
+    const sigKey = `${encodeURIComponent(apiSecret)}&${encodeURIComponent(accessSecret)}`
+    oauthParams.oauth_signature = crypto.createHmac('sha1', sigKey).update(sigBase).digest('base64')
+    const auth = 'OAuth ' + Object.keys(oauthParams)
+      .map(k => `${encodeURIComponent(k)}="${encodeURIComponent(oauthParams[k])}"`)
+      .join(', ')
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: auth, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: tweetText }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      return { success: false, error: `twitter_http_${res.status}: ${JSON.stringify(data).slice(0, 200)}`, combined_odds: acca.combined_odds, legs_count: acca.legs.length }
+    }
+    tweetId = data.data?.id
+  } catch (e: any) {
+    return { success: false, error: `twitter_exception: ${e.message}`, combined_odds: acca.combined_odds, legs_count: acca.legs.length }
+  }
+
+  // 3. Patch the row with the tweet ID
+  if (accaId && tweetId) {
+    await supabaseAdmin.from('daily_accas')
+      .update({ tweet_id: tweetId, tweet_posted_at: new Date().toISOString() })
+      .eq('id', accaId)
+  }
+
+  return { success: true, tweet_id: tweetId, combined_odds: acca.combined_odds, legs_count: acca.legs.length }
 }

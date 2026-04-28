@@ -197,11 +197,75 @@ export async function GET(req: NextRequest) {
       checked++
     }
 
+    // ── Daily ACCA grading ────────────────────────────────────────────────
+    // After individual picks have been graded, resolve any pending daily_accas:
+    // an ACCA wins iff every leg's prediction_records row has result='win'.
+    // Skip silently if the daily_accas table doesn't exist yet (pre-migration).
+    let accasGraded = 0
+    let accasWon = 0
+    let accasLost = 0
+    try {
+      const { data: pendingAccas, error: accaErr } = await supabaseAdmin
+        .from('daily_accas')
+        .select('*')
+        .is('result', null)
+        .lt('date', new Date().toISOString().split('T')[0]) // strictly before today (all legs resolved)
+        .limit(20)
+
+      if (!accaErr && pendingAccas) {
+        for (const acca of pendingAccas) {
+          const legs: any[] = Array.isArray(acca.legs) ? acca.legs : []
+          if (legs.length === 0) continue
+
+          // Look up each leg's graded result. We match by fixture_id + prediction
+          // (the same composite key prediction_records is uniquely keyed on).
+          let legsWon = 0
+          let allResolved = true
+          for (const leg of legs) {
+            const { data: rows } = await supabaseAdmin
+              .from('prediction_records')
+              .select('result')
+              .eq('fixture_id', leg.fixture_id)
+              .eq('prediction', leg.prediction)
+              .limit(1)
+            const r = rows?.[0]?.result
+            if (r === 'win') legsWon++
+            else if (r === 'loss') { /* keep counting wins for partial display */ }
+            else { allResolved = false; break }
+          }
+
+          if (!allResolved) continue // wait for next run
+
+          const accaResult: 'win' | 'loss' = legsWon === legs.length ? 'win' : 'loss'
+          const profitLoss = accaResult === 'win'
+            ? Math.round((acca.combined_odds - 1) * 100) / 100
+            : -1
+
+          await supabaseAdmin
+            .from('daily_accas')
+            .update({
+              result: accaResult,
+              profit_loss: profitLoss,
+              legs_won: legsWon,
+              graded_at: new Date().toISOString(),
+            })
+            .eq('id', acca.id)
+
+          accasGraded++
+          if (accaResult === 'win') accasWon++; else accasLost++
+        }
+      }
+    } catch (e: any) {
+      // Table missing or other error — log and continue
+      console.warn('[acca-grading] skipped:', e.message)
+    }
+
     return NextResponse.json({
       message: `Checked ${checked} predictions`,
       checked, wins, losses,
       clv_updated: clvUpdated,
       pending_remaining: pending.length - checked,
+      accas: { graded: accasGraded, won: accasWon, lost: accasLost },
     })
   } catch (err: any) {
     console.error('Check predictions cron error:', err)

@@ -1,11 +1,15 @@
 import Link from 'next/link'
 import PublicFooter from '@/components/layout/PublicFooter'
 
+// Lowered from 3600 → 300 so newly graded picks appear within 5 min
+// (matches the API's revalidate). Track-record credibility benefits from freshness.
+export const revalidate = 300
+
 async function getTrackRecord() {
   try {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'}/api/track-record`,
-      { next: { revalidate: 3600 } }
+      { next: { revalidate: 300 } }
     )
     if (!res.ok) throw new Error()
     return await res.json()

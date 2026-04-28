@@ -2,11 +2,16 @@ import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 
 // Ad-hoc Twitter posting endpoint.
-// POST { tweets: string[], thread?: boolean }
+// POST { tweets: (string | { text: string, replyToId?: string })[], thread?: boolean }
 // Auth: Authorization: Bearer ${CRON_SECRET}
 //
-// If thread=true, tweets are posted as a single thread (each replies to the previous).
-// If thread=false (default), tweets are posted as standalone independent tweets.
+// Tweet items can be a plain string OR { text, replyToId }. When replyToId is
+// set, that tweet is posted as a reply to the given existing tweet ID
+// (used for "✅ HIT" follow-ups on original picks).
+// If thread=true, tweets without replyToId are posted as a thread (each replies to previous).
+// If thread=false (default), tweets without replyToId are standalone.
+
+type TweetItem = string | { text: string; replyToId?: string }
 
 export async function POST(request: Request) {
   const authHeader = request.headers.get('authorization')
@@ -14,7 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { tweets?: string[]; thread?: boolean }
+  let body: { tweets?: TweetItem[]; thread?: boolean }
   try {
     body = await request.json()
   } catch {
@@ -63,17 +68,23 @@ export async function POST(request: Request) {
   }
 
   const results: Array<{ idx: number; ok: boolean; id?: string; error?: string; url?: string }> = []
-  let replyToId: string | undefined
+  let threadReplyToId: string | undefined
 
   for (let i = 0; i < tweets.length; i++) {
-    const text = tweets[i]
+    const item = tweets[i]
+    // Normalise into { text, replyToId? }
+    const tweet = typeof item === 'string' ? { text: item } : item
+    const text = tweet?.text
     if (typeof text !== 'string' || text.trim().length === 0) {
       results.push({ idx: i + 1, ok: false, error: 'Empty tweet text' })
       continue
     }
     const url = 'https://api.twitter.com/2/tweets'
     const reqBody: Record<string, unknown> = { text }
-    if (asThread && replyToId) reqBody.reply = { in_reply_to_tweet_id: replyToId }
+
+    // Reply precedence: explicit replyToId on the item > thread chain
+    const targetReplyId = tweet.replyToId || (asThread ? threadReplyToId : undefined)
+    if (targetReplyId) reqBody.reply = { in_reply_to_tweet_id: targetReplyId }
 
     try {
       const auth = oauthSign('POST', url)
@@ -89,7 +100,7 @@ export async function POST(request: Request) {
       } else {
         const id = data.data?.id
         results.push({ idx: i + 1, ok: true, id, url: `https://x.com/Match_Mind_AI/status/${id}` })
-        if (asThread) replyToId = id
+        if (asThread) threadReplyToId = id
         // Brief pacing to preserve order and avoid burst rate limits
         if (i < tweets.length - 1) await new Promise(r => setTimeout(r, 1200))
       }
