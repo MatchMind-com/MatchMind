@@ -8,6 +8,17 @@ const supabaseAdmin = createAdmin(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// Allow the static command-center HTML at file:// to fetch this endpoint
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS })
+}
+
 export async function GET() {
   try {
     const [
@@ -28,7 +39,7 @@ export async function GET() {
       ai_accuracy: 61,
       value_bets_today: 9,
       leagues_covered: 15,
-    })
+    }, { headers: CORS_HEADERS })
   } catch {
     return NextResponse.json({
       users: 0,
@@ -37,6 +48,6 @@ export async function GET() {
       ai_accuracy: 61,
       value_bets_today: 9,
       leagues_covered: 15,
-    })
+    }, { headers: CORS_HEADERS })
   }
 }

@@ -1,7 +1,21 @@
 import { NextResponse } from 'next/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 
-export const revalidate = 3600 // 1 hour cache
+// Lowered from 3600 → 300 so newly graded picks (and editorial inserts) appear
+// within 5 min of kickoff verification. Track-record credibility benefits from
+// freshness; the underlying Supabase query is cheap (~50ms).
+export const revalidate = 300
+
+// Allow the static command-center HTML at file:// to fetch this endpoint
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS })
+}
 
 const supabaseAdmin = createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -169,9 +183,9 @@ export async function GET() {
       recent,
       chartData,
       topCLV,
-    })
+    }, { headers: CORS_HEADERS })
   } catch (err: any) {
     console.error('Track record API error:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: err.message }, { status: 500, headers: CORS_HEADERS })
   }
 }
