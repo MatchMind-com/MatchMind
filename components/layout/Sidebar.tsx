@@ -80,8 +80,9 @@ const NAV: Array<{
 }> = [
   { href: '/dashboard', label: 'Home', icon: <IconHome />, exact: true },
   {
-    // Phase 3 will build /dashboard/picks; until then, send users to predictions.
-    href: '/dashboard/predictions',
+    // Phase 3: new editorial Picks page (Today / Tomorrow / Weekend / Live / Accumulators).
+    // Old /dashboard/predictions and /dashboard/live still resolve so any external links keep working.
+    href: '/dashboard/picks',
     label: 'Picks',
     icon: <IconPicks />,
     matches: ['/dashboard/picks', '/dashboard/predictions', '/dashboard/live'],
