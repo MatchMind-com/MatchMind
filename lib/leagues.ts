@@ -28,7 +28,7 @@ export const TRACKED_LEAGUES: readonly TrackedLeague[] = [
   { id: 61,  name: 'Ligue 1',                country: 'France',        flag: '🇫🇷', tier: 1 },
   { id: 2,   name: 'UEFA Champions League',  country: 'Europe',        flag: '🏆', tier: 1 },
   { id: 3,   name: 'UEFA Europa League',     country: 'Europe',        flag: '🥈', tier: 1 },
-  { id: 848, name: 'UEFA Conference League', country: 'Europe',        flag: '🥉', tier: 1 },
+  { id: 848, name: 'UEFA Europa Conference League', country: 'Europe', flag: '🥉', tier: 1 },
 
   // ── Tier 2: Mid-tier European + N. American ────────────────────────────
   { id: 88,  name: 'Eredivisie',             country: 'Netherlands',   flag: '🇳🇱', tier: 2 },
