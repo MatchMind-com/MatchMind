@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
+import { getSofaScoreLiveStats, type SofaScoreStats } from '@/lib/sofascore'
 
 const API_KEY = process.env.API_FOOTBALL_KEY!
 const BASE = 'https://v3.football.api-sports.io'
@@ -88,19 +89,66 @@ export async function POST(req: NextRequest) {
 
   const homeTeamStats = statsResp?.find((s: any) => s.team?.id === homeId)?.statistics || []
   const awayTeamStats = statsResp?.find((s: any) => s.team?.id === awayId)?.statistics || []
-  const homeXg = extractStat(homeTeamStats, 'expected_goals')
-  const awayXg = extractStat(awayTeamStats, 'expected_goals')
-  const homeShots = extractStat(homeTeamStats, 'Total Shots')
-  const awayShots = extractStat(awayTeamStats, 'Total Shots')
-  const homeCorners = extractStat(homeTeamStats, 'Corner Kicks')
-  const awayCorners = extractStat(awayTeamStats, 'Corner Kicks')
-  const homeRed = extractStat(homeTeamStats, 'Red Cards') || 0
-  const awayRed = extractStat(awayTeamStats, 'Red Cards') || 0
-  const homeYellow = extractStat(homeTeamStats, 'Yellow Cards') || 0
-  const awayYellow = extractStat(awayTeamStats, 'Yellow Cards') || 0
-  const homePossession = extractStat(homeTeamStats, 'Ball Possession')
-  const awayPossession = extractStat(awayTeamStats, 'Ball Possession')
+  let homeXg = extractStat(homeTeamStats, 'expected_goals')
+  let awayXg = extractStat(awayTeamStats, 'expected_goals')
+  let homeShots = extractStat(homeTeamStats, 'Total Shots')
+  let awayShots = extractStat(awayTeamStats, 'Total Shots')
+  let homeShotsOnTarget = extractStat(homeTeamStats, 'Shots on Goal')
+  let awayShotsOnTarget = extractStat(awayTeamStats, 'Shots on Goal')
+  let homeCorners = extractStat(homeTeamStats, 'Corner Kicks')
+  let awayCorners = extractStat(awayTeamStats, 'Corner Kicks')
+  let homeRed = extractStat(homeTeamStats, 'Red Cards') || 0
+  let awayRed = extractStat(awayTeamStats, 'Red Cards') || 0
+  let homeYellow = extractStat(homeTeamStats, 'Yellow Cards') || 0
+  let awayYellow = extractStat(awayTeamStats, 'Yellow Cards') || 0
+  let homePossession = extractStat(homeTeamStats, 'Ball Possession')
+  let awayPossession = extractStat(awayTeamStats, 'Ball Possession')
+  let homePassAccuracy: number | null = null
+  let awayPassAccuracy: number | null = null
+  let homeDangerousAttacks: number | null = null
+  let awayDangerousAttacks: number | null = null
+  let homeSaves: number | null = null
+  let awaySaves: number | null = null
+  let momentumAvg: number | null = null
   const odds = pickBookmakerOdds(oddsResp)
+
+  // SofaScore fallback — same logic as /api/live-copilot.
+  const needsFallback =
+    homeShots === null || homeXg === null || homeCorners === null
+  let sofa: SofaScoreStats | null = null
+  if (needsFallback && homeName && awayName) {
+    try {
+      sofa = await getSofaScoreLiveStats(homeName, awayName)
+    } catch (e) {
+      console.warn('[live-copilot/chat] SofaScore fallback failed:', e)
+    }
+  }
+  if (sofa) {
+    homeShots = homeShots ?? sofa.shots.home
+    awayShots = awayShots ?? sofa.shots.away
+    homeShotsOnTarget = homeShotsOnTarget ?? sofa.shotsOnTarget.home
+    awayShotsOnTarget = awayShotsOnTarget ?? sofa.shotsOnTarget.away
+    homeXg = homeXg ?? sofa.xg.home
+    awayXg = awayXg ?? sofa.xg.away
+    homeCorners = homeCorners ?? sofa.corners.home
+    awayCorners = awayCorners ?? sofa.corners.away
+    homePossession = homePossession ?? sofa.possession.home
+    awayPossession = awayPossession ?? sofa.possession.away
+    if (homeYellow === 0) homeYellow = sofa.yellowCards.home
+    if (awayYellow === 0) awayYellow = sofa.yellowCards.away
+    if (homeRed === 0) homeRed = sofa.redCards.home
+    if (awayRed === 0) awayRed = sofa.redCards.away
+    homePassAccuracy = sofa.passAccuracy.home
+    awayPassAccuracy = sofa.passAccuracy.away
+    homeDangerousAttacks = sofa.dangerousAttacks.home
+    awayDangerousAttacks = sofa.dangerousAttacks.away
+    homeSaves = sofa.saves.home
+    awaySaves = sofa.saves.away
+    if (sofa.momentum && sofa.momentum.length >= 10) {
+      const recent = sofa.momentum.slice(-10)
+      momentumAvg = recent.reduce((a, b) => a + b, 0) / recent.length
+    }
+  }
 
   // Only include stat lines we actually have. Lower-tier leagues often
   // return null for shots/xG/corners/possession — saying "0" or "n/a" misleads
@@ -111,9 +159,22 @@ export async function POST(req: NextRequest) {
   ]
   if (homeXg !== null || awayXg !== null) lines.push(`xG: ${homeXg ?? '?'} - ${awayXg ?? '?'}`)
   if (homeShots !== null || awayShots !== null) lines.push(`Shots: ${homeShots ?? '?'} - ${awayShots ?? '?'}`)
+  if (homeShotsOnTarget !== null || awayShotsOnTarget !== null) lines.push(`Shots on target: ${homeShotsOnTarget ?? '?'} - ${awayShotsOnTarget ?? '?'}`)
   if (homeCorners !== null || awayCorners !== null) lines.push(`Corners: ${homeCorners ?? '?'} - ${awayCorners ?? '?'}`)
   if ((homeYellow + homeRed + awayYellow + awayRed) > 0) lines.push(`Cards: ${homeName} ${homeYellow}Y/${homeRed}R | ${awayName} ${awayYellow}Y/${awayRed}R`)
   if (homePossession !== null || awayPossession !== null) lines.push(`Possession: ${homePossession ?? '?'}% - ${awayPossession ?? '?'}%`)
+  if (homePassAccuracy !== null && awayPassAccuracy !== null && Math.abs(homePassAccuracy - awayPassAccuracy) >= 8) {
+    lines.push(`Pass accuracy (skewed): ${homePassAccuracy}% - ${awayPassAccuracy}%`)
+  }
+  if (homeDangerousAttacks !== null || awayDangerousAttacks !== null) {
+    lines.push(`Dangerous attacks: ${homeDangerousAttacks ?? '?'} - ${awayDangerousAttacks ?? '?'}`)
+  }
+  if (homeSaves !== null || awaySaves !== null) {
+    lines.push(`Saves: ${homeSaves ?? '?'} - ${awaySaves ?? '?'}`)
+  }
+  if (momentumAvg !== null && Math.abs(momentumAvg) >= 25) {
+    lines.push(`Attack momentum (last 10 mins, +home / -away): avg ${momentumAvg.toFixed(0)}`)
+  }
   lines.push(`Match-winner odds: Home ${odds.home ?? 'n/a'} / Draw ${odds.draw ?? 'n/a'} / Away ${odds.away ?? 'n/a'}`)
   const hasDetailedStats = (homeShots !== null || homeXg !== null || homeCorners !== null || homePossession !== null)
 
@@ -137,7 +198,7 @@ ${hasDetailedStats ? '' : '\n(NOTE: Detailed shot/xG/corner stats are not tracke
         {
           role: 'system',
           content:
-            "You are MatchMind's Live Co-Pilot — a calm, analytical football betting assistant. The user is watching a live match and chatting with you about it. Stay observational and respectful, never dismissive. Use the live state provided to ground your answers. CRITICAL: only reference stats explicitly listed in the state block — if shots/corners/xG aren't shown, those stats simply aren't tracked by our data provider for this league. Don't say 'no shots taken' or 'no corners' based on missing data; say plainly 'I don't have detailed shot/corner stats for this league' and pivot to score, minute, momentum, or odds. Keep replies to 1-3 short sentences. Don't invent numbers.",
+            "You are MatchMind's Live Co-Pilot — a calm, analytical football betting assistant. The user is watching a live match and chatting with you about it. Stay observational and respectful, never dismissive. Use the live state provided to ground your answers. CRITICAL: only reference stats explicitly listed in the state block — if shots/corners/xG aren't shown, those stats simply aren't tracked by our data provider for this league. Don't say 'no shots taken' or 'no corners' based on missing data; say plainly 'I don't have detailed shot/corner stats for this league' and pivot to score, minute, momentum, or odds. When richer stats are present (shots on target, dangerous attacks, pass accuracy, saves, attack momentum), weave them in only when they meaningfully answer the user — don't dump them all. Keep replies to 1-3 short sentences. Don't invent numbers.",
         },
         { role: 'system', content: stateBlock },
         ...historyMessages,
