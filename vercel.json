@@ -17,8 +17,16 @@
       "schedule": "0 5 * * *"
     },
     {
-      "path": "/api/cron/refresh-predictions",
+      "path": "/api/cron/refresh-predictions-tier1",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-predictions-tier2",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-predictions-tier3",
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/cron/daily-digest",

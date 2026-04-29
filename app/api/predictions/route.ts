@@ -1,23 +1,17 @@
 /**
  * /api/predictions — public cache reader
  *
- * This route ONLY reads from the predictions_cache table in Supabase.
- * The heavy work (API-Football + GPT-4o) happens in /api/cron/refresh-predictions,
- * which runs every 6 hours and writes the result to that table.
+ * Reads from predictions_by_league (one row per league, written by the 3 tiered crons).
+ * Falls back to the legacy single-row predictions_cache if the per-league table is empty
+ * (e.g., during the initial migration window).
  *
- * Result: this route always returns in <200ms regardless of Vercel plan or timeout.
- * The predictions page will never 504 again.
- *
- * Cache age: returned in meta.generated_at. The cron refreshes every 6h so the
- * max staleness is 6h — acceptable for daily betting picks.
+ * Always returns in <200ms regardless of Vercel plan or timeout.
  */
 
 import { NextResponse } from 'next/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { rateLimit, getClientKey, rateLimitResponse } from '@/lib/rate-limit'
 
-// No expensive computation here — just a DB read.
-// Short ISR so fresh cache writes appear quickly for the next visitor.
 export const revalidate = 300
 
 const supabaseAdmin = createAdmin(
@@ -25,12 +19,69 @@ const supabaseAdmin = createAdmin(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// Round-robin so every league gets at least one slot before any league gets a second.
+function roundRobinPick<T>(perLeague: T[][], cap: number): T[] {
+  const picked: T[] = []
+  let round = 0
+  while (picked.length < cap) {
+    let added = 0
+    for (const league of perLeague) {
+      if (round < league.length) {
+        picked.push(league[round])
+        added++
+        if (picked.length >= cap) break
+      }
+    }
+    if (added === 0) break
+    round++
+  }
+  return picked
+}
+
 export async function GET(request: Request) {
-  // Rate limit: 60 calls/min per IP (much more generous now that there's no OpenAI call)
   const rl = rateLimit(`predictions:${getClientKey(request)}`, 60, 60_000)
   if (!rl.ok) return rateLimitResponse(rl.resetMs)
 
   try {
+    const { data: leagueRows, error: leagueErr } = await supabaseAdmin
+      .from('predictions_by_league')
+      .select('league_id, league_name, league_flag, payload, generated_at, fixture_count, api_failures')
+      .order('generated_at', { ascending: false })
+
+    if (!leagueErr && leagueRows && leagueRows.length > 0) {
+      const perLeagueArrays: any[][] = leagueRows.map(r => Array.isArray(r.payload) ? (r.payload as any[]) : [])
+      // Cap at 60 — round-robin guarantees breadth across all leagues first.
+      const merged = roundRobinPick(perLeagueArrays, 60)
+
+      // Sort by value_score desc within the picked set so best bets float up.
+      merged.sort((a: any, b: any) => (b?.value_score ?? -999) - (a?.value_score ?? -999))
+
+      const oldest = leagueRows.reduce<string | null>((acc, r) => {
+        if (!acc || r.generated_at < acc) return r.generated_at
+        return acc
+      }, null)
+      const newest = leagueRows.reduce<string | null>((acc, r) => {
+        if (!acc || r.generated_at > acc) return r.generated_at
+        return acc
+      }, null)
+
+      const meta = {
+        leagues_count: leagueRows.length,
+        league_names: leagueRows.map(r => r.league_name),
+        fixture_count: merged.length,
+        total_available: perLeagueArrays.reduce((s, a) => s + a.length, 0),
+        oldest_refresh: oldest,
+        newest_refresh: newest,
+        cache_generated_at: newest,
+        api_failures: leagueRows.reduce((s, r) => s + (r.api_failures ?? 0), 0),
+        served_from_cache: true,
+        source: 'predictions_by_league',
+      }
+
+      return NextResponse.json({ success: true, predictions: merged, meta })
+    }
+
+    // Fallback: legacy single-row cache
     const { data, error } = await supabaseAdmin
       .from('predictions_cache')
       .select('payload, generated_at, fixture_count, leagues_count')
@@ -38,7 +89,6 @@ export async function GET(request: Request) {
       .single()
 
     if (error || !data) {
-      // Cache miss — no predictions generated yet. Tell the client to try again later.
       return NextResponse.json(
         {
           success: false,
@@ -49,7 +99,6 @@ export async function GET(request: Request) {
       )
     }
 
-    // Merge cache metadata into the payload's meta field
     const payload = data.payload as any
     const enriched = {
       ...payload,
@@ -59,6 +108,7 @@ export async function GET(request: Request) {
         fixture_count: data.fixture_count,
         leagues_count: data.leagues_count,
         served_from_cache: true,
+        source: 'predictions_cache_legacy',
       },
     }
 

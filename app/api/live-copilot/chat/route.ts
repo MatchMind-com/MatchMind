@@ -11,6 +11,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
 import { getSofaScoreLiveStats, type SofaScoreStats } from '@/lib/sofascore'
+import { getUserContext, renderContextBlock } from '@/lib/user-context'
+import { recommendStake, renderStakeHint } from '@/lib/stake-recommender'
 
 const API_KEY = process.env.API_FOOTBALL_KEY!
 const BASE = 'https://v3.football.api-sports.io'
@@ -182,6 +184,30 @@ export async function POST(req: NextRequest) {
 ${lines.join('\n')}
 ${hasDetailedStats ? '' : '\n(NOTE: Detailed shot/xG/corner stats are not tracked for this league by our data provider. Only score, minute, and odds are reliable.)'}`
 
+  // Unified user context — bankroll, goal, recent bets, loss streak.
+  let ctxBlock = ''
+  let stakeHint = ''
+  try {
+    const userCtx = await getUserContext(user.id, message)
+    ctxBlock = renderContextBlock(userCtx)
+    // If there's a clear price worth quoting (best market-winner odds), pre-compute
+    // a sized stake the AI can quote when the user asks "should I bet?".
+    const candidates = [
+      odds.home ? { side: 'home', odds: odds.home } : null,
+      odds.away ? { side: 'away', odds: odds.away } : null,
+      odds.draw ? { side: 'draw', odds: odds.draw } : null,
+    ].filter((x): x is { side: string; odds: number } => x !== null && x.odds > 1)
+    const best = candidates.sort((a, b) => a.odds - b.odds)[0]
+    if (best && userCtx.bankroll) {
+      const rec = recommendStake(userCtx, best.odds, 5)
+      if (rec.suggestedStake > 0) {
+        stakeHint = `${renderStakeHint(rec)} (this sizing is for the ${best.side} side @ ${best.odds}; recompute if user asks about a different price.)`
+      }
+    }
+  } catch (e) {
+    console.warn('[live-copilot/chat] user context failed:', e)
+  }
+
   const history = Array.isArray(conversation) ? conversation.slice(-10) : []
   const historyMessages = history
     .filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
@@ -201,6 +227,8 @@ ${hasDetailedStats ? '' : '\n(NOTE: Detailed shot/xG/corner stats are not tracke
             "You are MatchMind's Live Co-Pilot — a calm, analytical football betting assistant. The user is watching a live match and chatting with you about it. Stay observational and respectful, never dismissive. Use the live state provided to ground your answers. CRITICAL: only reference stats explicitly listed in the state block — if shots/corners/xG aren't shown, those stats simply aren't tracked by our data provider for this league. Don't say 'no shots taken' or 'no corners' based on missing data; say plainly 'I don't have detailed shot/corner stats for this league' and pivot to score, minute, momentum, or odds. When richer stats are present (shots on target, dangerous attacks, pass accuracy, saves, attack momentum), weave them in only when they meaningfully answer the user — don't dump them all. Keep replies to 1-3 short sentences. Don't invent numbers.",
         },
         { role: 'system', content: stateBlock },
+        ...(ctxBlock ? [{ role: 'system' as const, content: ctxBlock }] : []),
+        ...(stakeHint ? [{ role: 'system' as const, content: stakeHint }] : []),
         ...historyMessages,
         { role: 'user', content: message },
       ],

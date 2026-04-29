@@ -15,6 +15,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
 import { getSofaScoreLiveStats, type SofaScoreStats } from '@/lib/sofascore'
+import { getUserContext, renderContextBlock } from '@/lib/user-context'
+import { recommendStake, renderStakeHint } from '@/lib/stake-recommender'
 
 const API_KEY = process.env.API_FOOTBALL_KEY!
 const BASE = 'https://v3.football.api-sports.io'
@@ -309,6 +311,32 @@ export async function GET(req: NextRequest) {
   // Speak — call GPT-4o
   const isOpening = !prev
 
+  // Pull user context (best-effort, never blocks). If a side has clear value
+  // (odds <= 2.2 implies favourite-ish, edge harder to compute live so we
+  // estimate from odds skew vs implied prob — keep simple: only inject hint
+  // when there's an odds edge worth flagging).
+  let ctxBlock = ''
+  let stakeHint = ''
+  try {
+    const userCtx = await getUserContext(user.id)
+    ctxBlock = renderContextBlock(userCtx)
+    // Cheap "is there an obvious value side?" heuristic — pick the side whose
+    // odds drifted most against the leading score line.
+    const candidates: Array<{ side: 'home' | 'away'; odds: number }> = []
+    if (odds.home && odds.home > 1) candidates.push({ side: 'home', odds: odds.home })
+    if (odds.away && odds.away > 1) candidates.push({ side: 'away', odds: odds.away })
+    const target = candidates.find((c) =>
+      c.side === 'home' ? (homeGoals ?? 0) >= (awayGoals ?? 0) : (awayGoals ?? 0) >= (homeGoals ?? 0),
+    )
+    if (target && userCtx.bankroll) {
+      // Assume ~5% edge as a placeholder for live in-running value bets.
+      const rec = recommendStake(userCtx, target.odds, 5)
+      if (rec.suggestedStake > 0) stakeHint = renderStakeHint(rec)
+    }
+  } catch (e) {
+    console.warn('[live-copilot] user context failed:', e)
+  }
+
   // Only include stat lines when the API actually returned values.
   // For lower-tier leagues, shots/xG/corners/possession are usually null —
   // showing them as "0" misleads the AI into saying "no shots taken".
@@ -356,7 +384,9 @@ ${isOpening
 
 CRITICAL: Only reference stats that appear above. If shots/corners/xG/possession are NOT listed, do NOT mention them and do NOT say "no shots" or "no corners" — those stats simply aren't tracked for this league. Focus on what you DO know: score, minute, momentum, odds, who's leading, late-game pressure, etc. Never invent stats. Keep it conversational, never dismissive.
 
-If extra stats are listed (shots on target, dangerous attacks, pass accuracy, saves, attack momentum), weave them in only when they ADD something — e.g. mention pass accuracy if clearly skewed, attack momentum if there's been a recent shift, saves if a keeper is being peppered. Don't list them all every time.`
+If extra stats are listed (shots on target, dangerous attacks, pass accuracy, saves, attack momentum), weave them in only when they ADD something — e.g. mention pass accuracy if clearly skewed, attack momentum if there's been a recent shift, saves if a keeper is being peppered. Don't list them all every time.
+
+${ctxBlock ? `\n${ctxBlock}\n` : ''}${stakeHint ? `\n${stakeHint}\nIf there's a genuine value angle on the price right now, you MAY drop a brief sizing note ("a 2-unit bet for your roll") — but only when it adds value. Never force it.\n` : ''}`
 
   let commentary: string | null = null
   try {

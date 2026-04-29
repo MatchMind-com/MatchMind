@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
 import { retrieveMemories, saveMemory } from '@/lib/memory-lane'
+import { getUserContext, renderContextBlock } from '@/lib/user-context'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const API_KEY = process.env.API_FOOTBALL_KEY!
@@ -138,6 +139,16 @@ export async function POST(req: NextRequest) {
 
   const leagueName = LEAGUE_NAMES[leagueId] || 'Football'
 
+  // Unified user context — bankroll + goal + recent bets + loss streak.
+  // Best-effort; falls back to empty block on any failure.
+  let financialContextBlock = ''
+  try {
+    const userCtx = await getUserContext(user.id, message)
+    financialContextBlock = renderContextBlock(userCtx)
+  } catch (e) {
+    console.warn('[coach-with-data] user context failed:', e)
+  }
+
   // Memory Lane — retrieve relevant past memories (best-effort, never blocks)
   const memories = await retrieveMemories(supabase as any, user.id, message, 5)
   const memoryText = memories.length
@@ -171,7 +182,7 @@ ${userPrefs.monthly_pl_estimate === 'consistent_profit' ? 'This user is profitab
 ` : ''
 
   const systemPrompt = `You are MatchMind, an elite AI football betting coach with access to real-time data for the ${season}/${season + 1} season. You combine deep football intelligence with sharp statistical analysis to help users make smarter betting decisions.
-${personalisation}${memoryBlock}
+${financialContextBlock ? `\n${financialContextBlock}\n` : ''}${personalisation}${memoryBlock}
 === LIVE FOOTBALL DATA — ${leagueName} (${season}/${String(season + 1).slice(2)} season) ===
 
 📅 UPCOMING FIXTURES (next 7 days):
