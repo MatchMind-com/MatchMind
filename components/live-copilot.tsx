@@ -17,6 +17,7 @@ type Message = {
   id: string
   text: string
   at: number
+  kind: 'copilot' | 'user' | 'reply'
   reason?: string
 }
 
@@ -32,7 +33,10 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
   const [messages, setMessages] = useState<Message[]>([])
   const [polling, setPolling] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [input, setInput] = useState('')
+  const [sending, setSending] = useState(false)
   const seenRef = useRef<Set<string>>(new Set())
+  const feedRef = useRef<HTMLDivElement | null>(null)
 
   async function poll() {
     try {
@@ -51,8 +55,14 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
         if (!seenRef.current.has(sig)) {
           seenRef.current.add(sig)
           setMessages((prev) => [
-            { id: `${Date.now()}-${Math.random()}`, text: data.commentary, at: Date.now(), reason: data.reason },
             ...prev,
+            {
+              id: `${Date.now()}-${Math.random()}`,
+              text: data.commentary,
+              at: Date.now(),
+              kind: 'copilot',
+              reason: data.reason,
+            },
           ])
         }
       }
@@ -65,20 +75,96 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
 
   useEffect(() => {
     if (!open) return
-    // Reset state for a fresh fixture
     seenRef.current = new Set()
     setMessages([])
     setState(null)
+    setInput('')
     poll()
     const id = setInterval(poll, 60_000)
     return () => clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, fixtureId])
 
+  // Auto-scroll feed on new messages
+  useEffect(() => {
+    if (feedRef.current) {
+      feedRef.current.scrollTop = feedRef.current.scrollHeight
+    }
+  }, [messages])
+
+  async function sendMessage(e?: React.FormEvent) {
+    e?.preventDefault()
+    const text = input.trim()
+    if (!text || sending) return
+    setSending(true)
+    const userMsg: Message = {
+      id: `${Date.now()}-${Math.random()}`,
+      text,
+      at: Date.now(),
+      kind: 'user',
+    }
+    // Build conversation history (only user/reply pairs) for context
+    const conversation = messages
+      .filter((m) => m.kind === 'user' || m.kind === 'reply')
+      .slice(-10)
+      .map((m) => ({ role: m.kind === 'user' ? 'user' : 'assistant', content: m.text }))
+    setMessages((prev) => [...prev, userMsg])
+    setInput('')
+    try {
+      const res = await fetch('/api/live-copilot/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fixtureId, message: text, conversation }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.reply) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-${Math.random()}`,
+            text: data.error || 'Could not get a reply.',
+            at: Date.now(),
+            kind: 'reply',
+          },
+        ])
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-${Math.random()}`,
+            text: data.reply,
+            at: Date.now(),
+            kind: 'reply',
+          },
+        ])
+      }
+    } catch (err: any) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-${Math.random()}`,
+          text: err?.message || 'Network error.',
+          at: Date.now(),
+          kind: 'reply',
+        },
+      ])
+    } finally {
+      setSending(false)
+    }
+  }
+
   if (!open) return null
 
   const homeName = state?.teams.home || initialTeams?.home || 'Home'
   const awayName = state?.teams.away || initialTeams?.away || 'Away'
+
+  // Determine which stat pills are present.
+  const hasXg = !!state && (state.xg.home !== null || state.xg.away !== null)
+  const hasShots = !!state && (state.shots.home !== null || state.shots.away !== null)
+  const hasOdds =
+    !!state && (state.odds.home !== null || state.odds.draw !== null || state.odds.away !== null)
+  const noStatsAtAll = !!state && !hasXg && !hasShots && !hasOdds
+  const pillCount = [hasXg, hasShots, hasOdds].filter(Boolean).length
 
   return (
     <>
@@ -89,7 +175,7 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
         aria-hidden
       />
 
-      {/* Drawer (right on desktop, bottom sheet on mobile) */}
+      {/* Drawer */}
       <div
         className="
           fixed z-[51] bg-[#0A0F1E] border-white/10 text-white shadow-2xl
@@ -145,21 +231,48 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
                 <div className="text-3xl font-black text-white mt-1">{state.score.away ?? 0}</div>
               </div>
             </div>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
-              <Stat label="xG" home={state.xg.home} away={state.xg.away} fmt={(v) => v?.toFixed(2) ?? '–'} />
-              <Stat label="Shots" home={state.shots.home} away={state.shots.away} fmt={(v) => String(v ?? '–')} />
-              <div className="rounded-lg bg-white/[0.03] border border-white/5 p-2">
-                <div className="text-white/40 uppercase tracking-wider mb-1 text-center">Odds</div>
-                <div className="text-center text-white/80 font-semibold">
-                  {state.odds.home ?? '–'} / {state.odds.draw ?? '–'} / {state.odds.away ?? '–'}
-                </div>
+
+            {noStatsAtAll ? (
+              <div className="mt-3 text-center text-[11px] text-white/40 italic">
+                Live stats not available for this match
               </div>
-            </div>
+            ) : (
+              <div
+                className={`mt-3 grid gap-2 text-[10px] ${
+                  pillCount === 1 ? 'grid-cols-1' : pillCount === 2 ? 'grid-cols-2' : 'grid-cols-3'
+                }`}
+              >
+                {hasXg && (
+                  <Stat
+                    label="xG"
+                    home={state.xg.home}
+                    away={state.xg.away}
+                    fmt={(v) => (v !== null ? v.toFixed(2) : '–')}
+                  />
+                )}
+                {hasShots && (
+                  <Stat
+                    label="Shots"
+                    home={state.shots.home}
+                    away={state.shots.away}
+                    fmt={(v) => (v !== null ? String(v) : '–')}
+                  />
+                )}
+                {hasOdds && (
+                  <div className="rounded-lg bg-white/[0.03] border border-white/5 p-2">
+                    <div className="text-white/40 uppercase tracking-wider mb-1 text-center">Odds</div>
+                    <div className="text-center text-white/80 font-semibold">
+                      {state.odds.home ?? '–'} / {state.odds.draw ?? '–'} / {state.odds.away ?? '–'}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Commentary feed */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+        {/* Feed */}
+        <div ref={feedRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
           {error && (
             <div className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3">
               {error}
@@ -167,31 +280,81 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
           )}
           {messages.length === 0 && !error && (
             <div className="text-center py-12">
-              <div className="text-white/20 text-xs mb-2">Listening for the next moment…</div>
+              <div className="text-white/30 text-xs mb-2">Listening for the next moment…</div>
               <div className="text-white/40 text-[11px]">
-                The AI stays quiet unless something genuinely shifts.
+                Ask the Co-Pilot anything about this match below.
               </div>
             </div>
           )}
-          {messages.map((m) => (
-            <div
-              key={m.id}
-              className="rounded-2xl bg-blue-500/5 border border-blue-500/20 p-3 text-sm text-white/90 leading-snug"
-            >
-              <div className="text-[10px] uppercase tracking-widest text-blue-300/80 mb-1.5 flex items-center justify-between">
-                <span>Co-Pilot</span>
-                <span className="text-white/30 normal-case tracking-normal">
-                  {new Date(m.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  {m.reason && ` · ${m.reason}`}
-                </span>
+          {messages.map((m) => {
+            if (m.kind === 'user') {
+              return (
+                <div key={m.id} className="flex justify-end">
+                  <div className="max-w-[85%] rounded-2xl bg-blue-500/80 text-white px-3.5 py-2 text-sm leading-snug">
+                    {m.text}
+                  </div>
+                </div>
+              )
+            }
+            if (m.kind === 'reply') {
+              return (
+                <div key={m.id} className="flex justify-start">
+                  <div className="max-w-[85%] rounded-2xl bg-white/[0.06] border border-white/10 px-3.5 py-2 text-sm text-white/90 leading-snug">
+                    {m.text}
+                  </div>
+                </div>
+              )
+            }
+            // copilot proactive message
+            return (
+              <div
+                key={m.id}
+                className="rounded-2xl bg-blue-500/5 border border-blue-500/20 p-3 text-sm text-white/90 leading-snug"
+              >
+                <div className="text-[10px] uppercase tracking-widest text-blue-300/80 mb-1.5 flex items-center justify-between">
+                  <span>Co-Pilot</span>
+                  <span className="text-white/30 normal-case tracking-normal">
+                    {new Date(m.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {m.reason && ` · ${m.reason}`}
+                  </span>
+                </div>
+                {m.text}
               </div>
-              {m.text}
+            )
+          })}
+          {sending && (
+            <div className="flex justify-start">
+              <div className="rounded-2xl bg-white/[0.04] border border-white/10 px-3.5 py-2 text-xs text-white/40 italic">
+                Co-Pilot is thinking…
+              </div>
             </div>
-          ))}
+          )}
         </div>
 
-        <div className="px-5 py-3 border-t border-white/10 text-[10px] text-white/30 text-center">
-          Updates every 60 seconds. AI speaks only on material changes.
+        {/* Chat input */}
+        <form
+          onSubmit={sendMessage}
+          className="px-4 py-3 border-t border-white/10 bg-[#0A0F1E] flex items-center gap-2"
+        >
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask the Co-Pilot…"
+            disabled={sending}
+            className="flex-1 bg-white/[0.05] border border-white/10 rounded-xl px-3.5 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/40 disabled:opacity-50"
+          />
+          <button
+            type="submit"
+            disabled={sending || !input.trim()}
+            className="rounded-xl bg-blue-500 hover:bg-blue-400 disabled:bg-white/10 disabled:text-white/30 text-white text-sm font-semibold px-4 py-2 transition"
+          >
+            Send
+          </button>
+        </form>
+
+        <div className="px-5 py-2 border-t border-white/5 text-[10px] text-white/30 text-center">
+          Auto-updates every 60s. AI speaks only on real changes.
         </div>
       </div>
     </>

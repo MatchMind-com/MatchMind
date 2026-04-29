@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
-import BankrollTracker from '@/components/bankroll/BankrollTracker'
+import BankrollTabs from '@/components/bankroll/BankrollTabs'
 
 export default async function BankrollPage() {
   const supabase = await createClient()
@@ -50,9 +50,9 @@ export default async function BankrollPage() {
       <div className="mb-6">
         <p className="text-slate-500 text-xs uppercase tracking-widest mb-1 font-medium">Finance</p>
         <h1 className="text-3xl font-black text-white tracking-tight mb-1">Bankroll</h1>
-        <p className="text-slate-500 text-sm">Track your balance over time and monitor your growth.</p>
+        <p className="text-slate-500 text-sm">Track your balance, plan your stakes, and chase your dream-bet target.</p>
       </div>
-      <BankrollTracker
+      <BankrollTabs
         userId={user.id}
         initialBankroll={currentBankroll}
         startingBankroll={startingBankroll}

@@ -2,8 +2,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import LiveFootballData from '@/components/football/LiveFootballData'
 import NewsPanel from '@/components/coach/NewsPanel'
+import MemoriesDrawer from '@/components/coach/MemoriesDrawer'
 
-interface Message { role: 'user' | 'assistant'; content: string }
+interface Message { role: 'user' | 'assistant'; content: string; memoriesUsed?: number }
 
 const QUICK_PROMPTS = [
   { label: 'Best bets today', msg: "What are the best value bets for today's fixtures?" },
@@ -62,6 +63,10 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
   const [unsupportedBrowser, setUnsupportedBrowser] = useState(false)
   const recognitionRef = useRef<any>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  // Memories drawer
+  const [memoriesOpen, setMemoriesOpen] = useState(false)
+  const [memoriesRefreshKey, setMemoriesRefreshKey] = useState(0)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -125,15 +130,17 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
       })
       const data = await res.json()
       if (data.reply) {
-        const newIndex = messages.length + 1 // +1 for the user message just added
+        const memoriesUsed: number = data?.context?.memoriesUsed ?? 0
         setMessages(prev => {
-          const next = [...prev, { role: 'assistant' as const, content: data.reply }]
+          const next = [...prev, { role: 'assistant' as const, content: data.reply, memoriesUsed }]
           // Auto-play if voice mode is active
           if (voiceMode) {
             setTimeout(() => speakMessage(data.reply, next.length - 1), 200)
           }
           return next
         })
+        // New exchange persisted server-side — refresh drawer (only matters when open)
+        setMemoriesRefreshKey(k => k + 1)
       }
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I ran into an error. Please try again.' }])
@@ -214,6 +221,16 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Memory toggle */}
+            <button
+              onClick={() => setMemoriesOpen(true)}
+              title="Open Coach memory"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border bg-white/[0.04] border-white/[0.07] text-slate-400 hover:text-orange-300 hover:border-orange-500/30 transition-all"
+            >
+              <span className="text-sm leading-none">🧠</span>
+              Memory
+            </button>
+
             {/* Voice toggle */}
             <button
               onClick={toggleVoiceMode}
@@ -287,18 +304,30 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
                 }`}>
                   {m.content}
                 </div>
-                {/* Speaker button for assistant messages */}
+                {/* Assistant message footer: speaker + memory badge */}
                 {m.role === 'assistant' && (
-                  <button
-                    onClick={() => speakMessage(m.content, i)}
-                    title={playingIndex === i ? 'Stop playback' : 'Read aloud'}
-                    className={`self-start flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] transition-all hover:bg-white/[0.06] ${
-                      playingIndex === i ? 'text-blue-400' : 'text-slate-600 hover:text-slate-400'
-                    }`}
-                  >
-                    <SpeakerIcon playing={playingIndex === i} />
-                    {playingIndex === i ? 'Playing…' : 'Read aloud'}
-                  </button>
+                  <div className="flex items-center gap-1.5 self-start">
+                    <button
+                      onClick={() => speakMessage(m.content, i)}
+                      title={playingIndex === i ? 'Stop playback' : 'Read aloud'}
+                      className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] transition-all hover:bg-white/[0.06] ${
+                        playingIndex === i ? 'text-blue-400' : 'text-slate-600 hover:text-slate-400'
+                      }`}
+                    >
+                      <SpeakerIcon playing={playingIndex === i} />
+                      {playingIndex === i ? 'Playing…' : 'Read aloud'}
+                    </button>
+                    {!!m.memoriesUsed && m.memoriesUsed > 0 && (
+                      <button
+                        onClick={() => setMemoriesOpen(true)}
+                        title={`Used ${m.memoriesUsed} memor${m.memoriesUsed === 1 ? 'y' : 'ies'} from past chats — click to view`}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] text-orange-300/70 hover:text-orange-300 hover:bg-orange-500/10 border border-orange-500/15 transition-all"
+                      >
+                        <span>💭</span>
+                        remembered {m.memoriesUsed}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -370,6 +399,13 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
         <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3">Football News</p>
         <NewsPanel />
       </div>
+
+      {/* Memories drawer (slides in from right, overlays everything) */}
+      <MemoriesDrawer
+        open={memoriesOpen}
+        onClose={() => setMemoriesOpen(false)}
+        refreshKey={memoriesRefreshKey}
+      />
     </div>
   )
 }

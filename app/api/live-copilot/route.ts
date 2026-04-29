@@ -84,35 +84,60 @@ function pickBookmakerOdds(oddsResp: any): { home: number | null; draw: number |
   return { home, draw, away }
 }
 
-function diffIsMaterial(prev: Snapshot | undefined, curr: Snapshot): { material: boolean; reason: string } {
-  if (!prev) return { material: true, reason: 'first observation' }
+function hasAnyData(s: Snapshot): boolean {
+  // True if there's enough live signal to actually say something useful.
+  return (
+    (s.homeGoals ?? 0) > 0 ||
+    (s.awayGoals ?? 0) > 0 ||
+    (s.homeShots ?? 0) > 0 ||
+    (s.awayShots ?? 0) > 0 ||
+    (s.homeCorners ?? 0) > 0 ||
+    (s.awayCorners ?? 0) > 0 ||
+    s.homeRed > 0 ||
+    s.awayRed > 0 ||
+    (s.homeXg !== null && s.homeXg > 0) ||
+    (s.awayXg !== null && s.awayXg > 0)
+  )
+}
 
-  if (curr.homeGoals !== prev.homeGoals || curr.awayGoals !== prev.awayGoals) {
-    return { material: true, reason: 'goal scored' }
+function diffIsMaterial(prev: Snapshot | undefined, curr: Snapshot): { material: boolean; reason: string } {
+  // Goals, reds, big xG shifts, odds moves are always material — even on first call.
+  if (curr.homeGoals !== null && curr.awayGoals !== null) {
+    if (!prev && (curr.homeGoals > 0 || curr.awayGoals > 0)) {
+      return { material: true, reason: 'match in progress' }
+    }
+    if (prev && (curr.homeGoals !== prev.homeGoals || curr.awayGoals !== prev.awayGoals)) {
+      return { material: true, reason: 'goal scored' }
+    }
   }
-  if (curr.homeRed > prev.homeRed || curr.awayRed > prev.awayRed) {
-    return { material: true, reason: 'red card' }
-  }
-  // xG shift > 0.4 either side
-  const xgShift = (a: number | null, b: number | null) =>
-    a !== null && b !== null && Math.abs(a - b) >= 0.4
-  if (xgShift(curr.homeXg, prev.homeXg) || xgShift(curr.awayXg, prev.awayXg)) {
-    return { material: true, reason: 'xG swing' }
-  }
-  // Odds movement >= 15%
-  const oddsShift = (a: number | null, b: number | null) =>
-    a !== null && b !== null && b > 0 && Math.abs((a - b) / b) >= 0.15
-  if (
-    oddsShift(curr.homeOdds, prev.homeOdds) ||
-    oddsShift(curr.awayOdds, prev.awayOdds) ||
-    oddsShift(curr.drawOdds, prev.drawOdds)
-  ) {
-    return { material: true, reason: 'odds moved' }
-  }
-  // At least 8 minutes elapsed without comment AND game still live → speak occasionally
-  const minutesSinceSpoke = (Date.now() - prev.lastSpokeAt) / 60000
-  if (minutesSinceSpoke >= 8 && curr.minute !== null && curr.minute > 0) {
-    return { material: true, reason: 'periodic check-in' }
+  if (prev) {
+    if (curr.homeRed > prev.homeRed || curr.awayRed > prev.awayRed) {
+      return { material: true, reason: 'red card' }
+    }
+    const xgShift = (a: number | null, b: number | null) =>
+      a !== null && b !== null && Math.abs(a - b) >= 0.4
+    if (xgShift(curr.homeXg, prev.homeXg) || xgShift(curr.awayXg, prev.awayXg)) {
+      return { material: true, reason: 'xG swing' }
+    }
+    const oddsShift = (a: number | null, b: number | null) =>
+      a !== null && b !== null && b > 0 && Math.abs((a - b) / b) >= 0.15
+    if (
+      oddsShift(curr.homeOdds, prev.homeOdds) ||
+      oddsShift(curr.awayOdds, prev.awayOdds) ||
+      oddsShift(curr.drawOdds, prev.drawOdds)
+    ) {
+      return { material: true, reason: 'odds moved' }
+    }
+    // Periodic check-in only if there's actually data worth talking about.
+    const minutesSinceSpoke = (Date.now() - prev.lastSpokeAt) / 60000
+    if (
+      minutesSinceSpoke >= 8 &&
+      curr.minute !== null &&
+      curr.minute > 0 &&
+      hasAnyData(curr)
+    ) {
+      return { material: true, reason: 'periodic check-in' }
+    }
   }
   return { material: false, reason: 'no material change' }
 }
@@ -226,7 +251,7 @@ Odds (Match Winner): Home ${odds.home ?? 'n/a'} / Draw ${odds.draw ?? 'n/a'} / A
 Trigger: ${reason}.
 Last thing you said: ${prev?.lastCommentary ?? '(nothing yet)'}.
 
-Speak now in 1–2 sentences as a sharp betting co-pilot. Reference what changed, point at value or risk if it's there. Don't repeat your last line.`
+Speak now in 1–2 sentences as an analytical co-pilot. Stay observational and respectful — never dismissive. Reference what actually changed or what's worth watching tactically. Tie to odds only if there's a real value or risk angle. Don't invent stats. If genuinely nothing of substance has happened, reply with the single word: SILENT.`
 
   let commentary: string | null = null
   try {
@@ -239,7 +264,7 @@ Speak now in 1–2 sentences as a sharp betting co-pilot. Reference what changed
         {
           role: 'system',
           content:
-            "You are MatchMind's Live Co-Pilot — a sharp, calm football betting analyst whispering in the user's ear during a live match. Talk like a smart friend at the pub: short, conversational, pointed. Always tie what you see (xG, shots, cards, momentum) to what it means for the betting markets. Reference specific odds when they matter. Never recap obvious facts the user already sees on screen — add insight or shut up.",
+            "You are MatchMind's Live Co-Pilot — a calm, analytical football analyst commenting on a live match. Stay observational and respectful, never dismissive. If little has happened so far, comment on tactics, shape, or what to watch for next rather than mocking the game. Tie to betting markets only when there's a real value or risk angle. Never invent stats. If nothing of substance has happened, prefer staying silent (reply 'SILENT').",
         },
         { role: 'user', content: userPrompt },
       ],
@@ -249,15 +274,17 @@ Speak now in 1–2 sentences as a sharp betting co-pilot. Reference what changed
     console.error('[live-copilot] OpenAI error:', err)
   }
 
-  if (commentary) {
+  // Treat 'SILENT' (or empty) as the model declining to comment.
+  const isSilent = !commentary || /^silent\.?$/i.test(commentary.trim())
+  if (commentary && !isSilent) {
     curr.lastCommentary = commentary
     curr.lastSpokeAt = Date.now()
   }
   snapshots.set(fixtureId, curr)
 
   return NextResponse.json({
-    status: commentary ? 'speaking' : 'silent',
-    commentary: commentary ?? undefined,
+    status: !isSilent ? 'speaking' : 'silent',
+    commentary: !isSilent ? commentary : undefined,
     reason,
     currentState,
   })

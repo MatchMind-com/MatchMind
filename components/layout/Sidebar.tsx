@@ -65,10 +65,8 @@ const SECTIONS = [
     label: 'AI Tools',
     items: [
       { href: '/dashboard/predictions', label: 'AI Predictions', icon: <IconBrain /> },
-      { href: '/dashboard/dream-bet', label: 'Dream Bet', icon: <IconDream /> },
       { href: '/dashboard/live', label: 'Live Matches', icon: <IconLive /> },
       { href: '/dashboard/coach', label: 'Football Coach', icon: <IconCoach /> },
-      { href: '/dashboard/memories', label: 'Memories', icon: <IconMemories /> },
     ],
   },
   {
