@@ -13,6 +13,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getSofaScoreLiveStats, type SofaScoreStats } from '@/lib/sofascore'
 import { getUserContext, renderContextBlock } from '@/lib/user-context'
 import { recommendStake, renderStakeHint } from '@/lib/stake-recommender'
+import { leaguesShortList } from '@/lib/leagues'
+import { parseBetRec, BET_REC_PROMPT_INSTRUCTIONS } from '@/lib/parse-bet-rec'
 
 const API_KEY = process.env.API_FOOTBALL_KEY!
 const BASE = 'https://v3.football.api-sports.io'
@@ -214,18 +216,21 @@ ${hasDetailedStats ? '' : '\n(NOTE: Detailed shot/xG/corner stats are not tracke
     .map((m: any) => ({ role: m.role, content: m.content }))
 
   let reply: string | null = null
+  let betRecommendation: ReturnType<typeof parseBetRec>['betRec'] = null
   try {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
-      max_tokens: 200,
+      max_tokens: 280,
       temperature: 0.6,
       messages: [
         {
           role: 'system',
           content:
-            "You are MatchMind's Live Co-Pilot — a calm, analytical football betting assistant. The user is watching a live match and chatting with you about it. Stay observational and respectful, never dismissive. Use the live state provided to ground your answers. CRITICAL: only reference stats explicitly listed in the state block — if shots/corners/xG aren't shown, those stats simply aren't tracked by our data provider for this league. Don't say 'no shots taken' or 'no corners' based on missing data; say plainly 'I don't have detailed shot/corner stats for this league' and pivot to score, minute, momentum, or odds. When richer stats are present (shots on target, dangerous attacks, pass accuracy, saves, attack momentum), weave them in only when they meaningfully answer the user — don't dump them all. Keep replies to 1-3 short sentences. Don't invent numbers.",
+            "You are MatchMind's Live Co-Pilot — a calm, analytical football betting assistant. The user is watching a live match and chatting with you about it. Stay observational and respectful, never dismissive. Use the live state provided to ground your answers. CRITICAL: only reference stats explicitly listed in the state block — if shots/corners/xG aren't shown, those stats simply aren't tracked by our data provider for this league. Don't say 'no shots taken' or 'no corners' based on missing data; say plainly 'I don't have detailed shot/corner stats for this league' and pivot to score, minute, momentum, or odds. When richer stats are present (shots on target, dangerous attacks, pass accuracy, saves, attack momentum), weave them in only when they meaningfully answer the user — don't dump them all. Keep replies to 1-3 short sentences. Don't invent numbers. " +
+            `MatchMind covers these competitions — never tell the user a league is unsupported: ${leaguesShortList()}.`,
         },
+        { role: 'system', content: BET_REC_PROMPT_INSTRUCTIONS },
         { role: 'system', content: stateBlock },
         ...(ctxBlock ? [{ role: 'system' as const, content: ctxBlock }] : []),
         ...(stakeHint ? [{ role: 'system' as const, content: stakeHint }] : []),
@@ -233,12 +238,30 @@ ${hasDetailedStats ? '' : '\n(NOTE: Detailed shot/xG/corner stats are not tracke
         { role: 'user', content: message },
       ],
     })
-    reply = completion.choices[0]?.message?.content?.trim() || null
+    const raw = completion.choices[0]?.message?.content?.trim() || null
+    if (raw) {
+      const parsed = parseBetRec(raw)
+      reply = parsed.cleanText || null
+      betRecommendation = parsed.betRec
+    }
   } catch (err) {
     console.error('[live-copilot/chat] OpenAI error:', err)
     return NextResponse.json({ error: 'AI unavailable' }, { status: 503 })
   }
 
   if (!reply) return NextResponse.json({ error: 'No reply' }, { status: 502 })
-  return NextResponse.json({ reply })
+
+  // Fill in any blanks in the bet rec from the known fixture context.
+  if (betRecommendation) {
+    if (!betRecommendation.home && homeName) betRecommendation.home = homeName
+    if (!betRecommendation.away && awayName) betRecommendation.away = awayName
+    if (!betRecommendation.league && league) betRecommendation.league = league
+    if (!betRecommendation.kickoff && fx?.fixture?.date) betRecommendation.kickoff = fx.fixture.date
+    if (!betRecommendation.fixtureId) {
+      const numFixtureId = typeof fixtureId === 'number' ? fixtureId : parseInt(fixtureId, 10)
+      betRecommendation.fixtureId = Number.isFinite(numFixtureId) ? numFixtureId : null
+    }
+  }
+
+  return NextResponse.json({ reply, betRecommendation })
 }

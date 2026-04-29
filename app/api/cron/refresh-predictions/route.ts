@@ -20,6 +20,7 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import { allLeagues, leaguesByTier, type TrackedLeague } from '@/lib/leagues'
 
 export const maxDuration = 60
 
@@ -33,7 +34,9 @@ const supabaseAdmin = createAdmin(
 )
 
 type FetchDiag = { path: string; reason: string; status?: number }
-type League = { id: number; name: string; flag: string }
+// League shape now lives in lib/leagues.ts as TrackedLeague (single source
+// of truth for the 25 competitions MatchMind covers).
+type League = TrackedLeague
 
 function getCurrentSeason(): number {
   const now = new Date()
@@ -190,49 +193,15 @@ function formatH2H(fixtures: any[]): string {
   }).join(' | ')
 }
 
-const TIER_1: League[] = [
-  { id: 39,  name: 'Premier League',       flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-  { id: 140, name: 'La Liga',              flag: '🇪🇸' },
-  { id: 135, name: 'Serie A',              flag: '🇮🇹' },
-  { id: 78,  name: 'Bundesliga',           flag: '🇩🇪' },
-  { id: 61,  name: 'Ligue 1',             flag: '🇫🇷' },
-  { id: 2,   name: 'Champions League',     flag: '🏆' },
-  { id: 3,   name: 'Europa League',        flag: '🥈' },
-  { id: 848, name: 'Conference League',    flag: '🥉' },
-]
-
-const TIER_2: League[] = [
-  { id: 88,  name: 'Eredivisie',           flag: '🇳🇱' },
-  { id: 94,  name: 'Primeira Liga',        flag: '🇵🇹' },
-  { id: 203, name: 'Süper Lig',            flag: '🇹🇷' },
-  { id: 40,  name: 'Championship',         flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-  { id: 144, name: 'Pro League',           flag: '🇧🇪' },
-  { id: 113, name: 'Allsvenskan',          flag: '🇸🇪' },
-  { id: 262, name: 'Liga MX',              flag: '🇲🇽' },
-  { id: 253, name: 'MLS',                  flag: '🇺🇸' },
-]
-
-const TIER_3: League[] = [
-  { id: 71,  name: 'Brasileirão',          flag: '🇧🇷' },
-  { id: 128, name: 'Argentine Primera',    flag: '🇦🇷' },
-  { id: 13,  name: 'Copa Libertadores',    flag: '🏆' },
-  { id: 11,  name: 'Copa Sudamericana',    flag: '🥈' },
-  { id: 307, name: 'Saudi Pro League',     flag: '🇸🇦' },
-  { id: 98,  name: 'J1 League',            flag: '🇯🇵' },
-  { id: 179, name: 'Scottish Premiership', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿' },
-  { id: 106, name: 'Ekstraklasa',          flag: '🇵🇱' },
-  { id: 1,   name: 'World Cup',            flag: '🌍' },
-]
-
-const ALL_LEAGUES: League[] = [...TIER_1, ...TIER_2, ...TIER_3]
-
+// All league lists come from lib/leagues.ts — keeps the AI prompt block,
+// the cron picker, and the per-tier wrappers in lockstep.
 function pickLeagues(tier: string): League[] {
   switch (tier) {
-    case '1': return TIER_1
-    case '2': return TIER_2
-    case '3': return TIER_3
-    case 'all': return ALL_LEAGUES
-    default: return TIER_1
+    case '1': return leaguesByTier(1)
+    case '2': return leaguesByTier(2)
+    case '3': return leaguesByTier(3)
+    case 'all': return allLeagues()
+    default: return leaguesByTier(1)
   }
 }
 
@@ -246,7 +215,9 @@ async function refreshLeagues(
 ): Promise<{ predictionsByLeague: Record<number, any[]>; totalFixtures: number; allPredictions: any[] }> {
   const season = getCurrentSeason()
   const today = new Date().toISOString().split('T')[0]
-  const in3days = getDatePlusDays(4)
+  // Look 7 days out (was 4) so off-peak leagues like Saudi/J1/MLS surface
+  // upcoming weekend matches even when the cron runs early in the week.
+  const in3days = getDatePlusDays(7)
   const tomorrow = getDatePlusDays(1)
 
   const leagueResults = await batchedAll(
@@ -637,7 +608,7 @@ export async function GET(req: Request) {
       }
 
       const legacyMeta = {
-        leagues_attempted: ALL_LEAGUES.length,
+        leagues_attempted: allLeagues().length,
         leagues_with_fixtures: leagueNames.length,
         fixture_count: merged.length,
         league_names: leagueNames,

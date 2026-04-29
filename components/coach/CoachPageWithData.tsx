@@ -3,8 +3,15 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import LiveFootballData from '@/components/football/LiveFootballData'
 import NewsPanel from '@/components/coach/NewsPanel'
 import MemoriesDrawer from '@/components/coach/MemoriesDrawer'
+import type { BetRecommendation } from '@/lib/parse-bet-rec'
 
-interface Message { role: 'user' | 'assistant'; content: string; memoriesUsed?: number }
+interface Message {
+  role: 'user' | 'assistant'
+  content: string
+  memoriesUsed?: number
+  betRecommendation?: BetRecommendation | null
+  betAddState?: 'idle' | 'adding' | 'added' | 'error'
+}
 
 const QUICK_PROMPTS = [
   { label: 'Best bets today', msg: "What are the best value bets for today's fixtures?" },
@@ -67,6 +74,36 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
   // Memories drawer
   const [memoriesOpen, setMemoriesOpen] = useState(false)
   const [memoriesRefreshKey, setMemoriesRefreshKey] = useState(0)
+
+  // Toast for "Added to your tracker" feedback
+  const [toast, setToast] = useState<string | null>(null)
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 2800)
+    return () => clearTimeout(t)
+  }, [toast])
+
+  // POSTs the AI's bet recommendation to /api/bet-slips/from-rec, which inserts
+  // a row into bet_slips and returns { success, id }. Defensive — survives a
+  // partially malformed rec because the server route does its own validation.
+  const addBetFromRec = useCallback(async (index: number, rec: BetRecommendation) => {
+    setMessages(prev => prev.map((m, i) => i === index ? { ...m, betAddState: 'adding' } : m))
+    try {
+      const res = await fetch('/api/bet-slips/from-rec', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rec),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json().catch(() => ({}))
+      if (!json?.success) throw new Error('Insert failed')
+      setMessages(prev => prev.map((m, i) => i === index ? { ...m, betAddState: 'added' } : m))
+      setToast('Added to your tracker')
+    } catch {
+      setMessages(prev => prev.map((m, i) => i === index ? { ...m, betAddState: 'error' } : m))
+      setToast('Could not add bet — try the manual form')
+    }
+  }, [])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -131,8 +168,18 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
       const data = await res.json()
       if (data.reply) {
         const memoriesUsed: number = data?.context?.memoriesUsed ?? 0
+        const betRecommendation: BetRecommendation | null = data?.betRecommendation ?? null
         setMessages(prev => {
-          const next = [...prev, { role: 'assistant' as const, content: data.reply, memoriesUsed }]
+          const next = [
+            ...prev,
+            {
+              role: 'assistant' as const,
+              content: data.reply,
+              memoriesUsed,
+              betRecommendation,
+              betAddState: 'idle' as const,
+            },
+          ]
           // Auto-play if voice mode is active
           if (voiceMode) {
             setTimeout(() => speakMessage(data.reply, next.length - 1), 200)
@@ -304,6 +351,17 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
                 }`}>
                   {m.content}
                 </div>
+
+                {/* Bet recommendation button — only shows when the AI emitted a
+                    structured [BET_REC] payload that the server parsed cleanly. */}
+                {m.role === 'assistant' && m.betRecommendation && (
+                  <BetRecCard
+                    rec={m.betRecommendation}
+                    state={m.betAddState ?? 'idle'}
+                    onAdd={() => addBetFromRec(i, m.betRecommendation!)}
+                  />
+                )}
+
                 {/* Assistant message footer: speaker + memory badge */}
                 {m.role === 'assistant' && (
                   <div className="flex items-center gap-1.5 self-start">
@@ -406,6 +464,68 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
         onClose={() => setMemoriesOpen(false)}
         refreshKey={memoriesRefreshKey}
       />
+
+      {/* Toast — bottom-centre, auto-dismisses after ~3s */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-200 text-sm font-medium shadow-lg backdrop-blur">
+          {toast}
+        </div>
+      )}
     </div>
+  )
+}
+
+/**
+ * Renders the AI's structured bet recommendation as a clickable button
+ * that adds the bet to the user's tracker. Defensive — gracefully handles
+ * partially malformed recs (e.g. missing kickoff or league).
+ */
+function BetRecCard({
+  rec,
+  state,
+  onAdd,
+}: {
+  rec: BetRecommendation
+  state: 'idle' | 'adding' | 'added' | 'error'
+  onAdd: () => void
+}) {
+  const matchLabel = rec.home && rec.away
+    ? `${rec.home} vs ${rec.away}`
+    : (rec.selection || 'AI Pick')
+  const marketLabel = [rec.market, rec.selection].filter(Boolean).join(' · ') || 'Bet'
+  const oddsLabel = rec.odds ? `@ ${rec.odds.toFixed(2)}` : ''
+  const stakeLabel = rec.stake ? `£${rec.stake.toFixed(2)}` : null
+
+  const disabled = state === 'adding' || state === 'added'
+  const label =
+    state === 'adding' ? 'Adding…' :
+    state === 'added' ? 'Added to tracker ✓' :
+    state === 'error' ? 'Try again' :
+    'Add to my bets'
+
+  return (
+    <button
+      onClick={onAdd}
+      disabled={disabled}
+      className={`mt-1 self-start text-left rounded-xl border px-3.5 py-2.5 text-xs transition-all
+        ${state === 'added'
+          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200 cursor-default'
+          : state === 'error'
+            ? 'bg-rose-500/10 border-rose-500/30 text-rose-200 hover:bg-rose-500/15'
+            : 'bg-blue-500/10 border-blue-500/30 text-blue-200 hover:bg-blue-500/20 hover:border-blue-400/50'}
+      `}
+    >
+      <div className="flex items-center gap-1.5 font-semibold mb-0.5">
+        <span className="text-sm leading-none">{state === 'added' ? '✓' : '✚'}</span>
+        <span>{label}</span>
+      </div>
+      <div className="text-[11px] opacity-80 leading-tight">
+        <span className="font-medium">{matchLabel}</span>
+        {rec.league && <span className="opacity-60"> · {rec.league}</span>}
+      </div>
+      <div className="text-[11px] opacity-90 mt-0.5">
+        {marketLabel} {oddsLabel}{stakeLabel ? ` · ${stakeLabel}` : ''}
+      </div>
+    </button>
   )
 }

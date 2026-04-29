@@ -13,12 +13,26 @@ type CurrentState = {
   odds: { home: number | null; draw: number | null; away: number | null }
 }
 
+type BetRec = {
+  home?: string
+  away?: string
+  market?: string
+  selection?: string
+  odds?: number
+  stake?: number
+  league?: string
+  kickoff?: string
+  reasoning?: string
+  fixtureId?: number | null
+} | null
+
 type Message = {
   id: string
   text: string
   at: number
   kind: 'copilot' | 'user' | 'reply'
   reason?: string
+  betRec?: BetRec
 }
 
 type Props = {
@@ -62,6 +76,7 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
               at: Date.now(),
               kind: 'copilot',
               reason: data.reason,
+              betRec: data.betRecommendation || undefined,
             },
           ])
         }
@@ -135,6 +150,7 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
             text: data.reply,
             at: Date.now(),
             kind: 'reply',
+            betRec: data.betRecommendation || undefined,
           },
         ])
       }
@@ -298,10 +314,11 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
             }
             if (m.kind === 'reply') {
               return (
-                <div key={m.id} className="flex justify-start">
+                <div key={m.id} className="flex justify-start flex-col items-start gap-2">
                   <div className="max-w-[85%] rounded-2xl bg-white/[0.06] border border-white/10 px-3.5 py-2 text-sm text-white/90 leading-snug">
                     {m.text}
                   </div>
+                  {m.betRec && <BetRecButton bet={m.betRec} />}
                 </div>
               )
             }
@@ -318,7 +335,8 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
                     {m.reason && ` · ${m.reason}`}
                   </span>
                 </div>
-                {m.text}
+                <div>{m.text}</div>
+                {m.betRec && <div className="mt-2"><BetRecButton bet={m.betRec} /></div>}
               </div>
             )
           })}
@@ -378,6 +396,67 @@ function Stat({
       <div className="text-center text-white/80 font-semibold">
         {fmt(home)} <span className="text-white/30">·</span> {fmt(away)}
       </div>
+    </div>
+  )
+}
+
+
+function BetRecButton({ bet }: { bet: NonNullable<BetRec> }) {
+  const [adding, setAdding] = useState(false)
+  const [done, setDone] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function add() {
+    setAdding(true)
+    setError(null)
+    try {
+      const res = await fetch("/api/bet-slips/from-rec", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bet),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || "Failed to add bet")
+      } else {
+        setDone(true)
+      }
+    } catch (e: any) {
+      setError(e.message || "Network error")
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  if (done) {
+    return (
+      <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 text-xs text-emerald-300 flex items-center gap-2">
+        <span>✓</span>
+        <span>Added to your bet tracker</span>
+      </div>
+    )
+  }
+
+  const homeAway = bet.home && bet.away ? `${bet.home} vs ${bet.away}` : ""
+  const market = [bet.market, bet.selection].filter(Boolean).join(" — ")
+  const odds = bet.odds ? `@ ${bet.odds}` : ""
+  const stake = bet.stake ? ` · £${bet.stake}` : ""
+
+  return (
+    <div className="rounded-xl bg-blue-500/10 border border-blue-500/30 p-3 space-y-2 max-w-[85%]">
+      <div className="text-[10px] uppercase tracking-widest text-blue-300/80">AI Bet Suggestion</div>
+      {homeAway && <div className="text-sm text-white/90 font-semibold">{homeAway}</div>}
+      <div className="text-xs text-white/70">
+        {market} {odds}{stake}
+      </div>
+      <button
+        onClick={add}
+        disabled={adding}
+        className="w-full rounded-lg bg-blue-500 hover:bg-blue-400 disabled:opacity-50 text-white text-xs font-semibold py-2 transition-colors"
+      >
+        {adding ? "Adding…" : "✚ Add to my bets"}
+      </button>
+      {error && <div className="text-xs text-red-300">{error}</div>}
     </div>
   )
 }

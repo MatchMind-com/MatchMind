@@ -17,6 +17,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getSofaScoreLiveStats, type SofaScoreStats } from '@/lib/sofascore'
 import { getUserContext, renderContextBlock } from '@/lib/user-context'
 import { recommendStake, renderStakeHint } from '@/lib/stake-recommender'
+import { leaguesShortList } from '@/lib/leagues'
+import { parseBetRec, BET_REC_PROMPT_INSTRUCTIONS } from '@/lib/parse-bet-rec'
 
 const API_KEY = process.env.API_FOOTBALL_KEY!
 const BASE = 'https://v3.football.api-sports.io'
@@ -389,22 +391,30 @@ If extra stats are listed (shots on target, dangerous attacks, pass accuracy, sa
 ${ctxBlock ? `\n${ctxBlock}\n` : ''}${stakeHint ? `\n${stakeHint}\nIf there's a genuine value angle on the price right now, you MAY drop a brief sizing note ("a 2-unit bet for your roll") — but only when it adds value. Never force it.\n` : ''}`
 
   let commentary: string | null = null
+  let betRecommendation: ReturnType<typeof parseBetRec>['betRec'] = null
   try {
     const openai = getOpenAIClient()
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
-      max_tokens: 200,
+      max_tokens: 260,
       temperature: 0.7,
       messages: [
         {
           role: 'system',
           content:
-            "You are MatchMind's Live Co-Pilot — a sharp, friendly football analyst watching a live match with the user. Speak naturally, like a friend on the couch with deep tactical knowledge. Reference the score, minute, and ANY stats that are explicitly given to you. ABSOLUTE RULE: never claim 'no shots', 'no corners', 'quiet game', 'snoozefest' or anything similar based on missing data — many lower-tier leagues simply don't have detailed stats from our provider. If stats aren't given, talk about what you DO know: score, minute, late-game pressure, who's leading, the implied odds, what to watch for tactically. Never invent stats. Never be dismissive.",
+            "You are MatchMind's Live Co-Pilot — a sharp, friendly football analyst watching a live match with the user. Speak naturally, like a friend on the couch with deep tactical knowledge. Reference the score, minute, and ANY stats that are explicitly given to you. ABSOLUTE RULE: never claim 'no shots', 'no corners', 'quiet game', 'snoozefest' or anything similar based on missing data — many lower-tier leagues simply don't have detailed stats from our provider. If stats aren't given, talk about what you DO know: score, minute, late-game pressure, who's leading, the implied odds, what to watch for tactically. Never invent stats. Never be dismissive. " +
+            `MatchMind has data coverage for these competitions: ${leaguesShortList()}. Never tell the user a league is unsupported.`,
         },
+        { role: 'system', content: BET_REC_PROMPT_INSTRUCTIONS },
         { role: 'user', content: userPrompt },
       ],
     })
-    commentary = completion.choices[0]?.message?.content?.trim() || null
+    const raw = completion.choices[0]?.message?.content?.trim() || null
+    if (raw) {
+      const parsed = parseBetRec(raw)
+      commentary = parsed.cleanText || null
+      betRecommendation = parsed.betRec
+    }
   } catch (err) {
     console.error('[live-copilot] OpenAI error:', err)
   }
@@ -415,9 +425,20 @@ ${ctxBlock ? `\n${ctxBlock}\n` : ''}${stakeHint ? `\n${stakeHint}\nIf there's a 
   }
   snapshots.set(fixtureId, curr)
 
+  // Enrich bet rec with fixture context — the AI doesn't always echo every
+  // detail back, but we know the teams + league + kickoff for sure.
+  if (betRecommendation) {
+    if (!betRecommendation.home && homeName) betRecommendation.home = homeName
+    if (!betRecommendation.away && awayName) betRecommendation.away = awayName
+    if (!betRecommendation.league && league) betRecommendation.league = league
+    if (!betRecommendation.kickoff && fx?.fixture?.date) betRecommendation.kickoff = fx.fixture.date
+    if (!betRecommendation.fixtureId) betRecommendation.fixtureId = parseInt(fixtureId, 10) || null
+  }
+
   return NextResponse.json({
     status: commentary ? 'speaking' : 'silent',
     commentary: commentary || undefined,
+    betRecommendation,
     reason,
     currentState,
   })

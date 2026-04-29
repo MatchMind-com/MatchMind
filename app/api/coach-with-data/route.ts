@@ -3,6 +3,8 @@ import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
 import { retrieveMemories, saveMemory } from '@/lib/memory-lane'
 import { getUserContext, renderContextBlock } from '@/lib/user-context'
+import { leaguesPromptBlock, findLeague } from '@/lib/leagues'
+import { parseBetRec, BET_REC_PROMPT_INSTRUCTIONS } from '@/lib/parse-bet-rec'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const API_KEY = process.env.API_FOOTBALL_KEY!
@@ -34,13 +36,8 @@ async function apiFetch(path: string) {
   } catch { return null }
 }
 
-const LEAGUE_NAMES: Record<string, string> = {
-  '39': 'Premier League', '140': 'La Liga', '135': 'Serie A',
-  '78': 'Bundesliga', '61': 'Ligue 1', '2': 'Champions League',
-  '3': 'Europa League', '848': 'Conference League', '40': 'Championship',
-  '88': 'Eredivisie', '94': 'Primeira Liga', '203': 'Süper Lig',
-  '179': 'Scottish Premiership', '144': 'Belgian Pro League', '253': 'MLS',
-}
+// League names now come from lib/leagues.ts via findLeague() so all 25
+// tracked competitions are covered (not just the Tier-1 / 2 subset).
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -137,7 +134,7 @@ export async function POST(req: NextRequest) {
     `${b.match_name} | ${b.bet_type} @ ${b.odds} | £${b.stake} | ${b.result || 'Pending'}${b.profit_loss ? ` | P/L: £${b.profit_loss}` : ''}`
   ).join('\n') || 'No recent bets'
 
-  const leagueName = LEAGUE_NAMES[leagueId] || 'Football'
+  const leagueName = findLeague(leagueId)?.name || 'Football'
 
   // Unified user context — bankroll + goal + recent bets + loss streak.
   // Best-effort; falls back to empty block on any failure.
@@ -182,6 +179,11 @@ ${userPrefs.monthly_pl_estimate === 'consistent_profit' ? 'This user is profitab
 ` : ''
 
   const systemPrompt = `You are MatchMind, an elite AI football betting coach with access to real-time data for the ${season}/${season + 1} season. You combine deep football intelligence with sharp statistical analysis to help users make smarter betting decisions.
+
+=== LEAGUES YOU COVER ===
+${leaguesPromptBlock()}
+
+${BET_REC_PROMPT_INSTRUCTIONS}
 ${financialContextBlock ? `\n${financialContextBlock}\n` : ''}${personalisation}${memoryBlock}
 === LIVE FOOTBALL DATA — ${leagueName} (${season}/${String(season + 1).slice(2)} season) ===
 
@@ -231,9 +233,16 @@ Keep responses concise and actionable. Use emojis sparingly for clarity. Focus o
     max_tokens: 700,
   })
 
-  const reply = completion.choices[0]?.message?.content || 'Unable to generate response.'
+  const rawReply = completion.choices[0]?.message?.content || 'Unable to generate response.'
 
-  // Persist both sides of the exchange (fire-and-forget, never blocks response)
+  // Strip the [BET_REC]…[/BET_REC] machine-token (if any) from the visible
+  // text and parse it into a structured recommendation the UI can render
+  // as an "Add to my bets" button.
+  const { cleanText: reply, betRec: betRecommendation } = parseBetRec(rawReply)
+
+  // Persist both sides of the exchange (fire-and-forget, never blocks response).
+  // Save the CLEAN text (without the token) so it doesn't pollute future
+  // memory retrievals.
   Promise.allSettled([
     saveMemory(supabase as any, user.id, message, 'user'),
     saveMemory(supabase as any, user.id, reply, 'assistant'),
@@ -241,6 +250,7 @@ Keep responses concise and actionable. Use emojis sparingly for clarity. Focus o
 
   return NextResponse.json({
     reply,
+    betRecommendation,
     context: {
       liveCount: liveGames?.length || 0,
       upcomingCount: fixtures?.slice(0, 15).length || 0,
