@@ -1,8 +1,9 @@
 'use client'
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import LiveFootballData from '@/components/football/LiveFootballData'
 import NewsPanel from '@/components/coach/NewsPanel'
 import MemoriesDrawer from '@/components/coach/MemoriesDrawer'
+import BetRecSidebar from '@/components/coach/BetRecSidebar'
 import type { BetRecommendation } from '@/lib/parse-bet-rec'
 
 interface Message {
@@ -82,6 +83,22 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
     const t = setTimeout(() => setToast(null), 2800)
     return () => clearTimeout(t)
   }, [toast])
+
+  // Sidebar bet rec — shows the LATEST assistant message that emitted a
+  // structured [BET_REC] payload, persisting until the user dismisses it
+  // (we record the dismissed message index so a fresh rec replaces it
+  // automatically when one arrives).
+  const [dismissedRecIndex, setDismissedRecIndex] = useState<number | null>(null)
+  const currentRec = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i]
+      if (m.role === 'assistant' && m.betRecommendation) {
+        if (dismissedRecIndex !== null && i <= dismissedRecIndex) return null
+        return { rec: m.betRecommendation, index: i, addState: m.betAddState ?? 'idle' as const }
+      }
+    }
+    return null
+  }, [messages, dismissedRecIndex])
 
   // POSTs the AI's bet recommendation to /api/bet-slips/from-rec, which inserts
   // a row into bet_slips and returns { success, id }. Defensive — survives a
@@ -310,6 +327,18 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
           </div>
         )}
 
+        {/* Mobile/tablet bet rec — stacks above chat when present, hidden on lg+ */}
+        {currentRec && (
+          <div className="lg:hidden px-4 pt-3">
+            <BetRecSidebar
+              rec={currentRec.rec}
+              addState={currentRec.addState}
+              onAdd={() => addBetFromRec(currentRec.index, currentRec.rec)}
+              onDismiss={() => setDismissedRecIndex(currentRec.index)}
+            />
+          </div>
+        )}
+
         {/* Quick prompts */}
         <div className="flex gap-2 px-4 py-2.5 overflow-x-auto border-b border-white/[0.05]" style={{ scrollbarWidth: 'none' }}>
           {QUICK_PROMPTS.map((p) => (
@@ -452,10 +481,25 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
         </div>
       </div>
 
-      {/* Right: News panel (desktop) */}
-      <div className="hidden lg:flex flex-col w-72 xl:w-80 shrink-0">
-        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3">Football News</p>
-        <NewsPanel />
+      {/* Right: Bet rec sidebar + News panel (desktop) */}
+      <div className="hidden lg:flex flex-col w-72 xl:w-80 shrink-0 gap-4 overflow-y-auto">
+        <div className="sticky top-0 z-10">
+          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3">AI Pick</p>
+          <BetRecSidebar
+            rec={currentRec?.rec ?? null}
+            addState={currentRec?.addState ?? 'idle'}
+            onAdd={() => {
+              if (currentRec) addBetFromRec(currentRec.index, currentRec.rec)
+            }}
+            onDismiss={() => {
+              if (currentRec) setDismissedRecIndex(currentRec.index)
+            }}
+          />
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3">Football News</p>
+          <NewsPanel />
+        </div>
       </div>
 
       {/* Memories drawer (slides in from right, overlays everything) */}
