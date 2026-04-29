@@ -207,6 +207,40 @@ h1, h2, h3, h4 {
    Safe — these classes are not used by app code. */
 .now-playing-indicator,
 [data-now-playing],
-[aria-label='Now Playing'] {
+[aria-label='Now Playing'],
+[aria-label='Now playing'],
+[role='status'][aria-label*='playing' i] {
   display: none !important;
+}
+
+/* ─── Micro-interactions: tab/content fade-in ───
+   Used when switching tabs (Picks/Money) or surfacing newly-loaded sections.
+   Subtle 200ms fade — never overdone. */
+@keyframes mm-fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.mm-fade-in {
+  animation: mm-fade-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Soft sidebar active-bar grow */
+@keyframes mm-bar-grow {
+  from { transform: translateY(-50%) scaleY(0); }
+  to   { transform: translateY(-50%) scaleY(1); }
+}
+
+.mm-bar-grow {
+  transform-origin: center;
+  animation: mm-bar-grow 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* scrollbar-hide utility — used by tab strips and chip rows */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

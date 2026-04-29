@@ -4,8 +4,8 @@
   "description": "AI-powered football betting intelligence. Track bets, find value, get AI picks.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#0B0B14",
-  "theme_color": "#7c3aed",
+  "background_color": "#0F1115",
+  "theme_color": "#F97316",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -25,13 +25,13 @@
   "shortcuts": [
     {
       "name": "Today's Picks",
-      "url": "/dashboard/predictions",
+      "url": "/dashboard/picks",
       "description": "View today's AI value bets"
     },
     {
-      "name": "Add Bet",
-      "url": "/dashboard",
-      "description": "Log a new bet slip"
+      "name": "Money",
+      "url": "/dashboard/money",
+      "description": "Manage your bankroll & goals"
     }
   ]
 }

@@ -116,7 +116,7 @@ function NavItem({
       onClick={onClick}
       className={`
         group relative flex items-center gap-3.5 pl-5 pr-4 py-2.5 text-[14px]
-        transition-all duration-150
+        transition-all duration-200 active:scale-[0.99]
         ${active
           ? 'text-fg font-semibold'
           : 'text-fg-muted hover:text-fg-secondary font-medium'
@@ -125,12 +125,13 @@ function NavItem({
     >
       {/* Editorial active marker — left-edge orange bar (no fill background) */}
       <span
-        className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full transition-all
-          ${active ? 'h-7 bg-brand' : 'h-0 bg-transparent group-hover:h-3 group-hover:bg-fg-muted/40'}
+        className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full
+          transition-[height,background-color] duration-200 ease-out
+          ${active ? 'h-7 bg-brand mm-bar-grow' : 'h-0 bg-transparent group-hover:h-3 group-hover:bg-fg-muted/40'}
         `}
         aria-hidden
       />
-      <span className={`transition-colors ${active ? 'text-brand' : 'text-fg-muted/70 group-hover:text-fg-secondary'}`}>
+      <span className={`transition-colors duration-200 ${active ? 'text-brand' : 'text-fg-muted/70 group-hover:text-fg-secondary'}`}>
         {item.icon}
       </span>
       <span>{item.label}</span>
@@ -204,7 +205,7 @@ export default function Sidebar({ email }: { email: string }) {
           onClick={signOut}
           className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[12px] font-semibold
                      text-fg-muted hover:text-fg hover:bg-bg-surface border border-transparent hover:border-border-subtle
-                     transition-all"
+                     transition-all duration-150 active:scale-[0.98]"
         >
           <IconSignOut />
           Sign out
@@ -217,7 +218,7 @@ export default function Sidebar({ email }: { email: string }) {
     <>
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-bg-base/95 backdrop-blur-xl border-b border-border-subtle flex items-center justify-between px-4 h-14">
-        <Link href="/dashboard" className="flex items-center gap-2.5">
+        <Link href="/dashboard" className="flex items-center gap-2.5 active:scale-[0.98] transition-transform duration-150">
           <div className="w-7 h-7 rounded-lg bg-brand/10 border border-brand/25 flex items-center justify-center">
             <Image src="/logo-icon.png" alt="MatchMind" width={16} height={16} className="object-contain" />
           </div>
@@ -225,9 +226,10 @@ export default function Sidebar({ email }: { email: string }) {
             Match<span className="text-brand">Mind</span>
           </div>
         </Link>
+        {/* 44px tap target — meets iOS HIG */}
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="text-fg-secondary hover:text-fg p-1 transition-colors"
+          className="text-fg-secondary hover:text-fg w-11 h-11 -mr-2 flex items-center justify-center transition-all duration-150 active:scale-[0.92] active:bg-bg-elevated/50 rounded-lg"
           aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
         >
           {mobileOpen ? <IconClose /> : <IconMenu />}
@@ -243,10 +245,10 @@ export default function Sidebar({ email }: { email: string }) {
       {mobileOpen && (
         <>
           <div
-            className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
+            className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm mm-fade-in"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="lg:hidden fixed left-0 top-0 bottom-0 z-50">
+          <div className="lg:hidden fixed left-0 top-0 bottom-0 z-50 animate-slide-down">
             {sidebarContent}
           </div>
         </>
