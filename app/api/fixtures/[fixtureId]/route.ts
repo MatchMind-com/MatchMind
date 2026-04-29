@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getSofaScoreLiveStats, type SofaScoreStats } from '@/lib/sofascore'
 
 const API_KEY = process.env.API_FOOTBALL_KEY!
 const BASE = 'https://v3.football.api-sports.io'
@@ -147,6 +148,63 @@ export async function GET(
         pass_accuracy: extractStat(awayTeamStats, 'Passes %'),
         offsides: extractStat(awayTeamStats, 'Offsides'),
       },
+    }
+  }
+
+  // SofaScore fallback — for live/finished matches in lower-tier leagues
+  // API-Football frequently returns null xG/shots/possession/corners. SofaScore
+  // covers nearly every league. Only fetch when there's something missing AND
+  // the match is in a state where stats should exist (live or finished).
+  const fxStatus = fixture.fixture?.status?.short
+  const isPlayedOrLive = fxStatus && !['NS', 'TBD', 'PST', 'CANC', 'ABD', 'AWD', 'WO'].includes(fxStatus)
+  const homeName = fixture.teams?.home?.name
+  const awayName = fixture.teams?.away?.name
+  const needsFallback =
+    isPlayedOrLive &&
+    homeName &&
+    awayName &&
+    (!statistics ||
+      statistics.home.shots_total === null ||
+      statistics.home.xg === null ||
+      statistics.home.possession === null ||
+      statistics.home.corners === null)
+  if (needsFallback) {
+    try {
+      const sofa: SofaScoreStats = await getSofaScoreLiveStats(homeName, awayName)
+      if (sofa.matchId !== null) {
+        if (!statistics) {
+          statistics = {
+            home: {
+              possession: null, shots_total: null, shots_on_goal: null, xg: null,
+              corners: null, fouls: null, yellow_cards: null, red_cards: null,
+              saves: null, passes_total: null, passes_accurate: null, pass_accuracy: null, offsides: null,
+            },
+            away: {
+              possession: null, shots_total: null, shots_on_goal: null, xg: null,
+              corners: null, fouls: null, yellow_cards: null, red_cards: null,
+              saves: null, passes_total: null, passes_accurate: null, pass_accuracy: null, offsides: null,
+            },
+          }
+        }
+        const fill = (side: 'home' | 'away') => {
+          const dst = statistics[side]
+          dst.possession = dst.possession ?? sofa.possession[side]
+          dst.shots_total = dst.shots_total ?? sofa.shots[side]
+          dst.shots_on_goal = dst.shots_on_goal ?? sofa.shotsOnTarget[side]
+          dst.xg = dst.xg ?? sofa.xg[side]
+          dst.corners = dst.corners ?? sofa.corners[side]
+          dst.fouls = dst.fouls ?? sofa.fouls[side]
+          dst.saves = dst.saves ?? sofa.saves[side]
+          dst.pass_accuracy = dst.pass_accuracy ?? sofa.passAccuracy[side]
+          dst.offsides = dst.offsides ?? sofa.offsides[side]
+          if (!dst.yellow_cards) dst.yellow_cards = sofa.yellowCards[side]
+          if (!dst.red_cards) dst.red_cards = sofa.redCards[side]
+        }
+        fill('home')
+        fill('away')
+      }
+    } catch (e) {
+      console.warn('[fixtures/[fixtureId]] SofaScore fallback failed:', e)
     }
   }
 
