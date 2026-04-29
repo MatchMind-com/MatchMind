@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import LiveFootballData from '@/components/football/LiveFootballData'
 import NewsPanel from '@/components/coach/NewsPanel'
 
@@ -22,6 +22,26 @@ function SendIcon() {
   )
 }
 
+function MicIcon({ recording }: { recording: boolean }) {
+  return (
+    <svg className={`w-4 h-4 ${recording ? 'text-red-400' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+    </svg>
+  )
+}
+
+function SpeakerIcon({ playing }: { playing: boolean }) {
+  return (
+    <svg className={`w-3.5 h-3.5 ${playing ? 'text-blue-400' : 'text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 6v12m-3.536-9.536a5 5 0 000 7.072M8.464 8.464A5 5 0 006 12M18 6a9 9 0 010 12" />
+    </svg>
+  )
+}
+
+// Detect Web Speech API support
+const hasSpeechRecognition = typeof window !== 'undefined' &&
+  ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
+
 export default function CoachPageWithData({ user, profile }: { user: any; profile: any }) {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -35,9 +55,55 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
   const [tab, setTab] = useState<'chat' | 'news'>('chat')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Voice state
+  const [voiceMode, setVoiceMode] = useState(false)
+  const [recording, setRecording] = useState(false)
+  const [playingIndex, setPlayingIndex] = useState<number | null>(null)
+  const [unsupportedBrowser, setUnsupportedBrowser] = useState(false)
+  const recognitionRef = useRef<any>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // TTS playback
+  const speakMessage = useCallback(async (text: string, index: number) => {
+    // Stop any current playback
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current = null
+    }
+    if (playingIndex === index) {
+      setPlayingIndex(null)
+      return
+    }
+
+    setPlayingIndex(index)
+    try {
+      const res = await fetch('/api/voice-tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      })
+      if (!res.ok) throw new Error('TTS failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const audio = new Audio(url)
+      audioRef.current = audio
+      audio.onended = () => {
+        setPlayingIndex(null)
+        URL.revokeObjectURL(url)
+      }
+      audio.onerror = () => {
+        setPlayingIndex(null)
+        URL.revokeObjectURL(url)
+      }
+      await audio.play()
+    } catch {
+      setPlayingIndex(null)
+    }
+  }, [playingIndex])
 
   async function sendMessage(text?: string) {
     const msg = text || input.trim()
@@ -59,12 +125,65 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
       })
       const data = await res.json()
       if (data.reply) {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
+        const newIndex = messages.length + 1 // +1 for the user message just added
+        setMessages(prev => {
+          const next = [...prev, { role: 'assistant' as const, content: data.reply }]
+          // Auto-play if voice mode is active
+          if (voiceMode) {
+            setTimeout(() => speakMessage(data.reply, next.length - 1), 200)
+          }
+          return next
+        })
       }
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I ran into an error. Please try again.' }])
     }
     setLoading(false)
+  }
+
+  function toggleRecording() {
+    if (!hasSpeechRecognition) {
+      setUnsupportedBrowser(true)
+      return
+    }
+
+    if (recording) {
+      recognitionRef.current?.stop()
+      setRecording(false)
+      return
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'en-GB'
+    recognition.interimResults = false
+    recognition.maxAlternatives = 1
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript
+      setInput(transcript)
+      setRecording(false)
+    }
+    recognition.onerror = () => setRecording(false)
+    recognition.onend = () => setRecording(false)
+
+    recognitionRef.current = recognition
+    recognition.start()
+    setRecording(true)
+  }
+
+  function toggleVoiceMode() {
+    if (!hasSpeechRecognition && !voiceMode) {
+      setUnsupportedBrowser(true)
+      return
+    }
+    // Stop any playing audio when turning off
+    if (voiceMode && audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current = null
+      setPlayingIndex(null)
+    }
+    setVoiceMode(v => !v)
   }
 
   return (
@@ -93,12 +212,39 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
               </div>
             </div>
           </div>
-          {/* Mobile tabs */}
-          <div className="flex lg:hidden gap-1">
-            <button onClick={() => setTab('chat')} className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${tab === 'chat' ? 'bg-blue-500/20 text-blue-300' : 'text-slate-500'}`}>Chat</button>
-            <button onClick={() => setTab('news')} className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${tab === 'news' ? 'bg-blue-500/20 text-blue-300' : 'text-slate-500'}`}>News</button>
+
+          <div className="flex items-center gap-2">
+            {/* Voice toggle */}
+            <button
+              onClick={toggleVoiceMode}
+              title={voiceMode ? 'Voice mode ON — click to turn off' : 'Turn on voice mode'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                voiceMode
+                  ? 'bg-blue-500/20 border-blue-500/40 text-blue-300'
+                  : 'bg-white/[0.04] border-white/[0.07] text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 6v12m-3.536-9.536a5 5 0 000 7.072" />
+              </svg>
+              Voice {voiceMode ? 'ON' : 'OFF'}
+            </button>
+
+            {/* Mobile tabs */}
+            <div className="flex lg:hidden gap-1">
+              <button onClick={() => setTab('chat')} className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${tab === 'chat' ? 'bg-blue-500/20 text-blue-300' : 'text-slate-500'}`}>Chat</button>
+              <button onClick={() => setTab('news')} className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${tab === 'news' ? 'bg-blue-500/20 text-blue-300' : 'text-slate-500'}`}>News</button>
+            </div>
           </div>
         </div>
+
+        {/* Browser warning */}
+        {unsupportedBrowser && (
+          <div className="mx-4 mt-3 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center justify-between">
+            <span>Voice input requires Chrome or Edge. Switch browser to use the mic.</span>
+            <button onClick={() => setUnsupportedBrowser(false)} className="ml-3 text-amber-400 hover:text-white">✕</button>
+          </div>
+        )}
 
         {/* Quick prompts */}
         <div className="flex gap-2 px-4 py-2.5 overflow-x-auto border-b border-white/[0.05]" style={{ scrollbarWidth: 'none' }}>
@@ -133,12 +279,27 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
                   </svg>
                 )}
               </div>
-              <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                m.role === 'assistant'
-                  ? 'bg-white/[0.04] border border-white/[0.06] text-slate-200 rounded-tl-sm'
-                  : 'bg-blue-600 text-white rounded-tr-sm'
-              }`}>
-                {m.content}
+              <div className="flex flex-col gap-1 max-w-[80%]">
+                <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                  m.role === 'assistant'
+                    ? 'bg-white/[0.04] border border-white/[0.06] text-slate-200 rounded-tl-sm'
+                    : 'bg-blue-600 text-white rounded-tr-sm'
+                }`}>
+                  {m.content}
+                </div>
+                {/* Speaker button for assistant messages */}
+                {m.role === 'assistant' && (
+                  <button
+                    onClick={() => speakMessage(m.content, i)}
+                    title={playingIndex === i ? 'Stop playback' : 'Read aloud'}
+                    className={`self-start flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] transition-all hover:bg-white/[0.06] ${
+                      playingIndex === i ? 'text-blue-400' : 'text-slate-600 hover:text-slate-400'
+                    }`}
+                  >
+                    <SpeakerIcon playing={playingIndex === i} />
+                    {playingIndex === i ? 'Playing…' : 'Read aloud'}
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -164,10 +325,27 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
         {/* Input */}
         <div className="p-4 border-t border-white/[0.07]">
           <form onSubmit={(e) => { e.preventDefault(); sendMessage() }} className="flex gap-2">
+            {/* Mic button */}
+            <button
+              type="button"
+              onClick={toggleRecording}
+              title={recording ? 'Stop recording' : 'Speak your question'}
+              className={`px-3 py-3 rounded-xl border transition-all relative ${
+                recording
+                  ? 'bg-red-500/20 border-red-500/50 text-red-400 animate-pulse'
+                  : 'bg-white/[0.04] border-white/[0.07] text-slate-500 hover:text-slate-300 hover:border-white/20'
+              }`}
+            >
+              <MicIcon recording={recording} />
+              {recording && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+              )}
+            </button>
+
             <input
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Ask about today's matches, team form, value bets..."
+              placeholder={recording ? 'Listening…' : 'Ask about today\'s matches, team form, value bets...'}
               className="flex-1 bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500/40 transition-colors"
               disabled={loading}
             />
@@ -179,6 +357,11 @@ export default function CoachPageWithData({ user, profile }: { user: any; profil
               <SendIcon />
             </button>
           </form>
+          {voiceMode && (
+            <p className="mt-2 text-[10px] text-blue-400/60 text-center">
+              Voice mode active — AI responses will be read aloud automatically
+            </p>
+          )}
         </div>
       </div>
 

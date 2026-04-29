@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { PRIMARY_AFFILIATE } from '@/lib/affiliates'
 import { kellyStake } from '@/lib/bankroll'
+import PreBetPause, { type PreBetPauseBet } from '@/components/pre-bet-pause'
 
 const FORCE_PRO_TIER = true // temp: set false to restore paywall
 
@@ -465,6 +466,7 @@ export default function PredictionsPage() {
   const [copied, setCopied] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [trackingBet, setTrackingBet] = useState<TrackingBet | null>(null)
+  const [pendingBet, setPendingBet] = useState<PreBetPauseBet | null>(null)
   const [tab, setTab] = useState<'accas' | 'bets' | 'matches'>('accas')
   const [bankroll, setBankroll] = useState<number>(0)
   const [unitPct, setUnitPct] = useState<number>(2)
@@ -673,17 +675,23 @@ export default function PredictionsPage() {
                           >
                             {copied === accaId ? <><CheckIcon /> Copied!</> : <><CopyIcon /> Copy</>}
                           </button>
-                          <a
-                            href={PRIMARY_AFFILIATE.url}
-                            target="_blank"
-                            rel="noopener noreferrer sponsored"
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPendingBet({
+                                betLabel: `${tier.label} Acca (${legs.length} legs): ${legs.map(l => `${l.pred.home_team} v ${l.pred.away_team} — ${l.market}`).join('; ')}`,
+                                odds: combinedOdds,
+                                href: PRIMARY_AFFILIATE.url,
+                                bookmaker: PRIMARY_AFFILIATE.short,
+                              })
+                            }
                             className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-sm transition-all"
                           >
                             Place on {PRIMARY_AFFILIATE.short}
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                             </svg>
-                          </a>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1003,10 +1011,17 @@ export default function PredictionsPage() {
                     })()}
 
                     {/* Bet Now CTA */}
-                    <a
-                      href={PRIMARY_AFFILIATE.url}
-                      target="_blank"
-                      rel="noopener noreferrer sponsored"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const recOdds = resolveRecommendedOdds(pred.recommended_bet, pred.bookmaker)
+                        setPendingBet({
+                          betLabel: `${pred.home_team} vs ${pred.away_team} — ${pred.recommended_bet}`,
+                          odds: recOdds ?? undefined,
+                          href: PRIMARY_AFFILIATE.url,
+                          bookmaker: pred.bookmaker_name || PRIMARY_AFFILIATE.short,
+                        })
+                      }}
                       className={`flex items-center justify-between w-full rounded-xl px-4 py-2.5 mb-2 transition-all group ${
                         pred.is_value_bet && isPro
                           ? 'bg-emerald-600 hover:bg-emerald-500'
@@ -1022,7 +1037,7 @@ export default function PredictionsPage() {
                       <svg className="w-4 h-4 text-white/80 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
-                    </a>
+                    </button>
 
                     {/* Track this bet */}
                     <button
@@ -1324,6 +1339,8 @@ export default function PredictionsPage() {
           onTracked={() => setTrackingBet(null)}
         />
       )}
+
+      <PreBetPause bet={pendingBet} onClose={() => setPendingBet(null)} />
     </div>
   )
 }

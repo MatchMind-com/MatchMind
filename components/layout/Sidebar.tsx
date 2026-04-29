@@ -22,8 +22,14 @@ function IconRecord() {
 function IconBrain() {
   return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
 }
+function IconLive() {
+  return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path strokeLinecap="round" strokeLinejoin="round" d="M5.636 5.636a9 9 0 000 12.728M18.364 5.636a9 9 0 010 12.728M8.464 8.464a5 5 0 000 7.072M15.536 8.464a5 5 0 010 7.072" /></svg>
+}
 function IconCoach() {
   return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+}
+function IconDream() {
+  return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
 }
 function IconBilling() {
   return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
@@ -56,6 +62,8 @@ const SECTIONS = [
     label: 'AI Tools',
     items: [
       { href: '/dashboard/predictions', label: 'AI Predictions', icon: <IconBrain /> },
+      { href: '/dashboard/dream-bet', label: 'Dream Bet', icon: <IconDream /> },
+      { href: '/dashboard/live', label: 'Live Matches', icon: <IconLive /> },
       { href: '/dashboard/coach', label: 'Football Coach', icon: <IconCoach /> },
     ],
   },
