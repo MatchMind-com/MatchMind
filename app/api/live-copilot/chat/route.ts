@@ -102,15 +102,24 @@ export async function POST(req: NextRequest) {
   const awayPossession = extractStat(awayTeamStats, 'Ball Possession')
   const odds = pickBookmakerOdds(oddsResp)
 
+  // Only include stat lines we actually have. Lower-tier leagues often
+  // return null for shots/xG/corners/possession — saying "0" or "n/a" misleads
+  // the AI into claiming those things didn't happen.
+  const lines: string[] = [
+    `${homeName} ${homeGoals ?? 0} - ${awayGoals ?? 0} ${awayName} (${minute ?? '?'}' ${status ?? ''})`,
+    `League: ${league}`,
+  ]
+  if (homeXg !== null || awayXg !== null) lines.push(`xG: ${homeXg ?? '?'} - ${awayXg ?? '?'}`)
+  if (homeShots !== null || awayShots !== null) lines.push(`Shots: ${homeShots ?? '?'} - ${awayShots ?? '?'}`)
+  if (homeCorners !== null || awayCorners !== null) lines.push(`Corners: ${homeCorners ?? '?'} - ${awayCorners ?? '?'}`)
+  if ((homeYellow + homeRed + awayYellow + awayRed) > 0) lines.push(`Cards: ${homeName} ${homeYellow}Y/${homeRed}R | ${awayName} ${awayYellow}Y/${awayRed}R`)
+  if (homePossession !== null || awayPossession !== null) lines.push(`Possession: ${homePossession ?? '?'}% - ${awayPossession ?? '?'}%`)
+  lines.push(`Match-winner odds: Home ${odds.home ?? 'n/a'} / Draw ${odds.draw ?? 'n/a'} / Away ${odds.away ?? 'n/a'}`)
+  const hasDetailedStats = (homeShots !== null || homeXg !== null || homeCorners !== null || homePossession !== null)
+
   const stateBlock = `Current live state:
-${homeName} ${homeGoals ?? 0} - ${awayGoals ?? 0} ${awayName} (${minute ?? '?'}' ${status ?? ''})
-League: ${league}
-xG: ${homeXg ?? 'n/a'} - ${awayXg ?? 'n/a'}
-Shots: ${homeShots ?? 'n/a'} - ${awayShots ?? 'n/a'}
-Corners: ${homeCorners ?? 'n/a'} - ${awayCorners ?? 'n/a'}
-Cards: ${homeName} ${homeYellow}Y/${homeRed}R | ${awayName} ${awayYellow}Y/${awayRed}R
-Possession: ${homePossession ?? 'n/a'}% - ${awayPossession ?? 'n/a'}%
-Match-winner odds: Home ${odds.home ?? 'n/a'} / Draw ${odds.draw ?? 'n/a'} / Away ${odds.away ?? 'n/a'}`
+${lines.join('\n')}
+${hasDetailedStats ? '' : '\n(NOTE: Detailed shot/xG/corner stats are not tracked for this league by our data provider. Only score, minute, and odds are reliable.)'}`
 
   const history = Array.isArray(conversation) ? conversation.slice(-10) : []
   const historyMessages = history
@@ -128,7 +137,7 @@ Match-winner odds: Home ${odds.home ?? 'n/a'} / Draw ${odds.draw ?? 'n/a'} / Awa
         {
           role: 'system',
           content:
-            "You are MatchMind's Live Co-Pilot — a calm, analytical football betting assistant. The user is watching a live match and chatting with you about it. Stay observational and respectful, never dismissive. Use the live state provided to ground your answers. If a stat the user asks about isn't available for this match, say so plainly. Keep replies to 1-3 short sentences, conversational tone. Don't invent numbers.",
+            "You are MatchMind's Live Co-Pilot — a calm, analytical football betting assistant. The user is watching a live match and chatting with you about it. Stay observational and respectful, never dismissive. Use the live state provided to ground your answers. CRITICAL: only reference stats explicitly listed in the state block — if shots/corners/xG aren't shown, those stats simply aren't tracked by our data provider for this league. Don't say 'no shots taken' or 'no corners' based on missing data; say plainly 'I don't have detailed shot/corner stats for this league' and pivot to score, minute, momentum, or odds. Keep replies to 1-3 short sentences. Don't invent numbers.",
         },
         { role: 'system', content: stateBlock },
         ...historyMessages,

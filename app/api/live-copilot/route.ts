@@ -262,13 +262,25 @@ export async function GET(req: NextRequest) {
 
   // Speak — call GPT-4o
   const isOpening = !prev
+
+  // Only include stat lines when the API actually returned values.
+  // For lower-tier leagues, shots/xG/corners/possession are usually null —
+  // showing them as "0" misleads the AI into saying "no shots taken".
+  const statLines: string[] = []
+  if (homeXg !== null || awayXg !== null) statLines.push(`xG: ${homeName} ${homeXg ?? '?'} | ${awayName} ${awayXg ?? '?'}`)
+  if (homeShots !== null || awayShots !== null) statLines.push(`Shots: ${homeShots ?? '?'} - ${awayShots ?? '?'}`)
+  if (homeCorners !== null || awayCorners !== null) statLines.push(`Corners: ${homeCorners ?? '?'} - ${awayCorners ?? '?'}`)
+  if ((homeYellow + homeRed + awayYellow + awayRed) > 0) statLines.push(`Cards: ${homeName} ${homeYellow}Y/${homeRed}R | ${awayName} ${awayYellow}Y/${awayRed}R`)
+  if (homePossession !== null || awayPossession !== null) statLines.push(`Possession: ${homePossession ?? '?'}% - ${awayPossession ?? '?'}%`)
+  const statsBlock = statLines.length > 0
+    ? statLines.join('\n')
+    : '(Detailed live stats not available for this league — only score, minute and odds are reliable.)'
+
   const userPrompt = `Live match: ${homeName} ${homeGoals ?? 0} - ${awayGoals ?? 0} ${awayName} (${minute ?? '?'}' ${status})
 League: ${league}
-xG: ${homeName} ${homeXg ?? 'n/a'} | ${awayName} ${awayXg ?? 'n/a'}
-Shots: ${homeShots ?? 0} - ${awayShots ?? 0}
-Corners: ${homeCorners ?? 0} - ${awayCorners ?? 0}
-Cards: ${homeName} ${homeYellow}Y/${homeRed}R | ${awayName} ${awayYellow}Y/${awayRed}R
-Possession: ${homePossession ?? '?'}% - ${awayPossession ?? '?'}%
+
+${statsBlock}
+
 Odds (Match Winner): Home ${odds.home ?? 'n/a'} / Draw ${odds.draw ?? 'n/a'} / Away ${odds.away ?? 'n/a'}
 
 Trigger: ${reason}.
@@ -277,7 +289,8 @@ Last thing you said: ${prev?.lastCommentary ?? '(nothing yet)'}.
 ${isOpening
   ? 'This is the user OPENING the panel. Set the scene in 2 sentences — the score, the minute, what stands out, what to watch for. Be the friend on the couch giving them the lay of the land.'
   : "Speak in 1–2 sentences as an analytical co-pilot watching with the user. Reference what actually changed, the tactical situation, or what's worth watching next. Tie to odds only when there's a real value or risk angle."}
-Don't invent stats. Keep it conversational, never dismissive.`
+
+CRITICAL: Only reference stats that appear above. If shots/corners/xG/possession are NOT listed, do NOT mention them and do NOT say "no shots" or "no corners" — those stats simply aren't tracked for this league. Focus on what you DO know: score, minute, momentum, odds, who's leading, late-game pressure, etc. Never invent stats. Keep it conversational, never dismissive.`
 
   let commentary: string | null = null
   try {
@@ -290,7 +303,7 @@ Don't invent stats. Keep it conversational, never dismissive.`
         {
           role: 'system',
           content:
-            "You are MatchMind's Live Co-Pilot — a sharp, friendly football analyst watching a live match with the user. Speak naturally, like a friend on the couch with deep tactical knowledge. Reference the score, the minute, the stats. When something shifts (goal, momentum, big chance), call it out. When it's quiet, comment on tactics, shape, what to watch for. Tie to betting markets when there's a real angle. Never invent stats. Never be dismissive — every match has something interesting to say about it.",
+            "You are MatchMind's Live Co-Pilot — a sharp, friendly football analyst watching a live match with the user. Speak naturally, like a friend on the couch with deep tactical knowledge. Reference the score, minute, and ANY stats that are explicitly given to you. ABSOLUTE RULE: never claim 'no shots', 'no corners', 'quiet game', 'snoozefest' or anything similar based on missing data — many lower-tier leagues simply don't have detailed stats from our provider. If stats aren't given, talk about what you DO know: score, minute, late-game pressure, who's leading, the implied odds, what to watch for tactically. Never invent stats. Never be dismissive.",
         },
         { role: 'user', content: userPrompt },
       ],
