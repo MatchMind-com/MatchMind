@@ -1,8 +1,38 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ─── Design tokens — "The Athletic, but for betting" ─── */
+:root {
+  /* Backgrounds — warm charcoal */
+  --bg-base: #0F1115;
+  --bg-surface: #1A1D24;
+  --bg-elevated: #232730;
+
+  /* Borders */
+  --border-subtle: #2A2F3A;
+  --border-strong: #3A4050;
+
+  /* Foreground — warm cream */
+  --fg-primary: #F5F1E8;
+  --fg-secondary: #B8B5AB;
+  --fg-muted: #6E6B62;
+
+  /* Brand + signal */
+  --brand: #F97316;
+  --brand-hover: #FB923C;
+  --success: #10B981;
+  --loss: #F43F5E;
+  --value: #F59E0B;
+  --live: #EF4444;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+  --font-display: 'Inter', system-ui, sans-serif;
+}
 
 * {
   box-sizing: border-box;
@@ -14,62 +44,169 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
-  background-color: #0F1117;
-  color: #ffffff;
-  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-base);
+  color: var(--fg-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headlines: Athletic-style — tight tracking, heavy weight */
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+  font-weight: 800;
+  color: var(--fg-primary);
+}
+
+/* Stat font helper — opt-in via class or var(--font-mono) */
+.font-stat,
+.font-mono {
+  font-family: var(--font-mono);
+  font-feature-settings: 'tnum' 1, 'zero' 1;
 }
 
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1A1D2E;
+  background: var(--bg-surface);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2D3152;
+  background: var(--border-strong);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3B5BDB;
+  background: var(--brand);
+}
+
+/* Selection — warm orange */
+::selection {
+  background: var(--brand);
+  color: var(--bg-base);
 }
 
 @layer components {
+  /* Card — elevated surface */
   .card {
-    @apply bg-[#1A1D2E] border border-[#2D3152] rounded-[12px] p-6;
+    @apply bg-bg-surface border border-border-subtle rounded-[12px] p-5;
   }
 
+  /* Primary CTA — warm orange, the brand */
   .btn-primary {
-    @apply bg-[#3B5BDB] hover:bg-[#2f4cc5] text-white font-semibold py-2.5 px-5 rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed;
+    @apply bg-brand hover:bg-brand-hover text-bg-base font-bold py-2.5 px-5 rounded-lg
+           transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-bg-elevated hover:bg-border-subtle text-fg font-semibold py-2.5 px-5 rounded-lg
+           border border-border-subtle hover:border-border-strong
+           transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed;
   }
 
   .btn-danger {
-    @apply bg-[#FF4757] hover:bg-[#e03e4d] text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200;
+    @apply bg-loss hover:opacity-90 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200;
   }
 
   .input-field {
-    @apply w-full bg-[#0F1117] border border-[#2D3152] rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-[#3B5BDB] transition-colors duration-200;
+    @apply w-full bg-bg-base border border-border-subtle rounded-lg px-4 py-2.5
+           text-fg placeholder-fg-muted focus:outline-none focus:border-brand
+           transition-colors duration-200;
   }
 
   .label {
-    @apply block text-sm font-medium text-gray-300 mb-1.5;
+    @apply block text-sm font-medium text-fg-secondary mb-1.5;
   }
 
   .stat-card {
     @apply card flex flex-col gap-2;
   }
 
+  /* Result rows */
   .win-row {
-    @apply bg-[#00C896]/10 hover:bg-[#00C896]/15;
+    @apply bg-success/10 hover:bg-success/15;
   }
 
   .loss-row {
-    @apply bg-[#FF4757]/10 hover:bg-[#FF4757]/15;
+    @apply bg-loss/10 hover:bg-loss/15;
   }
 
   .void-row {
-    @apply bg-gray-500/10 hover:bg-gray-500/15;
+    @apply bg-fg-muted/10 hover:bg-fg-muted/15;
   }
+
+  /* Editorial section eyebrow — small caps, wide tracking */
+  .eyebrow {
+    @apply text-[10px] font-bold uppercase tracking-[0.18em] text-fg-muted;
+  }
+
+  /* Headline scales — Athletic/magazine feel */
+  .headline-xl {
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    font-weight: 900;
+  }
+
+  .headline-lg {
+    @apply text-3xl md:text-4xl font-black tracking-tight;
+    letter-spacing: -0.022em;
+  }
+
+  .headline-md {
+    @apply text-2xl md:text-3xl font-extrabold tracking-tight;
+    letter-spacing: -0.02em;
+  }
+
+  /* Live pulse — used in LiveMatchBar */
+  .live-dot {
+    @apply relative inline-flex h-2 w-2;
+  }
+  .live-dot::before {
+    content: '';
+    @apply absolute inset-0 rounded-full bg-live opacity-75;
+    animation: live-ping 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+  .live-dot::after {
+    content: '';
+    @apply relative inline-flex h-2 w-2 rounded-full bg-live;
+  }
+}
+
+/* Live pulse keyframe */
+@keyframes live-ping {
+  0% { transform: scale(1); opacity: 0.8; }
+  75%, 100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* LiveMatchBar slide-in */
+@keyframes slide-down {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Marquee for the LiveMatchBar — used as a CSS hint for ticker layout */
+.live-bar-track {
+  display: flex;
+  gap: 1.75rem;
+  align-items: center;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+/* Defensive: hide any browser-injected media-session "now playing"
+   chip that some PWAs surface when a previous tab loaded an <audio> element.
+   Safe — these classes are not used by app code. */
+.now-playing-indicator,
+[data-now-playing],
+[aria-label='Now Playing'] {
+  display: none !important;
 }
