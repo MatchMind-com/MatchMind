@@ -16,7 +16,14 @@ export type StakeRecommendation = {
 }
 
 const KELLY_CAP = 0.25 // never recommend more than 25% raw Kelly (sanity)
-const STAKE_CAP_PCT = 0.05 // never recommend more than 5% of bankroll regardless
+
+// Hard cap on stake as % of bankroll, varies by risk profile.
+// Aggressive users with big goals need bigger swings; conservative users need protection.
+const STAKE_CAP_BY_RISK: Record<string, number> = {
+  conservative: 0.03, // max 3% per bet
+  balanced: 0.06,     // max 6% per bet
+  aggressive: 0.12,   // max 12% per bet — meaningful swings for ambitious goals
+}
 
 function roundStake(amount: number): number {
   if (amount <= 0) return 0
@@ -70,26 +77,29 @@ export function recommendStake(
   let warning: string | undefined
   const reasoningBits: string[] = []
 
-  // Behind on goal — slightly more aggressive (still capped).
+  // Behind on goal — more aggressive (cap depends on risk level)
   if (ctx.goal && !ctx.goal.onTrack) {
-    multiplier = Math.min(0.75, multiplier * 1.25)
-    reasoningBits.push("you're behind on your goal — sizing slightly larger")
+    const maxMult = ctx.goal.riskLevel === 'aggressive' ? 1.5 : 1.0
+    multiplier = Math.min(maxMult, multiplier * 1.4)
+    reasoningBits.push("you're behind on your goal — sizing larger to catch up")
     warning = 'behind_goal'
   }
 
-  // Loss streak — slightly more conservative.
+  // Loss streak — more conservative.
   if (ctx.recentLossStreak >= 3) {
     multiplier = multiplier * 0.75
     reasoningBits.push(`${ctx.recentLossStreak} losses in a row — sizing down to protect the roll`)
     warning = 'loss_streak'
   }
 
+  const riskLabel = ctx.goal?.riskLevel ?? 'balanced'
+  const stakeCapPct = STAKE_CAP_BY_RISK[riskLabel] ?? 0.06
+
   const fraction = kelly * multiplier
-  const cappedPct = Math.min(fraction, STAKE_CAP_PCT)
+  const cappedPct = Math.min(fraction, stakeCapPct)
   const rawStake = bankroll * cappedPct
   const stake = roundStake(rawStake)
   const unitsPct = bankroll > 0 ? Math.round((stake / bankroll) * 1000) / 10 : 0
-  const riskLabel = ctx.goal?.riskLevel ?? 'balanced'
 
   const baseReason = `Based on +${edgePct}% edge at ${odds} odds and your ${riskLabel} risk profile, stake £${stake} (${unitsPct}% of bankroll).`
   const reasoning = reasoningBits.length

@@ -64,7 +64,10 @@ export async function POST(req: NextRequest) {
   ])
 
   // Fetch rich football data in parallel (all cached 60s)
-  const [fixtures, liveGames, standings, topScorers, recentResults, injuries] = await Promise.all([
+  // Today's fixtures fetched ACROSS ALL LEAGUES (not just the active one) so the
+  // coach can answer "what's today" without picking a single league first.
+  const [todayAll, fixtures, liveGames, standings, topScorers, recentResults, injuries] = await Promise.all([
+    apiFetch(`/fixtures?date=${today}`),
     apiFetch(`/fixtures?league=${leagueId}&season=${season}&from=${today}&to=${getDatePlusDays(7)}`),
     apiFetch(`/fixtures?live=all`),
     apiFetch(`/standings?league=${leagueId}&season=${season}`),
@@ -73,7 +76,26 @@ export async function POST(req: NextRequest) {
     apiFetch(`/injuries?league=${leagueId}&season=${season}&date=${today}`),
   ])
 
-  // Format upcoming fixtures (next 7 days, up to 15)
+  // TRACKED league IDs — only show fixtures for leagues we actually cover
+  const TRACKED_IDS = new Set([39,140,135,78,61,2,3,848,88,94,203,40,144,113,262,253,71,128,13,11,307,98,179,106,1])
+
+  // Today's fixtures across all 25 leagues — sort by kickoff time
+  const todayFiltered = (todayAll || [])
+    .filter((f: any) => TRACKED_IDS.has(f.league?.id))
+    .filter((f: any) => ['NS','TBD','1H','HT','2H','ET','BT','P','LIVE'].includes(f.fixture?.status?.short))
+    .sort((a: any, b: any) => new Date(a.fixture?.date).getTime() - new Date(b.fixture?.date).getTime())
+    .slice(0, 25)
+
+  const todayText = todayFiltered.map((f: any) => {
+    const home = f.teams?.home?.name
+    const away = f.teams?.away?.name
+    const time = new Date(f.fixture?.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    const lge = f.league?.name
+    const status = f.fixture?.status?.short === 'NS' ? `${time} KO` : `${f.fixture?.status?.short} · ${f.goals?.home ?? 0}-${f.goals?.away ?? 0}`
+    return `• ${home} vs ${away} — ${lge} · ${status}`
+  }).join('\n') || 'No tracked-league matches today'
+
+  // Format upcoming fixtures (next 7 days, up to 15) — for the active league
   const upcomingText = fixtures?.slice(0, 15).map((f: any) => {
     const home = f.teams?.home?.name
     const away = f.teams?.away?.name
@@ -187,7 +209,10 @@ ${BET_REC_PROMPT_INSTRUCTIONS}
 ${financialContextBlock ? `\n${financialContextBlock}\n` : ''}${personalisation}${memoryBlock}
 === LIVE FOOTBALL DATA — ${leagueName} (${season}/${String(season + 1).slice(2)} season) ===
 
-📅 UPCOMING FIXTURES (next 7 days):
+📅 TODAY'S MATCHES (across ALL 25 tracked leagues — kicks off today, ${today}):
+${todayText}
+
+📅 UPCOMING FIXTURES — ${leagueName} (next 7 days):
 ${upcomingText}
 
 ✅ RECENT RESULTS (last 7 days):
@@ -211,6 +236,7 @@ ${betsText}
 
 === YOUR ROLE ===
 - Reference specific upcoming matches by name and date when giving advice
+- When the user asks about "today" or "tonight" specifically — recommend matches from the TODAY'S MATCHES block ONLY. Don't suggest tomorrow/Saturday matches if they asked about today.
 - Use recent results and form to back up your analysis
 - Mention top scorers when relevant to goalscoring markets
 - Give concrete stake recommendations using Kelly Criterion principles
