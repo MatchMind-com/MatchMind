@@ -101,45 +101,67 @@ function hasAnyData(s: Snapshot): boolean {
 }
 
 function diffIsMaterial(prev: Snapshot | undefined, curr: Snapshot): { material: boolean; reason: string } {
-  // Goals, reds, big xG shifts, odds moves are always material — even on first call.
-  if (curr.homeGoals !== null && curr.awayGoals !== null) {
-    if (!prev && (curr.homeGoals > 0 || curr.awayGoals > 0)) {
-      return { material: true, reason: 'match in progress' }
-    }
-    if (prev && (curr.homeGoals !== prev.homeGoals || curr.awayGoals !== prev.awayGoals)) {
+  // FIRST OBSERVATION — always speak. The user just opened the panel and
+  // needs context immediately. Set the scene.
+  if (!prev) {
+    return { material: true, reason: 'opening — setting the scene' }
+  }
+
+  // Goals — always material
+  if (curr.homeGoals !== null && curr.awayGoals !== null && prev.homeGoals !== null && prev.awayGoals !== null) {
+    if (curr.homeGoals !== prev.homeGoals || curr.awayGoals !== prev.awayGoals) {
       return { material: true, reason: 'goal scored' }
     }
   }
-  if (prev) {
-    if (curr.homeRed > prev.homeRed || curr.awayRed > prev.awayRed) {
-      return { material: true, reason: 'red card' }
-    }
-    const xgShift = (a: number | null, b: number | null) =>
-      a !== null && b !== null && Math.abs(a - b) >= 0.4
-    if (xgShift(curr.homeXg, prev.homeXg) || xgShift(curr.awayXg, prev.awayXg)) {
-      return { material: true, reason: 'xG swing' }
-    }
-    const oddsShift = (a: number | null, b: number | null) =>
-      a !== null && b !== null && b > 0 && Math.abs((a - b) / b) >= 0.15
-    if (
-      oddsShift(curr.homeOdds, prev.homeOdds) ||
-      oddsShift(curr.awayOdds, prev.awayOdds) ||
-      oddsShift(curr.drawOdds, prev.drawOdds)
-    ) {
-      return { material: true, reason: 'odds moved' }
-    }
-    // Periodic check-in only if there's actually data worth talking about.
-    const minutesSinceSpoke = (Date.now() - prev.lastSpokeAt) / 60000
-    if (
-      minutesSinceSpoke >= 8 &&
-      curr.minute !== null &&
-      curr.minute > 0 &&
-      hasAnyData(curr)
-    ) {
-      return { material: true, reason: 'periodic check-in' }
+  // Red cards
+  if (curr.homeRed > prev.homeRed || curr.awayRed > prev.awayRed) {
+    return { material: true, reason: 'red card' }
+  }
+  // xG shift — lowered threshold from 0.4 to 0.25
+  const xgShift = (a: number | null, b: number | null) =>
+    a !== null && b !== null && Math.abs(a - b) >= 0.25
+  if (xgShift(curr.homeXg, prev.homeXg) || xgShift(curr.awayXg, prev.awayXg)) {
+    return { material: true, reason: 'xG swing' }
+  }
+  // Odds shift — lowered threshold from 15% to 10%
+  const oddsShift = (a: number | null, b: number | null) =>
+    a !== null && b !== null && b > 0 && Math.abs((a - b) / b) >= 0.10
+  if (
+    oddsShift(curr.homeOdds, prev.homeOdds) ||
+    oddsShift(curr.awayOdds, prev.awayOdds) ||
+    oddsShift(curr.drawOdds, prev.drawOdds)
+  ) {
+    return { material: true, reason: 'odds moved' }
+  }
+
+  // KEY MATCH MOMENTS — speak when crossing important minute thresholds.
+  // Triggers once per threshold via the prev.minute comparison.
+  const milestones = [
+    { mark: 30, label: '30-minute mark' },
+    { mark: 45, label: 'half-time approaching' },
+    { mark: 60, label: 'hour mark — final third of regulation' },
+    { mark: 75, label: 'final 15 — game opening up' },
+    { mark: 85, label: 'closing minutes' },
+    { mark: 90, label: 'full-time approaching' },
+    { mark: 105, label: 'extra-time half-way' },
+    { mark: 115, label: 'final minutes of extra time' },
+  ]
+  if (curr.minute !== null && prev.minute !== null) {
+    for (const m of milestones) {
+      if (prev.minute < m.mark && curr.minute >= m.mark) {
+        return { material: true, reason: m.label }
+      }
     }
   }
-  return { material: false, reason: 'no material change' }
+
+  // PERIODIC CHECK-IN — every 4 minutes (was 8). Always speak, even if quiet,
+  // so the panel feels alive. The system prompt tells it what to say in quiet matches.
+  const minutesSinceSpoke = (Date.now() - prev.lastSpokeAt) / 60000
+  if (minutesSinceSpoke >= 4 && curr.minute !== null && curr.minute > 0) {
+    return { material: true, reason: 'periodic update' }
+  }
+
+  return { material: false, reason: 'no material change yet' }
 }
 
 export async function GET(req: NextRequest) {
@@ -239,6 +261,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Speak — call GPT-4o
+  const isOpening = !prev
   const userPrompt = `Live match: ${homeName} ${homeGoals ?? 0} - ${awayGoals ?? 0} ${awayName} (${minute ?? '?'}' ${status})
 League: ${league}
 xG: ${homeName} ${homeXg ?? 'n/a'} | ${awayName} ${awayXg ?? 'n/a'}
@@ -251,7 +274,10 @@ Odds (Match Winner): Home ${odds.home ?? 'n/a'} / Draw ${odds.draw ?? 'n/a'} / A
 Trigger: ${reason}.
 Last thing you said: ${prev?.lastCommentary ?? '(nothing yet)'}.
 
-Speak now in 1–2 sentences as an analytical co-pilot. Stay observational and respectful — never dismissive. Reference what actually changed or what's worth watching tactically. Tie to odds only if there's a real value or risk angle. Don't invent stats. If genuinely nothing of substance has happened, reply with the single word: SILENT.`
+${isOpening
+  ? 'This is the user OPENING the panel. Set the scene in 2 sentences — the score, the minute, what stands out, what to watch for. Be the friend on the couch giving them the lay of the land.'
+  : "Speak in 1–2 sentences as an analytical co-pilot watching with the user. Reference what actually changed, the tactical situation, or what's worth watching next. Tie to odds only when there's a real value or risk angle."}
+Don't invent stats. Keep it conversational, never dismissive.`
 
   let commentary: string | null = null
   try {
@@ -264,7 +290,7 @@ Speak now in 1–2 sentences as an analytical co-pilot. Stay observational and r
         {
           role: 'system',
           content:
-            "You are MatchMind's Live Co-Pilot — a calm, analytical football analyst commenting on a live match. Stay observational and respectful, never dismissive. If little has happened so far, comment on tactics, shape, or what to watch for next rather than mocking the game. Tie to betting markets only when there's a real value or risk angle. Never invent stats. If nothing of substance has happened, prefer staying silent (reply 'SILENT').",
+            "You are MatchMind's Live Co-Pilot — a sharp, friendly football analyst watching a live match with the user. Speak naturally, like a friend on the couch with deep tactical knowledge. Reference the score, the minute, the stats. When something shifts (goal, momentum, big chance), call it out. When it's quiet, comment on tactics, shape, what to watch for. Tie to betting markets when there's a real angle. Never invent stats. Never be dismissive — every match has something interesting to say about it.",
         },
         { role: 'user', content: userPrompt },
       ],
@@ -274,17 +300,15 @@ Speak now in 1–2 sentences as an analytical co-pilot. Stay observational and r
     console.error('[live-copilot] OpenAI error:', err)
   }
 
-  // Treat 'SILENT' (or empty) as the model declining to comment.
-  const isSilent = !commentary || /^silent\.?$/i.test(commentary.trim())
-  if (commentary && !isSilent) {
+  if (commentary) {
     curr.lastCommentary = commentary
     curr.lastSpokeAt = Date.now()
   }
   snapshots.set(fixtureId, curr)
 
   return NextResponse.json({
-    status: !isSilent ? 'speaking' : 'silent',
-    commentary: !isSilent ? commentary : undefined,
+    status: commentary ? 'speaking' : 'silent',
+    commentary: commentary || undefined,
     reason,
     currentState,
   })
