@@ -90,7 +90,7 @@ const NAV: Array<{
   { href: '/dashboard/coach', label: 'Coach', icon: <IconCoach /> },
   {
     // Phase 5 will build /dashboard/money; until then, send users to bankroll.
-    href: '/dashboard/bankroll',
+    href: '/dashboard/money',
     label: 'Money',
     icon: <IconMoney />,
     matches: ['/dashboard/money', '/dashboard/bankroll', '/dashboard/track-record', '/dashboard/dream-bet'],
