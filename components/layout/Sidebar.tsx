@@ -31,6 +31,9 @@ function IconCoach() {
 function IconDream() {
   return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
 }
+function IconMemories() {
+  return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M3 12a9 9 0 019-9" /></svg>
+}
 function IconBilling() {
   return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
 }
@@ -65,6 +68,7 @@ const SECTIONS = [
       { href: '/dashboard/dream-bet', label: 'Dream Bet', icon: <IconDream /> },
       { href: '/dashboard/live', label: 'Live Matches', icon: <IconLive /> },
       { href: '/dashboard/coach', label: 'Football Coach', icon: <IconCoach /> },
+      { href: '/dashboard/memories', label: 'Memories', icon: <IconMemories /> },
     ],
   },
   {

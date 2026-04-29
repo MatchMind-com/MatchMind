@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
+import { retrieveMemories, saveMemory } from '@/lib/memory-lane'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const API_KEY = process.env.API_FOOTBALL_KEY!
@@ -137,6 +138,17 @@ export async function POST(req: NextRequest) {
 
   const leagueName = LEAGUE_NAMES[leagueId] || 'Football'
 
+  // Memory Lane — retrieve relevant past memories (best-effort, never blocks)
+  const memories = await retrieveMemories(supabase as any, user.id, message, 5)
+  const memoryText = memories.length
+    ? memories
+        .map((m, i) => `${i + 1}. (${m.role}) "${m.content.slice(0, 240)}"`)
+        .join('\n')
+    : ''
+  const memoryBlock = memoryText
+    ? `\n=== WHAT YOU REMEMBER ABOUT THIS USER (from past conversations) ===\n${memoryText}\nReference these naturally when relevant — it shows you remember them. Never list them back robotically.\n`
+    : ''
+
   // Build personalisation context from onboarding preferences
   const personalisation = userPrefs ? `
 === USER PROFILE (personalised from onboarding) ===
@@ -159,7 +171,7 @@ ${userPrefs.monthly_pl_estimate === 'consistent_profit' ? 'This user is profitab
 ` : ''
 
   const systemPrompt = `You are MatchMind, an elite AI football betting coach with access to real-time data for the ${season}/${season + 1} season. You combine deep football intelligence with sharp statistical analysis to help users make smarter betting decisions.
-${personalisation}
+${personalisation}${memoryBlock}
 === LIVE FOOTBALL DATA — ${leagueName} (${season}/${String(season + 1).slice(2)} season) ===
 
 📅 UPCOMING FIXTURES (next 7 days):
@@ -210,6 +222,12 @@ Keep responses concise and actionable. Use emojis sparingly for clarity. Focus o
 
   const reply = completion.choices[0]?.message?.content || 'Unable to generate response.'
 
+  // Persist both sides of the exchange (fire-and-forget, never blocks response)
+  Promise.allSettled([
+    saveMemory(supabase as any, user.id, message, 'user'),
+    saveMemory(supabase as any, user.id, reply, 'assistant'),
+  ]).catch(() => {})
+
   return NextResponse.json({
     reply,
     context: {
@@ -218,6 +236,7 @@ Keep responses concise and actionable. Use emojis sparingly for clarity. Focus o
       recentResultsCount: recentResults?.slice(0, 10).length || 0,
       league: leagueName,
       season: `${season}/${String(season + 1).slice(2)}`,
+      memoriesUsed: memories.length,
     }
   })
 }
