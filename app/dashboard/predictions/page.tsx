@@ -497,6 +497,7 @@ export default function PredictionsPage() {
       .then(r => r.json())
       .then(d => {
         if (d.success) setPredictions(d.predictions || [])
+        else if (d.cache_miss) setError('__cache_miss__')
         else setError(d.error || 'Failed to load predictions')
       })
       .catch(() => setError('Failed to load predictions'))
@@ -520,7 +521,7 @@ export default function PredictionsPage() {
             </div>
             <h1 className="text-2xl font-black text-white tracking-tight">AI Predictions</h1>
           </div>
-          <p className="text-slate-500 text-xs">GPT-4o · Pinnacle edge detection · Refreshed every 30 min</p>
+          <p className="text-slate-500 text-xs">GPT-4o · Pinnacle edge detection · Refreshed every 6 hours</p>
         </div>
       </div>
 
@@ -534,8 +535,23 @@ export default function PredictionsPage() {
         </div>
       )}
 
-      {/* Error */}
-      {!loading && error && (
+      {/* Error — cache miss (first deploy, cron hasn't run yet) */}
+      {!loading && error === '__cache_miss__' && (
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-8 text-center space-y-3">
+          <div className="text-3xl">⏳</div>
+          <p className="text-blue-300 font-semibold">Predictions are warming up</p>
+          <p className="text-slate-500 text-sm">Our AI is analysing today&apos;s fixtures right now.<br/>This only happens once — check back in a few minutes.</p>
+          <button
+            onClick={() => { setLoading(true); setError(''); fetch('/api/predictions').then(r => r.json()).then(d => { if (d.success) setPredictions(d.predictions || []); else if (d.cache_miss) setError('__cache_miss__'); else setError(d.error || 'Failed to load predictions') }).catch(() => setError('Failed to load predictions')).finally(() => setLoading(false)) }}
+            className="mt-2 px-4 py-2 text-sm bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-xl border border-blue-500/30 transition-colors"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {/* Error — generic */}
+      {!loading && error && error !== '__cache_miss__' && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center">
           <p className="text-red-400 text-sm">{error}</p>
         </div>
