@@ -5,6 +5,8 @@ import { retrieveMemories, saveMemory } from '@/lib/memory-lane'
 import { getUserContext, renderContextBlock } from '@/lib/user-context'
 import { leaguesPromptBlock, findLeague } from '@/lib/leagues'
 import { parseBetRec, BET_REC_PROMPT_INSTRUCTIONS } from '@/lib/parse-bet-rec'
+import { detectTeams } from '@/lib/team-resolver'
+import { getTeamDeepData, renderDeepDataBlock } from '@/lib/team-deep-data'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const API_KEY = process.env.API_FOOTBALL_KEY!
@@ -192,6 +194,35 @@ export async function POST(req: NextRequest) {
 
   const leagueName = findLeague(leagueId)?.name || 'Football'
 
+  // ── DEEP TEAM DATA ────────────────────────────────────────────────────
+  // If the user mentioned specific teams ("how is Galatasaray doing?"),
+  // pull their injuries / form / fixtures / season stats on demand.
+  // Detection is local + instant; the API fan-out is bounded to 3 teams
+  // and ~4 calls each, all guarded with timeouts.
+  const activeLeagueIdNum = parseInt(String(leagueId), 10) || 39
+  let deepDataBlock = ''
+  try {
+    const detectedTeams = await detectTeams(message)
+    if (detectedTeams.length > 0) {
+      const deepData = await Promise.all(
+        detectedTeams.map(t =>
+          getTeamDeepData(t.id, t.leagueId ?? activeLeagueIdNum).catch(() => null),
+        ),
+      )
+      const blocks = deepData
+        .filter((d): d is NonNullable<typeof d> => d !== null)
+        .map(renderDeepDataBlock)
+      if (blocks.length > 0) {
+        deepDataBlock =
+          '\n=== TEAM-SPECIFIC DEEP DATA (fetched on demand for teams the user mentioned) ===\n' +
+          blocks.join('\n\n') +
+          '\n\nWhen you see a 🔬 DEEP DATA block above for a team, use it as the AUTHORITATIVE source for that team\'s form, injuries, fixtures, and stats. Reference specific players and numbers from it — never contradict it with training-data guesses.\n'
+      }
+    }
+  } catch (e) {
+    console.warn('[coach-with-data] deep team data failed:', e)
+  }
+
   // Unified user context — bankroll + goal + recent bets + loss streak.
   // Best-effort; falls back to empty block on any failure.
   let financialContextBlock = ''
@@ -240,7 +271,7 @@ ${userPrefs.monthly_pl_estimate === 'consistent_profit' ? 'This user is profitab
 ${leaguesPromptBlock()}
 
 ${BET_REC_PROMPT_INSTRUCTIONS}
-${financialContextBlock ? `\n${financialContextBlock}\n` : ''}${personalisation}${memoryBlock}
+${financialContextBlock ? `\n${financialContextBlock}\n` : ''}${personalisation}${memoryBlock}${deepDataBlock}
 === LIVE FOOTBALL DATA — ${leagueName} (${season}/${String(season + 1).slice(2)} season) ===
 
 📅 TODAY'S MATCHES (across ALL 25 tracked leagues — kicks off today, ${today}):
