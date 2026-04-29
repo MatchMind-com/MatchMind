@@ -404,3 +404,341 @@ export default function BetRecSidebar({ rec, addState, onAdd, onDismiss }: BetRe
     </div>
   )
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BetRecInline — the editorial in-chat variant.
+// Uses the Athletic-style design tokens (bg-bg-surface / brand orange / etc.)
+// instead of the legacy slate/blue palette in BetRecSidebar above. Lives
+// directly under the AI message that emitted the bet, not in a sidebar.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface BetRecInlineProps {
+  rec: BetRecommendation
+  addState: AddState
+  onAdd: () => void
+  onDismiss: () => void
+}
+
+function InlineFormBadge({ result }: { result: 'W' | 'D' | 'L' }) {
+  const colour =
+    result === 'W'
+      ? 'bg-success/15 text-success border-success/30'
+      : result === 'D'
+        ? 'bg-value/15 text-value border-value/30'
+        : 'bg-loss/15 text-loss border-loss/30'
+  return (
+    <span
+      className={`inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold border font-stat ${colour}`}
+    >
+      {result}
+    </span>
+  )
+}
+
+function InlineStatBar({
+  label,
+  home,
+  away,
+  unit = '',
+}: {
+  label: string
+  home: number | null
+  away: number | null
+  unit?: string
+}) {
+  if (home === null && away === null) return null
+  const h = home ?? 0
+  const a = away ?? 0
+  const total = h + a || 1
+  const homePct = (h / total) * 100
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-[10px] text-fg-muted">
+        <span className="font-stat text-fg">
+          {home ?? '—'}
+          {unit}
+        </span>
+        <span className="uppercase tracking-wider">{label}</span>
+        <span className="font-stat text-brand">
+          {away ?? '—'}
+          {unit}
+        </span>
+      </div>
+      <div className="flex h-1.5 rounded-full overflow-hidden bg-bg-elevated">
+        <div className="bg-fg/40" style={{ width: `${homePct}%` }} />
+        <div className="bg-brand/70" style={{ width: `${100 - homePct}%` }} />
+      </div>
+    </div>
+  )
+}
+
+export function BetRecInline({ rec, addState, onAdd, onDismiss }: BetRecInlineProps) {
+  const [reasoningExpanded, setReasoningExpanded] = useState(false)
+  const [statsOpen, setStatsOpen] = useState(false)
+  const [statsLoading, setStatsLoading] = useState(false)
+  const [statsError, setStatsError] = useState<string | null>(null)
+  const [stats, setStats] = useState<FixtureStats | null>(null)
+
+  // Reset stats panel + reasoning expand whenever the rec changes
+  useEffect(() => {
+    setStatsOpen(false)
+    setStats(null)
+    setStatsError(null)
+    setReasoningExpanded(false)
+  }, [rec])
+
+  const fetchStats = useCallback(async (fixtureId: number) => {
+    setStatsLoading(true)
+    setStatsError(null)
+    try {
+      const res = await fetch(`/api/fixtures/${fixtureId}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json: FixtureStats = await res.json()
+      setStats(json)
+    } catch (e: any) {
+      setStatsError(e?.message || 'Failed to load stats')
+    } finally {
+      setStatsLoading(false)
+    }
+  }, [])
+
+  const toggleStats = useCallback(() => {
+    if (!rec.fixtureId) return
+    const next = !statsOpen
+    setStatsOpen(next)
+    if (next && !stats && !statsLoading) {
+      fetchStats(rec.fixtureId)
+    }
+  }, [statsOpen, stats, statsLoading, rec.fixtureId, fetchStats])
+
+  const matchTitle =
+    rec.home && rec.away ? `${rec.home} vs ${rec.away}` : rec.selection || 'AI Pick'
+  const kickoffLabel = formatKickoff(rec.kickoff)
+  const stakeStr = rec.stake ? `£${rec.stake.toFixed(2)}` : null
+  const stakePctStr = bankrollPct(rec.stake)
+  const oddsStr = rec.odds ? rec.odds.toFixed(2) : null
+  const reasoning = rec.reasoning?.trim() || ''
+  const reasoningIsLong = reasoning.length > 140
+
+  // EV badge — derived from odds. Without true probability we can't compute
+  // real EV, so we show the implied prob as a confidence cue (lower implied
+  // prob = the bet pays more = AI thinks the edge justifies it).
+  const impliedPct = rec.odds ? Math.round((1 / rec.odds) * 100) : null
+
+  const addLabel =
+    addState === 'adding'
+      ? 'Adding…'
+      : addState === 'added'
+        ? 'Added to your tracker'
+        : addState === 'error'
+          ? 'Try again'
+          : 'Add to my bets'
+
+  const addDisabled = addState === 'adding' || addState === 'added'
+
+  return (
+    <div className="mt-3 rounded-2xl border border-border-subtle bg-bg-surface overflow-hidden">
+      {/* Header */}
+      <div className="px-5 pt-4 pb-3 border-b border-border-subtle">
+        <p className="eyebrow mb-2">AI Bet Suggestion</p>
+        <div className="text-lg font-bold text-fg leading-tight tracking-tight">{matchTitle}</div>
+        <div className="flex items-center gap-2 mt-1 text-[11px] text-fg-muted">
+          {rec.league && <span className="truncate">{rec.league}</span>}
+          {rec.league && kickoffLabel && <span className="opacity-50">·</span>}
+          {kickoffLabel && <span className="font-stat">{kickoffLabel}</span>}
+        </div>
+      </div>
+
+      {/* Pick row */}
+      <div className="px-5 py-4">
+        <div className="rounded-xl bg-bg-elevated border border-border-subtle px-4 py-3.5 flex items-center gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="eyebrow mb-1">Pick</p>
+            <div className="text-sm font-semibold text-fg truncate">
+              {rec.market || 'Bet'}
+              {rec.selection ? <span className="text-fg-secondary font-medium"> · {rec.selection}</span> : null}
+            </div>
+            <div className="flex items-center gap-2 mt-1.5">
+              {impliedPct !== null && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-value/15 text-value border border-value/30">
+                  {impliedPct}% implied
+                </span>
+              )}
+              {stakeStr && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-success/15 text-success border border-success/30">
+                  Stake {stakeStr}
+                  {stakePctStr ? ` (${stakePctStr})` : ''}
+                </span>
+              )}
+            </div>
+          </div>
+          {oddsStr && (
+            <div className="text-right shrink-0">
+              <p className="eyebrow mb-1">Odds</p>
+              <div className="font-stat text-3xl font-bold text-brand leading-none">@{oddsStr}</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Reasoning */}
+      {reasoning && (
+        <div className="px-5 pb-4">
+          <p className="eyebrow mb-1.5">Why?</p>
+          <p
+            className={`text-sm text-fg-secondary leading-relaxed ${
+              reasoningIsLong && !reasoningExpanded ? 'line-clamp-3' : ''
+            }`}
+          >
+            {reasoning}
+          </p>
+          {reasoningIsLong && (
+            <button
+              onClick={() => setReasoningExpanded(v => !v)}
+              className="mt-1 text-[11px] font-semibold text-brand hover:text-brand-hover transition-colors"
+            >
+              {reasoningExpanded ? 'see less' : 'see more'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Stats toggle */}
+      <div className="px-5 pb-4">
+        <button
+          onClick={toggleStats}
+          disabled={!rec.fixtureId}
+          title={!rec.fixtureId ? 'Stats unavailable for this match' : undefined}
+          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg border text-xs font-semibold transition-all ${
+            !rec.fixtureId
+              ? 'bg-bg-elevated/60 border-border-subtle text-fg-muted cursor-not-allowed'
+              : statsOpen
+                ? 'bg-brand/10 border-brand text-brand'
+                : 'bg-bg-elevated border-border-subtle text-fg-secondary hover:border-brand hover:text-brand'
+          }`}
+        >
+          <span className="flex items-center gap-1.5">
+            <span>📊</span>
+            Look into stats
+          </span>
+          <svg
+            className={`w-3.5 h-3.5 transition-transform ${statsOpen ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {statsOpen && rec.fixtureId && (
+          <div className="mt-3 space-y-3">
+            {statsLoading && (
+              <div className="space-y-2">
+                <div className="h-3 rounded bg-bg-elevated animate-pulse" />
+                <div className="h-3 rounded bg-bg-elevated animate-pulse w-3/4" />
+                <div className="h-3 rounded bg-bg-elevated animate-pulse w-5/6" />
+              </div>
+            )}
+
+            {statsError && (
+              <div className="text-[11px] text-loss bg-loss/10 border border-loss/20 rounded-lg px-3 py-2">
+                Couldn&rsquo;t load stats: {statsError}
+              </div>
+            )}
+
+            {stats && !statsLoading && (
+              <>
+                {stats.statistics && (
+                  <div className="space-y-2 px-3.5 py-3 rounded-lg bg-bg-elevated border border-border-subtle">
+                    <p className="eyebrow mb-1">Match stats</p>
+                    <InlineStatBar label="Shots" home={stats.statistics.home.shots_total} away={stats.statistics.away.shots_total} />
+                    <InlineStatBar label="On target" home={stats.statistics.home.shots_on_goal} away={stats.statistics.away.shots_on_goal} />
+                    <InlineStatBar label="xG" home={stats.statistics.home.xg} away={stats.statistics.away.xg} />
+                    <InlineStatBar label="Possession" home={stats.statistics.home.possession} away={stats.statistics.away.possession} unit="%" />
+                    <InlineStatBar label="Corners" home={stats.statistics.home.corners} away={stats.statistics.away.corners} />
+                  </div>
+                )}
+
+                {(stats.home?.form?.length || stats.away?.form?.length) ? (
+                  <div className="px-3.5 py-3 rounded-lg bg-bg-elevated border border-border-subtle space-y-2">
+                    <p className="eyebrow">Recent form (last 5)</p>
+                    {stats.home?.form && stats.home.form.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-fg truncate min-w-0 flex-1">{stats.home.name || rec.home}</span>
+                        <div className="flex gap-1 shrink-0">
+                          {stats.home.form.slice(0, 5).map((f, i) => (
+                            <InlineFormBadge key={i} result={f.result} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {stats.away?.form && stats.away.form.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-fg truncate min-w-0 flex-1">{stats.away.name || rec.away}</span>
+                        <div className="flex gap-1 shrink-0">
+                          {stats.away.form.slice(0, 5).map((f, i) => (
+                            <InlineFormBadge key={i} result={f.result} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
+                {stats.h2h && stats.h2h.length > 0 && (
+                  <div className="px-3.5 py-3 rounded-lg bg-bg-elevated border border-border-subtle">
+                    <p className="eyebrow mb-2">Head-to-head (last {stats.h2h.length})</p>
+                    <div className="space-y-1">
+                      {stats.h2h.slice(0, 5).map((m, i) => (
+                        <div key={i} className="flex items-center justify-between text-[11px] text-fg-secondary">
+                          <span className="truncate min-w-0 flex-1">{m.homeTeam}</span>
+                          <span className="font-stat mx-2 text-fg shrink-0">
+                            {m.homeGoals ?? '?'}-{m.awayGoals ?? '?'}
+                          </span>
+                          <span className="truncate min-w-0 flex-1 text-right">{m.awayTeam}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {!stats.statistics && !stats.home?.form?.length && !stats.h2h?.length && (
+                  <div className="text-[11px] text-fg-muted text-center py-2">
+                    No detailed stats available for this fixture yet.
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="px-5 pb-5 pt-1 flex items-center gap-3">
+        <button
+          onClick={onAdd}
+          disabled={addDisabled}
+          className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+            addState === 'added'
+              ? 'bg-success/15 border border-success/40 text-success cursor-default'
+              : addState === 'error'
+                ? 'bg-loss/15 border border-loss/40 text-loss hover:bg-loss/20'
+                : addState === 'adding'
+                  ? 'bg-brand/40 border border-brand/40 text-bg-base/70 cursor-wait'
+                  : 'bg-brand hover:bg-brand-hover border border-brand text-bg-base'
+          }`}
+        >
+          <span className="text-base leading-none">{addState === 'added' ? '✓' : '✚'}</span>
+          {addLabel}
+        </button>
+        <button
+          onClick={onDismiss}
+          className="px-4 py-3 rounded-xl text-xs font-semibold text-fg-muted hover:text-fg border border-border-subtle hover:border-border-strong transition-colors"
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  )
+}
