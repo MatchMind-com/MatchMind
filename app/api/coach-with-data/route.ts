@@ -48,8 +48,10 @@ export async function POST(req: NextRequest) {
   const season = getCurrentSeason()
   const today = new Date().toISOString().split('T')[0]
 
-  // Fetch user's bet history + preferences in parallel
-  const [{ data: recentBets }, { data: userPrefs }] = await Promise.all([
+  // Fetch user's bet history + preferences + AI's pre-computed predictions in parallel.
+  // The AI MUST recommend from these picks (real fixtures with real odds and EVs)
+  // instead of vague "wait for odds" answers.
+  const [{ data: recentBets }, { data: userPrefs }, { data: predictionRows }] = await Promise.all([
     supabase
       .from('bet_slips')
       .select('match_name, league, stake, odds, result, profit_loss, bet_type, created_at')
@@ -61,6 +63,10 @@ export async function POST(req: NextRequest) {
       .select('favourite_team, lucky_charm_team, favourite_leagues, betting_experience, monthly_pl_estimate, preferred_bet_types')
       .eq('user_id', user.id)
       .single(),
+    supabase
+      .from('predictions_by_league')
+      .select('league_name, payload, generated_at')
+      .order('generated_at', { ascending: false }),
   ])
 
   // Fetch rich football data in parallel (all cached 60s)
@@ -94,6 +100,34 @@ export async function POST(req: NextRequest) {
     const status = f.fixture?.status?.short === 'NS' ? `${time} KO` : `${f.fixture?.status?.short} · ${f.goals?.home ?? 0}-${f.goals?.away ?? 0}`
     return `• ${home} vs ${away} — ${lge} · ${status}`
   }).join('\n') || 'No tracked-league matches today'
+
+  // Flatten all the AI's pre-computed value picks across all leagues, take the best
+  // by EV/value_score. The AI MUST recommend from these — they have real fixture IDs,
+  // real odds, and proven +EV. No more "wait for odds to be released" excuses.
+  const allPicks: any[] = []
+  for (const row of (predictionRows || [])) {
+    const arr = Array.isArray(row.payload) ? row.payload : []
+    for (const p of arr) {
+      if (p?.is_value_bet && p?.best_value && p?.id) {
+        const ko = p.date ? new Date(p.date) : null
+        const isFuture = ko && ko.getTime() > Date.now()
+        if (isFuture) {
+          allPicks.push({ ...p, _leagueName: row.league_name })
+        }
+      }
+    }
+  }
+  allPicks.sort((a, b) => (b.value_score ?? b.best_value?.ev ?? 0) - (a.value_score ?? a.best_value?.ev ?? 0))
+  const topPicks = allPicks.slice(0, 12)
+  const aiPicksText = topPicks.map((p: any) => {
+    const home = p.home_team
+    const away = p.away_team
+    const ko = p.date ? new Date(p.date).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'TBC'
+    const bv = p.best_value
+    const conf = p.confidence ?? '?'
+    const reason = p.edge_explanation ? ` — ${p.edge_explanation}` : ''
+    return `• ${home} vs ${away} (${p._leagueName}, ${ko}) | PICK: ${bv.label} @ ${bv.odds} | EV: +${bv.ev}% | confidence ${conf}/10 | fixtureId: ${p.id}${reason}`
+  }).join('\n') || 'No +EV picks computed yet — refresh the predictions cron.'
 
   // Format upcoming fixtures (next 7 days, up to 15) — for the active league
   const upcomingText = fixtures?.slice(0, 15).map((f: any) => {
@@ -215,6 +249,9 @@ ${todayText}
 📅 UPCOMING FIXTURES — ${leagueName} (next 7 days):
 ${upcomingText}
 
+🎯 MATCHMIND'S CURRENT VALUE PICKS (pre-computed by the daily prediction pipeline — these are the bets the AI has already identified as +EV across all 25 leagues. WHEN THE USER ASKS FOR A BET RECOMMENDATION, RECOMMEND FROM THIS LIST FIRST — these have real odds, real edges, and exact fixture IDs):
+${aiPicksText}
+
 ✅ RECENT RESULTS (last 7 days):
 ${resultsText}
 
@@ -237,6 +274,8 @@ ${betsText}
 === YOUR ROLE ===
 - Reference specific upcoming matches by name and date when giving advice
 - When the user asks about "today" or "tonight" specifically — recommend matches from the TODAY'S MATCHES block ONLY. Don't suggest tomorrow/Saturday matches if they asked about today.
+- ABSOLUTE RULE: When the user asks "what's the best bet" / "value bets" / "should I bet on X" / "find me a bet" — you MUST recommend a SPECIFIC pick from MATCHMIND'S CURRENT VALUE PICKS list above. Each entry has a real fixture, real odds, real EV, and a fixtureId. Pick the highest-EV one that matches the user's filter (today / specific league / specific market) and emit a [BET_REC] block with its exact data: home, away, market, selection, odds, league, kickoff (the date shown), fixtureId. Never say "wait for odds to be released" — the picks are right there with odds.
+- If MATCHMIND'S CURRENT VALUE PICKS is empty, then say "the prediction pipeline hasn't run yet today — try again in a few minutes" instead of making up vague advice.
 - Use recent results and form to back up your analysis
 - Mention top scorers when relevant to goalscoring markets
 - Give concrete stake recommendations using Kelly Criterion principles
