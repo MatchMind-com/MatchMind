@@ -151,6 +151,54 @@ const RISK_ODDS_RANGE: Record<RiskLevel, [number, number]> = {
   aggressive: [2.2, 4.0],
 }
 
+/**
+ * Expand a single fixture into all per-market candidates (Home Win, Draw,
+ * Away Win, Over 2.5, BTTS) where odds AND an EV signal exist. Each fixture
+ * yields up to 5 separate candidate rows so the day-picker can choose across
+ * MARKETS, not just one "best" market per fixture. This is what gives the
+ * Daily Plan real variety.
+ */
+function expandFixtureToCandidates(p: any): any[] {
+  const out: any[] = []
+  const ev = p?.ev || {}
+  const bk = p?.bookmaker || {}
+  const baseFixture = {
+    id: p.id,
+    date: p.date,
+    home_team: p.home_team,
+    away_team: p.away_team,
+    league: p.league,
+    confidence: p.confidence,
+    edge_explanation: p.edge_explanation,
+    home_win_pct: p.home_win_pct,
+    draw_pct: p.draw_pct,
+    away_win_pct: p.away_win_pct,
+    over_2_5_pct: p.over_2_5_pct,
+    btts_pct: p.btts_pct,
+  }
+  const markets = [
+    { label: 'Home Win',  evKey: 'home',   oddsKey: 'home',   pctKey: 'home_win_pct' },
+    { label: 'Draw',      evKey: 'draw',   oddsKey: 'draw',   pctKey: 'draw_pct' },
+    { label: 'Away Win',  evKey: 'away',   oddsKey: 'away',   pctKey: 'away_win_pct' },
+    { label: 'Over 2.5',  evKey: 'over25', oddsKey: 'over25', pctKey: 'over_2_5_pct' },
+    { label: 'BTTS',      evKey: 'btts',   oddsKey: 'btts',   pctKey: 'btts_pct' },
+  ]
+  for (const m of markets) {
+    const odds = Number(bk?.[m.oddsKey] ?? 0)
+    const evVal = Number(ev?.[m.evKey] ?? 0)
+    if (!odds || odds <= 1.0 || odds > 6.0) continue
+    if (evVal === null || evVal === undefined || Number.isNaN(evVal)) continue
+    out.push({
+      ...baseFixture,
+      __market_label: m.label,
+      __market_odds: odds,
+      __market_ev: evVal,
+      __market_aiPct: Number(p?.[m.pctKey] ?? 0),
+    })
+  }
+  return out
+}
+
 function topPicksForDay(
   predictions: any[],
   dayStart: Date,
@@ -162,59 +210,60 @@ function topPicksForDay(
   const dayEndMs = dayEnd.getTime()
   const [oddsMin, oddsMax] = RISK_ODDS_RANGE[riskLevel]
 
-  // Generous filter: fixture is on this day, has odds + an EV signal.
-  // We DON'T filter on odds-range or even strict EV>0 — the goal is to
-  // always show SOMETHING. We sort by EV desc and tag tier_match.
-  // is_value_bet is intentionally IGNORED here — it's just a hint for other
-  // surfaces. The daily plan wants the day's top edges regardless of tier.
-  const candidates = predictions.filter((p) => {
+  // Filter to fixtures kicking off this day, then expand each into all
+  // per-market candidates so we pick across markets, not just one per fixture.
+  const fixturesToday = predictions.filter((p) => {
     if (!p?.date) return false
     const t = new Date(p.date).getTime()
     if (Number.isNaN(t)) return false
-    if (t < dayStartMs || t >= dayEndMs) return false
-    const odds = p?.best_value?.odds ?? null
-    if (odds == null) return false
-    return true
+    return t >= dayStartMs && t < dayEndMs
   })
 
-  const seen = new Set<number>()
-  const sorted = candidates.sort((a, b) => {
-    const evA = Number(a?.value_score ?? a?.best_value?.ev ?? 0)
-    const evB = Number(b?.value_score ?? b?.best_value?.ev ?? 0)
-    return evB - evA
-  })
+  // Expand to per-market candidates
+  const allCandidates: any[] = []
+  for (const p of fixturesToday) {
+    allCandidates.push(...expandFixtureToCandidates(p))
+  }
 
-  // First pass: positive-EV picks only.
+  // Sort by EV desc
+  const sorted = allCandidates.sort(
+    (a, b) => Number(b.__market_ev ?? 0) - Number(a.__market_ev ?? 0),
+  )
+
+  // De-dupe: only one bet per fixture (don't suggest both Home Win AND Over 2.5
+  // for the same match — pick the highest-EV market for each fixture). This
+  // gives the day MARKET diversity across DIFFERENT fixtures.
+  const seenFixtures = new Set<number>()
+
+  // Pass 1: positive-EV per fixture (highest market only)
   const positive: any[] = []
-  for (const p of sorted) {
-    const id = Number(p?.id)
-    if (id && seen.has(id)) continue
-    const ev = Number(p?.value_score ?? p?.best_value?.ev ?? 0)
-    if (ev <= 0) continue
-    if (id) seen.add(id)
-    const odds = Number(p?.best_value?.odds ?? 0)
-    p.__tierMatch = odds >= oddsMin && odds <= oddsMax ? 'in-range' : 'out-of-range'
-    p.__isFallback = false
-    p.__edgeStrength = ev >= 5 ? 'strong' : ev >= 2 ? 'medium' : 'thin'
-    positive.push(p)
+  for (const c of sorted) {
+    const id = Number(c.id)
+    if (!id || seenFixtures.has(id)) continue
+    const evVal = Number(c.__market_ev ?? 0)
+    if (evVal <= 0) continue
+    seenFixtures.add(id)
+    const odds = Number(c.__market_odds ?? 0)
+    c.__tierMatch = odds >= oddsMin && odds <= oddsMax ? 'in-range' : 'out-of-range'
+    c.__isFallback = false
+    c.__edgeStrength = evVal >= 5 ? 'strong' : evVal >= 2 ? 'medium' : 'thin'
+    positive.push(c)
     if (positive.length >= maxPicks) break
   }
 
   if (positive.length > 0) return positive
 
-  // Fallback pass: no positive-EV picks for this day, but fixtures DO exist
-  // in cache. Surface the closest-to-positive picks so the user has context
-  // — clearly tagged as fallback in the UI.
+  // Pass 2: no positive-EV picks today — fall back to closest-to-positive
   const fallback: any[] = []
-  for (const p of sorted) {
-    const id = Number(p?.id)
-    if (id && seen.has(id)) continue
-    if (id) seen.add(id)
-    const odds = Number(p?.best_value?.odds ?? 0)
-    p.__tierMatch = odds >= oddsMin && odds <= oddsMax ? 'in-range' : 'out-of-range'
-    p.__isFallback = true
-    p.__edgeStrength = 'thin'
-    fallback.push(p)
+  for (const c of sorted) {
+    const id = Number(c.id)
+    if (!id || seenFixtures.has(id)) continue
+    seenFixtures.add(id)
+    const odds = Number(c.__market_odds ?? 0)
+    c.__tierMatch = odds >= oddsMin && odds <= oddsMax ? 'in-range' : 'out-of-range'
+    c.__isFallback = true
+    c.__edgeStrength = 'thin'
+    fallback.push(c)
     if (fallback.length >= 3) break
   }
   return fallback
@@ -529,9 +578,12 @@ export async function GET(req: Request) {
       )
 
       const suggestedBets: SuggestedBet[] = dayPicks.map((p) => {
-        const odds = Number(p?.best_value?.odds ?? 2.0)
-        const ev = Number(p?.value_score ?? p?.best_value?.ev ?? 0)
-        const label: string = p?.best_value?.label ?? p?.recommended_bet ?? 'Top pick'
+        // Per-market expansion: each pick now has __market_* fields from
+        // expandFixtureToCandidates(). Fall back to legacy best_value for
+        // anything that wasn't expanded (e.g. legacy cache entries).
+        const odds = Number(p?.__market_odds ?? p?.best_value?.odds ?? 2.0)
+        const ev = Number(p?.__market_ev ?? p?.value_score ?? p?.best_value?.ev ?? 0)
+        const label: string = p?.__market_label ?? p?.best_value?.label ?? p?.recommended_bet ?? 'Top pick'
         const market = deriveBetType(label)
         const isFallback = (p?.__isFallback as boolean | undefined) === true
         if (ev > 0 && !isFallback) positiveEvPicks++
