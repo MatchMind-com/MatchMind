@@ -62,6 +62,13 @@ interface AllMarketsResponse {
   }
   markets: Market[]
   generatedAt: string
+  /** Diagnostic flags so the UI can render a meaningful empty state. */
+  diagnostics: {
+    bookmakers_count: number
+    odds_available: boolean
+    ai_evaluated: boolean
+    note?: string
+  }
 }
 
 // ---- Cache ---------------------------------------------------------------
@@ -371,10 +378,16 @@ function extractAllMarkets(books: ApiBookmaker[]): Market[] {
 }
 
 // ---- GPT batch evaluator -------------------------------------------------
+//
+// We use deterministic numeric IDs of the form "M.S" (market index + selection
+// index) instead of asking GPT to echo back the market_name and selection
+// label. GPT routinely paraphrases — "Match Winner" → "Home/Away", "Over 2.5"
+// → "O 2.5" — which broke the lookup and caused reasoning to be attached to
+// the wrong selection (e.g. an "Over 2.5" verdict displaying a "Home Win"
+// reason). Numeric IDs are unambiguous and cheap.
 
 interface GptVerdict {
-  market_name: string
-  selection: string
+  id: string // "marketIdx.selectionIdx"
   verdict: Verdict
   prob: number
   reason: string
@@ -391,26 +404,30 @@ function buildPrompt(
   markets: Market[]
 ): { system: string; user: string } {
   const lines: string[] = []
-  for (const m of markets) {
-    for (const s of m.selections) {
+  markets.forEach((m, mi) => {
+    lines.push(`MARKET ${mi}: ${m.name}`)
+    m.selections.forEach((s, si) => {
       lines.push(
-        `- market="${m.name}" selection="${s.label}" odds=${s.odds.toFixed(2)} implied=${s.impliedProb}%`
+        `  id=${mi}.${si} selection="${s.label}" odds=${s.odds.toFixed(2)} implied=${s.impliedProb}%`
       )
-    }
-  }
+    })
+  })
 
-  const system = `You are a calibrated football betting analyst. For each (market, selection) pair below, return:
-- verdict: "bet" if you believe true probability is comfortably above implied (clear edge, EV >= 5%), "lean" if slight edge (EV 1-5%), "skip" if neutral (EV ~0), "avoid" if you think implied is too generous to the bettor (negative EV).
-- prob: your honest 0-100 estimate of true probability (integer)
-- reason: ONE short sentence (max 14 words) — concrete, no hedging.
+  const system = `You are a calibrated football betting analyst. Evaluate every (market, selection) pair you are given. For EACH selection return:
+- id: the EXACT id string from the input (e.g. "3.1") — copy it verbatim.
+- verdict: "bet" (clear edge, EV >= 5%), "lean" (slight edge, EV 1-5%), "skip" (neutral, EV ~0), or "avoid" (implied too generous, negative EV).
+- prob: your 0-100 estimate of true probability (integer).
+- reason: ONE short sentence (max 14 words) directly justifying THIS selection — never reference a different market or selection.
 
-Calibration rules:
-1. Implied probabilities reflect sharp money and years of modelling — usually within ±5pts of truth.
+Calibration:
+1. Implied probabilities reflect sharp money — usually within ±5pts of truth.
 2. Your prob must be within ±10pts of implied UNLESS you have a specific concrete reason.
-3. Probabilities for mutually exclusive selections in the same market should sum near 100% (allow 100-110% for vig).
-4. Be conservative — most markets are efficient. Default to "skip".
+3. Probabilities for mutually exclusive selections in the same market should sum near 100-110% (allowing for vig).
+4. Be conservative — most markets are efficient. Default to "skip" when uncertain.
 
-Return strict JSON: { "verdicts": [{ "market_name": "...", "selection": "...", "verdict": "...", "prob": 65, "reason": "..." }] }`
+CRITICAL: Your reason for a selection like "Over 2.5" must be ABOUT goals — never about home/away winning. Your reason for "Home Win" must be about which side wins — never about totals or BTTS. Each reason is read directly under its selection, so a mismatch is misleading.
+
+Return strict JSON: { "verdicts": [{ "id": "0.0", "verdict": "lean", "prob": 60, "reason": "..." }, ...] } with one entry for EVERY id you were given.`
 
   const user = `Fixture: ${fixture.home} vs ${fixture.away}
 League: ${fixture.league}
@@ -419,10 +436,9 @@ Kickoff: ${fixture.kickoff}
 Context:
 ${formSummary || 'No additional form data available.'}
 
-Evaluate every market+selection below:
-${lines.join('\n')}
+Evaluate every selection below — return one verdict per id.
 
-Return JSON with a verdict for EVERY pair above (one entry per line).`
+${lines.join('\n')}`
   return { system, user }
 }
 
@@ -443,19 +459,20 @@ async function evaluateWithGpt(
       { role: 'system', content: system },
       { role: 'user', content: user },
     ],
-    max_tokens: 2000,
+    max_tokens: 2500,
   })
 
   const raw = completion.choices[0]?.message?.content || '{"verdicts":[]}'
   const parsed = JSON.parse(raw)
   const out = new Map<string, GptVerdict>()
   for (const v of parsed.verdicts || []) {
-    if (!v?.market_name || !v?.selection) continue
-    const key = `${v.market_name}::${v.selection}`.toLowerCase()
-    out.set(key, {
-      market_name: String(v.market_name),
-      selection: String(v.selection),
-      verdict: (v.verdict as Verdict) ?? 'skip',
+    if (!v?.id) continue
+    const id = String(v.id).trim()
+    // Validate id format "M.S" with non-negative integers
+    if (!/^\d+\.\d+$/.test(id)) continue
+    out.set(id, {
+      id,
+      verdict: (['bet', 'lean', 'skip', 'avoid'].includes(v.verdict) ? v.verdict : 'skip') as Verdict,
       prob: Math.max(0, Math.min(100, Number(v.prob) || 0)),
       reason: String(v.reason || '').slice(0, 160),
     })
@@ -464,10 +481,10 @@ async function evaluateWithGpt(
 }
 
 function applyVerdicts(markets: Market[], verdicts: Map<string, GptVerdict>): Market[] {
-  for (const m of markets) {
-    for (const sel of m.selections) {
-      const key = `${m.name}::${sel.label}`.toLowerCase()
-      const v = verdicts.get(key)
+  markets.forEach((m, mi) => {
+    m.selections.forEach((sel, si) => {
+      const id = `${mi}.${si}`
+      const v = verdicts.get(id)
       if (v) {
         sel.aiVerdict = v.verdict
         sel.aiProb = v.prob
@@ -475,15 +492,18 @@ function applyVerdicts(markets: Market[], verdicts: Map<string, GptVerdict>): Ma
         // EV = (prob/100 × odds) - 1
         sel.ev = Math.round(((v.prob / 100) * sel.odds - 1) * 100)
       } else {
+        // No verdict for this selection — neutral skip with implied prob,
+        // and a generic reason that is at least correct (refers to the right
+        // selection by label, never inherits text from another row).
         sel.aiVerdict = 'skip'
-        sel.aiReason = sel.aiReason || 'AI analysis unavailable'
+        sel.aiReason = `Neutral on ${sel.label} — no clear edge found.`
         sel.aiProb = sel.impliedProb
         sel.ev = 0
       }
-    }
+    })
     // Sort selections within a market: bet → lean → skip → avoid
     m.selections.sort((a, b) => verdictRank(a.aiVerdict) - verdictRank(b.aiVerdict))
-  }
+  })
   return markets
 }
 
@@ -540,102 +560,166 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { fixtureId: string } }
 ) {
-  const supabase = createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const fixtureId = params.fixtureId
-  if (!fixtureId || !/^\d+$/.test(fixtureId)) {
-    return NextResponse.json({ error: 'Invalid fixture id' }, { status: 400 })
-  }
-
-  // Cache hit?
-  const cached = cache.get(fixtureId)
-  if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
-    return NextResponse.json(cached.payload)
-  }
-
-  // Fetch fixture meta + odds in parallel.
-  const [fixtureData, oddsData] = await Promise.all([
-    apiFetch(`/fixtures?id=${fixtureId}`),
-    apiFetch(`/odds?fixture=${fixtureId}`),
-  ])
-
-  if (!fixtureData?.length) {
-    return NextResponse.json({ error: 'Fixture not found' }, { status: 404 })
-  }
-  const fx = fixtureData[0]
-  const homeName = fx.teams?.home?.name ?? 'Home'
-  const awayName = fx.teams?.away?.name ?? 'Away'
-  const homeId = fx.teams?.home?.id
-  const awayId = fx.teams?.away?.id
-  const leagueName = fx.league?.name ?? '—'
-  const status = fx.fixture?.status?.short ?? 'NS'
-  const kickoff = fx.fixture?.date ?? ''
-
-  // Pull bookmakers from the first odds entry for this fixture.
-  const oddsEntry = (oddsData ?? []).find((o: any) => o.fixture?.id === Number(fixtureId)) || (oddsData ?? [])[0]
-  const bookmakers: ApiBookmaker[] = (oddsEntry?.bookmakers ?? []).map((b: any) => ({
-    id: b.id,
-    name: b.name,
-    bets: (b.bets ?? []).map((bt: any) => ({
-      id: bt.id,
-      name: bt.name,
-      values: (bt.values ?? []).map((v: any) => ({ value: String(v.value), odd: String(v.odd) })),
-    })),
-  }))
-
-  let markets = extractAllMarkets(bookmakers)
-  // Cap at 30 markets (keep most popular ones — already in extractAllMarkets order)
-  markets = markets.slice(0, 30)
-
-  // Pull recent form for AI context (cheap, cached on API-Football side).
-  let formSummary = ''
-  if (homeId && awayId) {
-    const [homeForm, awayForm] = await Promise.all([
-      apiFetch(`/fixtures?team=${homeId}&last=5`),
-      apiFetch(`/fixtures?team=${awayId}&last=5`),
-    ])
-    formSummary = summarizeForm(homeForm || [], awayForm || [], homeName, awayName)
-  }
-
-  // Single GPT call to evaluate every market — robust to failure.
-  let evaluated = markets
   try {
-    const verdicts = await evaluateWithGpt(
-      { home: homeName, away: awayName, league: leagueName, kickoff },
-      formSummary,
-      markets
-    )
-    evaluated = applyVerdicts(markets, verdicts)
-  } catch (err: any) {
-    console.warn('[all-markets] GPT eval failed:', err?.message)
-    // Mark every selection as skip with a friendly reason; EV = 0
-    for (const m of evaluated) {
-      for (const s of m.selections) {
-        s.aiVerdict = 'skip'
-        s.aiReason = 'AI analysis unavailable'
-        s.aiProb = s.impliedProb
-        s.ev = 0
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const fixtureId = params.fixtureId
+    if (!fixtureId || !/^\d+$/.test(fixtureId)) {
+      return NextResponse.json({ error: 'Invalid fixture id' }, { status: 400 })
+    }
+
+    // Cache hit?
+    const cached = cache.get(fixtureId)
+    if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+      return NextResponse.json(cached.payload)
+    }
+
+    // Fetch fixture meta + odds in parallel.
+    const [fixtureData, oddsData] = await Promise.all([
+      apiFetch(`/fixtures?id=${fixtureId}`),
+      apiFetch(`/odds?fixture=${fixtureId}`),
+    ])
+
+    if (!fixtureData?.length) {
+      // Return an empty-but-shaped response instead of 404 so the UI can render
+      // a friendly message rather than a hard error.
+      return NextResponse.json({
+        fixture: { id: Number(fixtureId), home: '—', away: '—', league: '—', kickoff: '', status: 'NS' },
+        markets: [],
+        generatedAt: new Date().toISOString(),
+        diagnostics: {
+          bookmakers_count: 0,
+          odds_available: false,
+          ai_evaluated: false,
+          note: 'Fixture not found in our data feed. It may have been postponed or the ID is wrong.',
+        },
+      })
+    }
+    const fx = fixtureData[0]
+    const homeName = fx.teams?.home?.name ?? 'Home'
+    const awayName = fx.teams?.away?.name ?? 'Away'
+    const homeId = fx.teams?.home?.id
+    const awayId = fx.teams?.away?.id
+    const leagueName = fx.league?.name ?? '—'
+    const status = fx.fixture?.status?.short ?? 'NS'
+    const kickoff = fx.fixture?.date ?? ''
+
+    // Pull bookmakers from the first odds entry for this fixture.
+    const oddsEntry = (oddsData ?? []).find((o: any) => o.fixture?.id === Number(fixtureId)) || (oddsData ?? [])[0]
+    const bookmakers: ApiBookmaker[] = (oddsEntry?.bookmakers ?? []).map((b: any) => ({
+      id: b.id,
+      name: b.name,
+      bets: (b.bets ?? []).map((bt: any) => ({
+        id: bt.id,
+        name: bt.name,
+        values: (bt.values ?? []).map((v: any) => ({ value: String(v.value), odd: String(v.odd) })),
+      })),
+    }))
+
+    let markets = extractAllMarkets(bookmakers)
+    // Cap at 30 markets (keep most popular ones — already in extractAllMarkets order)
+    markets = markets.slice(0, 30)
+
+    // Decide on a useful diagnostic note for the UI when there's nothing to show.
+    // Live/finished games and lower-tier fixtures often have no bookmaker odds.
+    const finishedStatuses = ['FT', 'AET', 'PEN', 'AWD', 'WO', 'CANC', 'ABD', 'PST']
+    const liveStatuses = ['1H', '2H', 'HT', 'ET', 'BT', 'P', 'INT', 'LIVE']
+    let diagnosticNote: string | undefined
+    if (!bookmakers.length) {
+      if (finishedStatuses.includes(status)) {
+        diagnosticNote = 'This fixture has finished — bookmakers no longer offer odds.'
+      } else if (liveStatuses.includes(status)) {
+        diagnosticNote = 'Live fixture — pre-match odds have closed and live odds are not available here.'
+      } else {
+        diagnosticNote = 'No bookmaker has posted odds for this fixture yet. Check back closer to kickoff.'
+      }
+    } else if (markets.length === 0) {
+      diagnosticNote = 'Bookmakers are listed but none currently offer the markets we track for this fixture.'
+    }
+
+    // Pull recent form for AI context (cheap, cached on API-Football side).
+    // Skip if there are no markets to evaluate — saves two API calls.
+    let formSummary = ''
+    if (markets.length && homeId && awayId) {
+      const [homeForm, awayForm] = await Promise.all([
+        apiFetch(`/fixtures?team=${homeId}&last=5`),
+        apiFetch(`/fixtures?team=${awayId}&last=5`),
+      ])
+      formSummary = summarizeForm(homeForm || [], awayForm || [], homeName, awayName)
+    }
+
+    // Single GPT call to evaluate every market — robust to failure.
+    let evaluated = markets
+    let aiEvaluated = false
+    if (markets.length) {
+      try {
+        const verdicts = await evaluateWithGpt(
+          { home: homeName, away: awayName, league: leagueName, kickoff },
+          formSummary,
+          markets
+        )
+        evaluated = applyVerdicts(markets, verdicts)
+        aiEvaluated = verdicts.size > 0
+        if (!aiEvaluated && !diagnosticNote) {
+          diagnosticNote = 'Markets loaded but the AI did not return verdicts in time. Try refresh.'
+        }
+      } catch (err: any) {
+        console.warn('[all-markets] GPT eval failed:', err?.message)
+        // Mark every selection as skip with a label-aware reason; EV = 0
+        for (const m of evaluated) {
+          for (const s of m.selections) {
+            s.aiVerdict = 'skip'
+            s.aiReason = `Neutral on ${s.label} — AI evaluation temporarily unavailable.`
+            s.aiProb = s.impliedProb
+            s.ev = 0
+          }
+        }
+        if (!diagnosticNote) {
+          diagnosticNote = 'Markets loaded but the AI evaluator timed out. Try refresh.'
+        }
       }
     }
-  }
 
-  const payload: AllMarketsResponse = {
-    fixture: {
-      id: Number(fixtureId),
-      home: homeName,
-      away: awayName,
-      league: leagueName,
-      kickoff,
-      status,
-    },
-    markets: evaluated,
-    generatedAt: new Date().toISOString(),
-  }
+    const payload: AllMarketsResponse = {
+      fixture: {
+        id: Number(fixtureId),
+        home: homeName,
+        away: awayName,
+        league: leagueName,
+        kickoff,
+        status,
+      },
+      markets: evaluated,
+      generatedAt: new Date().toISOString(),
+      diagnostics: {
+        bookmakers_count: bookmakers.length,
+        odds_available: bookmakers.length > 0,
+        ai_evaluated: aiEvaluated,
+        note: diagnosticNote,
+      },
+    }
 
-  cache.set(fixtureId, { at: Date.now(), payload })
-  return NextResponse.json(payload)
+    cache.set(fixtureId, { at: Date.now(), payload })
+    return NextResponse.json(payload)
+  } catch (err: any) {
+    // Last-ditch safety net — never let the panel see a generic 500. Return
+    // a shaped empty payload so the UI explains *why* it can't show anything,
+    // rather than rendering "Couldn't load markets — HTTP 500" to the user.
+    console.error('[all-markets] unexpected error:', err?.message, err?.stack)
+    return NextResponse.json({
+      fixture: { id: Number(params.fixtureId) || 0, home: '—', away: '—', league: '—', kickoff: '', status: 'NS' },
+      markets: [],
+      generatedAt: new Date().toISOString(),
+      diagnostics: {
+        bookmakers_count: 0,
+        odds_available: false,
+        ai_evaluated: false,
+        note: 'Markets temporarily unavailable — our data feed had a hiccup. Try refresh in a moment.',
+      },
+    })
+  }
 }

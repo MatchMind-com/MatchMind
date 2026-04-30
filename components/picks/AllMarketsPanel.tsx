@@ -50,6 +50,12 @@ interface AllMarketsResponse {
   }
   markets: Market[]
   generatedAt: string
+  diagnostics?: {
+    bookmakers_count: number
+    odds_available: boolean
+    ai_evaluated: boolean
+    note?: string
+  }
 }
 
 interface Props {
@@ -438,17 +444,43 @@ export default function AllMarketsPanel({
         </div>
       )}
 
-      {/* Error */}
+      {/* Error — only for true network/HTTP failures (the API now returns
+          a shaped payload with a `note` for any "no markets" case). */}
       {error && !loading && (
-        <div className="text-loss text-sm py-3 text-center">
-          Couldn’t load markets — {error}
+        <div className="bg-loss/5 border border-loss/20 rounded-lg p-3 text-center my-2">
+          <p className="text-loss text-sm font-semibold">Couldn’t load markets</p>
+          <p className="text-fg-muted text-[11px] mt-1">{error}</p>
+          <button
+            type="button"
+            onClick={() => setRefreshTick((t) => t + 1)}
+            className="mt-2 text-[11px] font-bold uppercase tracking-wider py-1 px-3 rounded border border-loss/40 text-loss hover:bg-loss/10 transition-colors"
+          >
+            Retry
+          </button>
         </div>
       )}
 
-      {/* Empty */}
+      {/* Empty (or AI-failed) — shaped payload returned a diagnostic note. */}
       {!loading && !error && data && data.markets.length === 0 && (
-        <div className="text-fg-muted text-sm py-3 text-center">
-          No markets available from bookmakers for this fixture yet.
+        <div className="bg-bg-elevated border border-border-subtle rounded-lg p-4 text-center my-2">
+          <p className="text-fg text-sm font-semibold mb-1">No markets to show</p>
+          <p className="text-fg-muted text-[12px] leading-relaxed">
+            {data.diagnostics?.note ??
+              'No markets available from bookmakers for this fixture yet.'}
+          </p>
+          {data.fixture?.status && data.fixture.status !== 'NS' && (
+            <p className="text-fg-muted text-[10px] mt-2 font-stat uppercase tracking-wider">
+              Status: {data.fixture.status}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Soft notice — markets did load, but the AI evaluator didn't return
+          (rare, but the user deserves to know rather than see all-skip). */}
+      {!loading && !error && data && data.markets.length > 0 && data.diagnostics?.ai_evaluated === false && (
+        <div className="bg-value/5 border border-value/20 rounded-lg px-3 py-2 mb-2 text-[11px] text-value text-center">
+          {data.diagnostics?.note ?? 'AI verdicts unavailable — showing odds only.'}
         </div>
       )}
 
