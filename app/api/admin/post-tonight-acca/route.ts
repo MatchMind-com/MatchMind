@@ -88,25 +88,47 @@ function buildAccaTweet(legs: Array<{ pick: Pick; sum: { label: string; odds: nu
   const stake = 10
   const payout = Math.round(combinedOdds * stake * 100) / 100
 
-  const header = `🔥 TONIGHT'S ${legs.length}-FOLD — AI VALUE ACCA\n`
-  const lines = legs.map((l, i) => {
+  // Try the rich version first (with flags + kickoffs).
+  const headerRich = `🔥 TONIGHT'S ${legs.length}-FOLD — AI VALUE ACCA\n`
+  const richLines = legs.map((l, i) => {
     const flag = l.pick.leagueFlag ?? ''
     const ko = fmtKickoff(l.pick.date)
     return `${i + 1}. ${flag} ${l.pick.home_team} v ${l.pick.away_team} (${ko})\n   ${l.sum.label} @ ${l.sum.odds.toFixed(2)}`
   })
-  const footer = `\n💰 Combined @ ${combinedOdds.toFixed(2)}\n£${stake} → £${payout.toFixed(2)}\n\nNo advice — just data.\nmatchmindcom.com`
+  const footerRich = `\n💰 Combined @ ${combinedOdds.toFixed(2)}\n£${stake} → £${payout.toFixed(2)}\n\nNo advice — just data.\nmatchmindcom.com`
 
-  let tweet = [header, ...lines, footer].join('\n')
+  // Slim version — drop flags + kickoffs + tagline.
+  const headerSlim = `🔥 ${legs.length}-FOLD AI VALUE ACCA\n`
+  const slimLines = legs.map((l, i) =>
+    `${i + 1}. ${l.pick.home_team} v ${l.pick.away_team} — ${l.sum.label} @ ${l.sum.odds.toFixed(2)}`
+  )
+  const footerSlim = `\n💰 ${combinedOdds.toFixed(2)} · £${stake} → £${payout.toFixed(2)}\nmatchmindcom.com`
 
-  // Twitter cap is 280 — trim by dropping the kickoff column from
-  // each leg if we're over. (We could also drop the flag.)
-  if (tweet.length > 280) {
-    const slimLines = legs.map((l, i) =>
-      `${i + 1}. ${l.pick.home_team} v ${l.pick.away_team}\n   ${l.sum.label} @ ${l.sum.odds.toFixed(2)}`
-    )
-    tweet = [header, ...slimLines, footer].join('\n')
+  // Ultra-slim — abbreviate team names.
+  function abbr(name?: string): string {
+    if (!name) return ''
+    if (name.length <= 12) return name
+    // Drop common suffixes / take first two words
+    const tokens = name.split(/\s+/)
+    if (tokens.length >= 2) return tokens.slice(0, 2).join(' ').slice(0, 14)
+    return name.slice(0, 14)
   }
-  return tweet
+  const headerUltra = `🔥 ${legs.length}-FOLD ACCA\n`
+  const ultraLines = legs.map((l, i) =>
+    `${i + 1}. ${abbr(l.pick.home_team)} v ${abbr(l.pick.away_team)} — ${l.sum.label} @ ${l.sum.odds.toFixed(2)}`
+  )
+  const footerUltra = `\n${combinedOdds.toFixed(2)} · £${stake}→£${payout.toFixed(2)}\nmatchmindcom.com`
+
+  // Pick the densest format that fits 280 chars.
+  const candidates = [
+    [headerRich, ...richLines, footerRich].join('\n'),
+    [headerSlim, ...slimLines, footerSlim].join('\n'),
+    [headerUltra, ...ultraLines, footerUltra].join('\n'),
+  ]
+  for (const t of candidates) if (t.length <= 280) return t
+  // If even ultra is too long, return ultra (Twitter will reject; user
+  // can drop a leg and retry).
+  return candidates[candidates.length - 1]
 }
 
 // ── Twitter OAuth 1.0a poster ────────────────────────────────────────
