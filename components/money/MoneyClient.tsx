@@ -6,9 +6,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import MoneyHeader from './MoneyHeader'
 import BankrollTab from './BankrollTab'
 import GoalsTab from './GoalsTab'
-import DailyPlanTab from './DailyPlanTab'
 import HistoryTab from './HistoryTab'
 import StatsTab from './StatsTab'
+import MyLiveBets from '@/components/home/MyLiveBets'
 
 /**
  * MoneyClient — orchestrator for /dashboard/money.
@@ -25,15 +25,24 @@ import StatsTab from './StatsTab'
  * bankroll down so the BankrollTab doesn't duplicate the request.
  */
 
-type TabKey = 'bankroll' | 'goals' | 'dailyplan' | 'history' | 'stats'
+type TabKey = 'bankroll' | 'goals' | 'mybets' | 'history' | 'stats'
 
 const TABS: Array<{ key: TabKey; label: string }> = [
   { key: 'bankroll', label: 'Bankroll' },
   { key: 'goals', label: 'Goals' },
-  { key: 'dailyplan', label: 'Daily Plan' },
+  { key: 'mybets', label: 'My Bets' },
   { key: 'history', label: 'History' },
   { key: 'stats', label: 'Stats' },
 ]
+
+// Back-compat: any old `?tab=dailyplan` link from the previous version
+// silently routes to the new `mybets` tab so bookmarks don't 404 the
+// user into Bankroll.
+function normalizeTabParam(raw: string | null): TabKey | null {
+  if (!raw) return null
+  if (raw === 'dailyplan') return 'mybets'
+  return TABS.some((t) => t.key === raw) ? (raw as TabKey) : null
+}
 
 interface Snapshot {
   id: string
@@ -63,10 +72,8 @@ export default function MoneyClient({
   const searchParams = useSearchParams()
 
   // ── URL-synced tab ─────────────────────────────────────────────────
-  const initialTab = (searchParams.get('tab') as TabKey) || 'bankroll'
-  const [tab, setTab] = useState<TabKey>(
-    TABS.some((t) => t.key === initialTab) ? initialTab : 'bankroll'
-  )
+  const initialTab = normalizeTabParam(searchParams.get('tab')) ?? 'bankroll'
+  const [tab, setTab] = useState<TabKey>(initialTab)
 
   const writeTab = useCallback(
     (next: TabKey) => {
@@ -212,14 +219,13 @@ export default function MoneyClient({
       {tab === 'goals' && (
         <GoalsTab
           currency={currency}
-          onViewDailyPlan={() => handleTabChange('dailyplan')}
+          onViewDailyPlan={() => handleTabChange('mybets')}
         />
       )}
-      {tab === 'dailyplan' && (
-        <DailyPlanTab
-          currency={currency}
-          onSwitchToGoals={() => handleTabChange('goals')}
-        />
+      {tab === 'mybets' && (
+        <div className="space-y-5">
+          <MyLiveBets />
+        </div>
       )}
       {tab === 'history' && (
         <HistoryTab

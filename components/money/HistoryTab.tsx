@@ -2,7 +2,6 @@
 
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import type { Currency } from './MoneyClient'
-import BetCalendar, { type CalendarBet } from './BetCalendar'
 import BetSlipScanner from './BetSlipScanner'
 import AccaLegsBreakdown from './AccaLegsBreakdown'
 
@@ -10,10 +9,10 @@ import AccaLegsBreakdown from './AccaLegsBreakdown'
  * HistoryTab — editable history of every bet the user has logged.
  *
  * Layout:
- *   - BetCalendar (collapsible) — month grid, click a day to filter
- *   - Filters row (league + result chips + date range + Export CSV + "+ Add manual bet")
+ *   - Filters row (league + result chips + date range + Export CSV + "+ Add manual bet" + "Scan slip")
  *   - Summary stats (total bets · win rate · ROI · net P/L)
  *   - Sortable table with row checkboxes, edit/delete/mark-won/lost actions
+ *   - Acca rows expandable to per-leg breakdown with live status
  *   - Bulk-delete bar (visible when ≥1 row selected)
  *   - Load-more pagination (50 / page)
  *
@@ -118,8 +117,6 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
   const [records, setRecords] = useState<BetRow[]>([])
 
   // UI state
-  const [showCalendar, setShowCalendar] = useState(true)
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [editingId, setEditingId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -182,11 +179,10 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
     const toMs = to ? new Date(to).getTime() + 86_400_000 : Number.POSITIVE_INFINITY
 
     let rows = records.filter((r) => {
-      if (selectedDate && betDate(r) !== selectedDate) return false
       if (league !== 'all' && r.league !== league) return false
       if (betType !== 'all' && r.bet_type !== betType) return false
       if (result !== 'all' && r.result !== result) return false
-      if (!selectedDate && (from || to)) {
+      if (from || to) {
         const ts = betDate(r) ? new Date(betDate(r)).getTime() : 0
         if (ts < fromMs || ts > toMs) return false
       }
@@ -211,12 +207,12 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
     })
 
     return rows
-  }, [records, league, betType, result, from, to, sortKey, sortDir, selectedDate])
+  }, [records, league, betType, result, from, to, sortKey, sortDir])
 
   // Reset paginate + selection when filters change
   useEffect(() => {
     setShown(PAGE_SIZE)
-  }, [league, betType, result, from, to, selectedDate])
+  }, [league, betType, result, from, to])
 
   // Drop selections that no longer match the filtered view
   useEffect(() => {
@@ -231,21 +227,6 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
     if (changed) setSelected(next)
   }, [filtered, selected])
 
-  // Calendar uses the full record set
-  const calendarBets: CalendarBet[] = useMemo(
-    () =>
-      records.map((r) => ({
-        id: r.id,
-        date: betDate(r),
-        result: r.result,
-        profit_loss: r.profit_loss,
-        selection: r.selection,
-        bet_type: r.bet_type,
-        match_name: r.match_name,
-        odds: r.odds,
-      })),
-    [records]
-  )
 
   // Summary stats over the filtered set
   const summary = useMemo(() => {
@@ -443,33 +424,6 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
         </div>
       )}
 
-      {/* CALENDAR */}
-      <div className="bg-bg-surface border border-border-subtle rounded-2xl p-5">
-        <div className="flex items-center justify-between mb-3">
-          <p className="eyebrow">Activity</p>
-          <button
-            type="button"
-            onClick={() => setShowCalendar((v) => !v)}
-            className="text-fg-secondary hover:text-fg text-[10px] font-bold uppercase tracking-wider transition-colors"
-          >
-            {showCalendar ? 'Hide calendar' : 'Show calendar'}
-          </button>
-        </div>
-        {showCalendar &&
-          (isEmpty ? (
-            <div className="py-10 text-center text-fg-muted text-sm">
-              Your bet calendar will appear here once you log your first bet.
-            </div>
-          ) : (
-            <BetCalendar
-              bets={calendarBets}
-              currency={currency}
-              selectedDate={selectedDate}
-              onSelectDate={setSelectedDate}
-            />
-          ))}
-      </div>
-
       {/* FILTERS + ADD */}
       <div className="bg-bg-surface border border-border-subtle rounded-2xl p-4 lg:p-5">
         <div className="flex flex-wrap items-end gap-3 lg:gap-4">
@@ -550,7 +504,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
             </div>
           </div>
 
-          {/* Date range — disabled when a calendar day is pinned */}
+          {/* Date range */}
           <div>
             <label className="block text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-1.5">
               From
@@ -559,8 +513,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
               type="date"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
-              disabled={selectedDate !== null}
-              className="bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand disabled:opacity-40"
+              className="bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
             />
           </div>
           <div>
@@ -571,20 +524,9 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
               type="date"
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              disabled={selectedDate !== null}
-              className="bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand disabled:opacity-40"
+              className="bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
             />
           </div>
-
-          {selectedDate && (
-            <button
-              type="button"
-              onClick={() => setSelectedDate(null)}
-              className="px-3 py-2 bg-brand/15 border border-brand/40 text-brand text-[11px] font-bold uppercase tracking-wider rounded-lg hover:bg-brand/20 transition-colors"
-            >
-              Day: {selectedDate} ✕
-            </button>
-          )}
 
           <div className="flex-1" />
 
