@@ -8,6 +8,7 @@ import { parseBetRec, BET_REC_PROMPT_INSTRUCTIONS } from '@/lib/parse-bet-rec'
 import { detectTeams } from '@/lib/team-resolver'
 import { getTeamDeepData, renderDeepDataBlock } from '@/lib/team-deep-data'
 import {
+  evaluatePick,
   fetchFixturesForDates,
   matchFixture,
   parseAccaLegs,
@@ -232,6 +233,13 @@ export async function POST(req: NextRequest) {
     venue?: string | null
     venueCity?: string | null
     kickoff?: string | null
+    // Live enrichment
+    liveStatus?: string | null  // NS / 1H / 2H / FT / etc.
+    liveMinute?: number | null
+    liveScore?: string | null   // "1-3"
+    pickState?: string | null   // cashing / losing / won / lost / pending
+    pickLabel?: string | null   // "Won", "Behind", "Cashing"
+    pickContext?: string | null // "Both teams scored"
   }
   const activeItems: ActiveItem[] = []
   for (const bet of pendingBetsRaw ?? []) {
@@ -290,6 +298,24 @@ export async function POST(req: NextRequest) {
             it.venue = fx?.fixture?.venue?.name ?? null
             it.venueCity = fx?.fixture?.venue?.city ?? null
             it.kickoff = fx?.fixture?.date ?? null
+            // Live enrichment so the coach can answer "what's the score
+            // for my first leg?" — covers FT games (which would otherwise
+            // drop out of the global LIVE block) AND in-play games.
+            it.liveStatus = fx?.fixture?.status?.short ?? null
+            it.liveMinute = fx?.fixture?.status?.elapsed ?? null
+            const hg = fx?.goals?.home
+            const ag = fx?.goals?.away
+            if (hg != null && ag != null) it.liveScore = `${hg}-${ag}`
+            // Grade the pick against current state — same evaluator the
+            // money page uses, so coach + UI agree on every leg.
+            try {
+              const ev = evaluatePick(it.selection ?? '', it.betType ?? null, fx)
+              it.pickState = ev.state
+              it.pickLabel = ev.label
+              it.pickContext = ev.context ?? null
+            } catch {
+              // Best-effort — leave pickState null on errors.
+            }
           }
         }
       } catch (e) {
@@ -299,18 +325,43 @@ export async function POST(req: NextRequest) {
   }
 
   // Build the "MY ACTIVE BETS" prompt block.
+  // Format the live status line for each active item. This is the bit
+  // that lets the coach answer "what's the score for my Saudi game?"
+  // even when the game is FT and dropped out of the global LIVE block.
+  function liveLine(it: ActiveItem): string | null {
+    if (!it.liveStatus) return null
+    const FINISHED = ['FT', 'AET', 'PEN']
+    const IN_PLAY = ['1H', '2H', 'HT', 'ET', 'BT', 'P', 'INT', 'LIVE']
+    let statusText: string
+    if (FINISHED.includes(it.liveStatus)) {
+      statusText = it.liveStatus === 'FT' ? 'FT' : it.liveStatus
+    } else if (IN_PLAY.includes(it.liveStatus)) {
+      statusText = `LIVE ${it.liveMinute ?? ''}'`
+    } else if (it.liveStatus === 'NS' || it.liveStatus === 'TBD') {
+      statusText = 'Not started'
+    } else {
+      statusText = it.liveStatus
+    }
+    const score = it.liveScore ? ` · score ${it.liveScore}` : ''
+    const grade = it.pickLabel
+      ? ` · pick is ${it.pickLabel.toUpperCase()}${it.pickContext ? ` (${it.pickContext})` : ''}`
+      : ''
+    return `Status: ${statusText}${score}${grade}`
+  }
+
   const myBetsBlock = activeItems.length > 0
-    ? `\n=== USER'S CURRENT ACTIVE BETS (still pending — answer questions about THESE specifically) ===
+    ? `\n=== USER'S CURRENT ACTIVE BETS (still pending — answer questions about THESE specifically, with LIVE scores) ===
 ${activeItems.map((it, i) => {
         const tag = it.source === 'acca' ? `[Acca leg]` : `[Single]`
         const venue = it.venue ? `${it.venue}${it.venueCity ? ', ' + it.venueCity : ''}` : null
         const kickoff = it.kickoff ? new Date(it.kickoff).toUTCString().replace(' GMT', ' UTC') : (it.matchDate ?? 'TBC')
+        const live = liveLine(it)
         return `${i + 1}. ${tag} ${it.matchName}${it.league ? ` · ${it.league}` : ''}
    Pick: ${it.betType ? it.betType + ' — ' : ''}${it.selection} @ ${it.odds.toFixed(2)}${it.stake ? ` · stake ${it.stake}u` : ''}${it.bookmaker ? ` · ${it.bookmaker}` : ''}
-   Kickoff: ${kickoff}${venue ? ` · Venue: ${venue}` : ''}`
+   Kickoff: ${kickoff}${venue ? ` · Venue: ${venue}` : ''}${live ? '\n   ' + live : ''}`
       }).join('\n\n')}
 
-When the user asks "where is my bet played", "who's playing", "my acca", "my pick today", "is my bet still alive", "who's injured for [team]" — refer to the bets above. Use the venue, kickoff, and league info directly. For injury / form / lineup detail, the relevant teams have been auto-included in the DEEP DATA section below — pull specific player names and numbers from there.\n`
+When the user asks about "my bet" / "my acca" / "is my bet alive" / "what's the score for my X" / "who's winning my pick" — answer DIRECTLY from the Status lines above, even if the game is finished (FT). The Status field always reflects the latest score and grades the pick as WON / LOST / CASHING / BEHIND / NOT STARTED. Never say "I don't know the score" if a Status line exists for that bet. For injury / form / lineup detail, relevant teams are pre-loaded in the DEEP DATA block below.\n`
     : ''
 
   // ── DEEP TEAM DATA ────────────────────────────────────────────────────
@@ -437,7 +488,7 @@ Recent bets (last 15):
 ${betsText}
 
 === YOUR ROLE ===
-- ABSOLUTE RULE — questions about "my bet", "my acca", "my pick", "my slip", "where is it played", "what time", "who's playing", "is my bet alive", "who's injured for [team]", "which stadium" — answer SPECIFICALLY from the USER'S CURRENT ACTIVE BETS block above. Use the venue, kickoff, league exactly as listed. For player injuries / recent form / lineups, reference the DEEP DATA block which has the relevant teams pre-loaded.
+- ABSOLUTE RULE — questions about "my bet", "my acca", "my pick", "my slip", "where is it played", "what time", "who's playing", "is my bet alive", "what's the score for my X", "how is my X doing", "who's injured for [team]", "which stadium" — answer SPECIFICALLY from the USER'S CURRENT ACTIVE BETS block above. Each active bet has a Status line with live score + pick grade (WON / LOST / CASHING / BEHIND / NOT STARTED) — quote it directly. Use the venue, kickoff, league exactly as listed. For player injuries / recent form / lineups, reference the DEEP DATA block which has the relevant teams pre-loaded.
 - Reference specific upcoming matches by name and date when giving advice
 - When the user asks about "today" or "tonight" specifically — recommend matches from the TODAY'S MATCHES block ONLY. Don't suggest tomorrow/Saturday matches if they asked about today.
 - ABSOLUTE RULE: When the user asks "what's the best bet" / "value bets" / "should I bet on X" / "find me a bet" — you MUST recommend a SPECIFIC pick from MATCHMIND'S CURRENT VALUE PICKS list above. Each entry has a real fixture, real odds, real EV, and a fixtureId. Pick the highest-EV one that matches the user's filter (today / specific league / specific market) and emit a [BET_REC] block with its exact data: home, away, market, selection, odds, league, kickoff (the date shown), fixtureId. Never say "wait for odds to be released" — the picks are right there with odds.
