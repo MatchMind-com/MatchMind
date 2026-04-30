@@ -137,6 +137,8 @@ export function evaluatePick(
   const away = Number(fx?.goals?.away ?? 0) || 0
   const homeName = fx?.teams?.home?.name ?? 'Home'
   const awayName = fx?.teams?.away?.name ?? 'Away'
+  const halftimeHome = Number(fx?.score?.halftime?.home ?? 0) || 0
+  const halftimeAway = Number(fx?.score?.halftime?.away ?? 0) || 0
   const finished = (FINISHED_STATUSES as readonly string[]).includes(status)
   const live = (IN_PLAY_STATUSES as readonly string[]).includes(status)
   const notStarted =
@@ -158,26 +160,48 @@ export function evaluatePick(
       ? { state: 'won', label: 'Won', context: `${homeName} ${home}-${away} ${awayName}` }
       : { state: 'lost', label: 'Lost', context: `${homeName} ${home}-${away} ${awayName}` }
 
-  // ── Match-result family ────────────────────────────────────────
+  // ── Helpers for team-name detection inside selection text ──────
+  // Bookies print Double Chance picks as "X or Liverpool" / "Arsenal or
+  // Newcastle" / "Liverpool or X" — not in the canonical 1X/X2/12 form.
+  // We detect which team is on which side by fuzzy matching the name.
+  const homeNorm = normTeam(homeName)
+  const awayNorm = normTeam(awayName)
+  const selNorm = normTeam(selection)
+  // Each token sequence in selection that looks like a team mention
+  const mentionsHome = !!homeNorm && (selNorm.includes(homeNorm) || tokensOverlap(selNorm, homeNorm) >= 60)
+  const mentionsAway = !!awayNorm && (selNorm.includes(awayNorm) || tokensOverlap(selNorm, awayNorm) >= 60)
+
+  // ── Match-result family (1X2) ──────────────────────────────────
+  const isExplicitDraw = /\bdraw\b/.test(sel) || sel.trim() === 'x'
   const isHomePick =
     /\bhome\b/.test(sel) ||
-    sel.startsWith('1') ||
-    (homeName && sel.includes(homeName.toLowerCase()))
+    sel.startsWith('1 ') || sel === '1' ||
+    (mentionsHome && !mentionsAway && !isExplicitDraw && !sel.includes(' or '))
   const isAwayPick =
     /\baway\b/.test(sel) ||
-    sel.startsWith('2') ||
-    (awayName && sel.includes(awayName.toLowerCase()))
-  const isDrawPick = /\bdraw\b/.test(sel) || sel === 'x'
+    sel.startsWith('2 ') || sel === '2' ||
+    (mentionsAway && !mentionsHome && !isExplicitDraw && !sel.includes(' or '))
 
-  if (bt.includes('match result') || bt.includes('1x2') || /win$|to win/.test(sel)) {
+  if (bt.includes('match result') || bt.includes('1x2') || /win$|to win/.test(sel) || (!sel.includes(' or ') && (mentionsHome !== mentionsAway))) {
     if (isHomePick) return finished ? settle(home > away) : liveCash(home > away)
     if (isAwayPick) return finished ? settle(away > home) : liveCash(away > home)
-    if (isDrawPick) return finished ? settle(home === away) : liveCash(home === away)
+    if (isExplicitDraw && !sel.includes(' or ')) return finished ? settle(home === away) : liveCash(home === away)
   }
-  if (bt.includes('double chance')) {
+
+  // ── Double Chance ──────────────────────────────────────────────
+  // Recognise canonical (1X / X2 / 12) AND bookie-style ("X or Arsenal",
+  // "Liverpool or X", "Liverpool or Arsenal") by inspecting which entities
+  // appear on each side of " or ".
+  const isDoubleChance =
+    bt.includes('double chance') ||
+    /\b(1x|x2|12)\b/.test(sel) ||
+    /\bor\b/.test(sel)
+  if (isDoubleChance) {
     const homeOrDraw = home >= away
     const drawOrAway = away >= home
     const eitherWin = home !== away
+
+    // Canonical 1X / X2 / 12 strings first.
     if (sel.includes('1x') || sel.includes('home/draw') || sel.includes('home or draw')) {
       return finished ? settle(homeOrDraw) : liveCash(homeOrDraw)
     }
@@ -185,6 +209,16 @@ export function evaluatePick(
       return finished ? settle(drawOrAway) : liveCash(drawOrAway)
     }
     if (sel.includes('12') || sel.includes('home/away') || sel.includes('either')) {
+      return finished ? settle(eitherWin) : liveCash(eitherWin)
+    }
+
+    // "X or [team]" / "[team] or X" — Draw + one specific side.
+    if (/\bx\b/.test(sel) && / or /.test(sel)) {
+      if (mentionsHome) return finished ? settle(homeOrDraw) : liveCash(homeOrDraw)
+      if (mentionsAway) return finished ? settle(drawOrAway) : liveCash(drawOrAway)
+    }
+    // "[home] or [away]" — both teams, so 12 (either win).
+    if (mentionsHome && mentionsAway) {
       return finished ? settle(eitherWin) : liveCash(eitherWin)
     }
   }
@@ -225,10 +259,77 @@ export function evaluatePick(
     }
   }
 
+  // ── Half Time Result ───────────────────────────────────────────
+  // Needs API-Football's `score.halftime`. Treat HT as "settled" once the
+  // game is past HT (i.e. status is 2H, ET, FT, etc.).
+  if (bt.includes('half time') || bt.includes('halftime') || /\bht\b/.test(sel)) {
+    const htReached = ['HT', '2H', 'ET', 'BT', 'P', 'INT'].includes(status) || finished
+    const htHomeWin = halftimeHome > halftimeAway
+    const htAwayWin = halftimeAway > halftimeHome
+    const htDraw = halftimeHome === halftimeAway
+    const ctx = `HT ${halftimeHome}-${halftimeAway}`
+    if (mentionsHome || /\bhome\b/.test(sel)) {
+      return htReached ? { state: htHomeWin ? 'won' : 'lost', label: htHomeWin ? 'Won' : 'Lost', context: ctx } : liveCash(home > away)
+    }
+    if (mentionsAway || /\baway\b/.test(sel)) {
+      return htReached ? { state: htAwayWin ? 'won' : 'lost', label: htAwayWin ? 'Won' : 'Lost', context: ctx } : liveCash(away > home)
+    }
+    if (/\bdraw\b/.test(sel) || sel.trim() === 'x') {
+      return htReached ? { state: htDraw ? 'won' : 'lost', label: htDraw ? 'Won' : 'Lost', context: ctx } : liveCash(home === away)
+    }
+  }
+
+  // ── Win to Nil ─────────────────────────────────────────────────
+  if (bt.includes('win to nil') || sel.includes('to nil') || sel.includes('to win to nil')) {
+    const homeNil = home > away && away === 0
+    const awayNil = away > home && home === 0
+    if (mentionsHome || /\bhome\b/.test(sel)) {
+      if (away > 0) return { state: finished ? 'lost' : 'lost', label: finished ? 'Lost' : 'Already lost', context: `${awayName} scored` }
+      return finished ? settle(homeNil) : liveCash(home > 0 && away === 0)
+    }
+    if (mentionsAway || /\baway\b/.test(sel)) {
+      if (home > 0) return { state: finished ? 'lost' : 'lost', label: finished ? 'Lost' : 'Already lost', context: `${homeName} scored` }
+      return finished ? settle(awayNil) : liveCash(away > 0 && home === 0)
+    }
+  }
+
+  // ── Asian Handicap (basic) ─────────────────────────────────────
+  // Selection like "Liverpool -1.5" / "Arsenal +0.5". We assume integer
+  // and half-integer lines (no quarter-line splits — those settle two
+  // ways and are bookie-specific). For half-line, Win/Lose only; for
+  // integer line, push/Win/Lose (we treat push as "void").
+  const ahMatch = sel.match(/([+-])\s*(\d+(?:\.\d+)?)/)
+  if (ahMatch && (bt.includes('handicap') || bt.includes('ah') || /\b(handicap|ah)\b/.test(sel))) {
+    const sign = ahMatch[1] === '+' ? 1 : -1
+    const line = sign * parseFloat(ahMatch[2])
+    const teamIsHome = mentionsHome
+    const teamIsAway = mentionsAway && !mentionsHome
+    if (teamIsHome || teamIsAway) {
+      const teamScore = teamIsHome ? home : away
+      const oppScore = teamIsHome ? away : home
+      const adjustedDiff = (teamScore + line) - oppScore
+      if (Math.abs(adjustedDiff) < 0.001) {
+        return finished ? { state: 'void', label: 'Push (void)' } : liveCash(false)
+      }
+      return finished ? settle(adjustedDiff > 0) : liveCash(adjustedDiff > 0)
+    }
+  }
+
   // ── Fallback ───────────────────────────────────────────────────
   if (live) return { state: 'tbd', label: 'In play', context: `${homeName} ${home}-${away} ${awayName}` }
-  if (finished) return { state: 'tbd', label: 'Settled — see book', context: `${homeName} ${home}-${away} ${awayName}` }
+  if (finished) return { state: 'tbd', label: 'Settled — check slip', context: `${homeName} ${home}-${away} ${awayName}` }
   return { state: 'pending', label: 'Pending' }
+}
+
+/** Token-overlap percent score used by `mentionsHome / mentionsAway` checks. */
+function tokensOverlap(a: string, b: string): number {
+  if (!a || !b) return 0
+  const ta = new Set(a.split(' ').filter((t) => t.length >= 3))
+  const tb = new Set(b.split(' ').filter((t) => t.length >= 3))
+  if (ta.size === 0 || tb.size === 0) return 0
+  let hit = 0
+  for (const t of ta) if (tb.has(t)) hit++
+  return Math.round((hit / Math.min(ta.size, tb.size)) * 100)
 }
 
 export function shiftDate(iso: string, days: number): string {

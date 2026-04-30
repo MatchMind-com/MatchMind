@@ -7,6 +7,12 @@ import { leaguesPromptBlock, findLeague, TRACKED_LEAGUES } from '@/lib/leagues'
 import { parseBetRec, BET_REC_PROMPT_INSTRUCTIONS } from '@/lib/parse-bet-rec'
 import { detectTeams } from '@/lib/team-resolver'
 import { getTeamDeepData, renderDeepDataBlock } from '@/lib/team-deep-data'
+import {
+  fetchFixturesForDates,
+  matchFixture,
+  parseAccaLegs,
+  shiftDate,
+} from '@/lib/live-bet-evaluator'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const API_KEY = process.env.API_FOOTBALL_KEY!
@@ -50,16 +56,24 @@ export async function POST(req: NextRequest) {
   const season = getCurrentSeason()
   const today = new Date().toISOString().split('T')[0]
 
-  // Fetch user's bet history + preferences + AI's pre-computed predictions in parallel.
-  // The AI MUST recommend from these picks (real fixtures with real odds and EVs)
-  // instead of vague "wait for odds" answers.
-  const [{ data: recentBets }, { data: userPrefs }, { data: predictionRows }] = await Promise.all([
+  // Fetch user's bet history + currently pending bets + preferences + AI's
+  // pre-computed predictions in parallel. The pending bets fuel the coach's
+  // awareness of "my bet today" so the user can ask "where's it played",
+  // "who's injured", etc., and get specific answers.
+  const [{ data: recentBets }, { data: pendingBetsRaw }, { data: userPrefs }, { data: predictionRows }] = await Promise.all([
     supabase
       .from('bet_slips')
       .select('match_name, league, stake, odds, result, profit_loss, bet_type, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(15),
+    supabase
+      .from('bet_slips')
+      .select('id, match_name, league, bet_type, selection, odds, stake, match_date, bookmaker, notes')
+      .eq('user_id', user.id)
+      .eq('result', 'pending')
+      .order('match_date', { ascending: true, nullsFirst: false })
+      .limit(20),
     supabase
       .from('user_preferences')
       .select('favourite_team, lucky_charm_team, favourite_leagues, betting_experience, monthly_pl_estimate, preferred_bet_types')
@@ -197,18 +211,135 @@ export async function POST(req: NextRequest) {
 
   const leagueName = findLeague(leagueId)?.name || 'Football'
 
+  // ── USER'S ACTIVE PENDING BETS ────────────────────────────────────────
+  // Flatten singles + acca legs into a unified list. Every leg is an
+  // "active item" with team names, league, kickoff date, etc. Used both
+  // for (a) injecting an "ACTIVE BETS" block in the system prompt and
+  // (b) seeding the deep-team-data fetcher so the coach automatically
+  // has injury/form/venue intel on the teams the user is betting on.
+  type ActiveItem = {
+    source: 'single' | 'acca'
+    parentId?: string
+    matchName: string
+    league?: string | null
+    matchDate?: string | null
+    selection: string
+    betType?: string | null
+    odds: number
+    stake?: number | null
+    bookmaker?: string | null
+    fixture?: any | null
+    venue?: string | null
+    venueCity?: string | null
+    kickoff?: string | null
+  }
+  const activeItems: ActiveItem[] = []
+  for (const bet of pendingBetsRaw ?? []) {
+    const legs = parseAccaLegs(bet.notes)
+    if (legs && legs.length > 1) {
+      for (const leg of legs) {
+        activeItems.push({
+          source: 'acca',
+          parentId: bet.id,
+          matchName: leg.match_name,
+          league: leg.league ?? null,
+          matchDate: leg.match_date ?? null,
+          selection: leg.selection,
+          betType: leg.bet_type ?? null,
+          odds: leg.odds,
+          stake: bet.stake,
+          bookmaker: bet.bookmaker ?? null,
+        })
+      }
+    } else if (bet.match_name) {
+      activeItems.push({
+        source: 'single',
+        matchName: bet.match_name,
+        league: bet.league ?? null,
+        matchDate: bet.match_date ?? null,
+        selection: bet.selection ?? '',
+        betType: bet.bet_type ?? null,
+        odds: bet.odds ?? 0,
+        stake: bet.stake,
+        bookmaker: bet.bookmaker ?? null,
+      })
+    }
+  }
+
+  // Enrich each active item with venue + kickoff time by looking up the
+  // fixture in API-Football. Group by date to keep API calls minimal.
+  if (activeItems.length > 0) {
+    const datesNeeded = new Set<string>()
+    for (const it of activeItems) {
+      if (it.matchDate) datesNeeded.add(it.matchDate.slice(0, 10))
+    }
+    if (datesNeeded.size > 0) {
+      try {
+        const fixturesByDate = await fetchFixturesForDates(datesNeeded)
+        for (const it of activeItems) {
+          const date = it.matchDate?.slice(0, 10)
+          if (!date) continue
+          const fxs = [
+            ...(fixturesByDate.get(date) ?? []),
+            ...(fixturesByDate.get(shiftDate(date, -1)) ?? []),
+            ...(fixturesByDate.get(shiftDate(date, 1)) ?? []),
+          ]
+          const fx = matchFixture(fxs, it.matchName)
+          if (fx) {
+            it.fixture = fx
+            it.venue = fx?.fixture?.venue?.name ?? null
+            it.venueCity = fx?.fixture?.venue?.city ?? null
+            it.kickoff = fx?.fixture?.date ?? null
+          }
+        }
+      } catch (e) {
+        console.warn('[coach-with-data] active-bet fixture lookup failed:', e)
+      }
+    }
+  }
+
+  // Build the "MY ACTIVE BETS" prompt block.
+  const myBetsBlock = activeItems.length > 0
+    ? `\n=== USER'S CURRENT ACTIVE BETS (still pending — answer questions about THESE specifically) ===
+${activeItems.map((it, i) => {
+        const tag = it.source === 'acca' ? `[Acca leg]` : `[Single]`
+        const venue = it.venue ? `${it.venue}${it.venueCity ? ', ' + it.venueCity : ''}` : null
+        const kickoff = it.kickoff ? new Date(it.kickoff).toUTCString().replace(' GMT', ' UTC') : (it.matchDate ?? 'TBC')
+        return `${i + 1}. ${tag} ${it.matchName}${it.league ? ` · ${it.league}` : ''}
+   Pick: ${it.betType ? it.betType + ' — ' : ''}${it.selection} @ ${it.odds.toFixed(2)}${it.stake ? ` · stake ${it.stake}u` : ''}${it.bookmaker ? ` · ${it.bookmaker}` : ''}
+   Kickoff: ${kickoff}${venue ? ` · Venue: ${venue}` : ''}`
+      }).join('\n\n')}
+
+When the user asks "where is my bet played", "who's playing", "my acca", "my pick today", "is my bet still alive", "who's injured for [team]" — refer to the bets above. Use the venue, kickoff, and league info directly. For injury / form / lineup detail, the relevant teams have been auto-included in the DEEP DATA section below — pull specific player names and numbers from there.\n`
+    : ''
+
   // ── DEEP TEAM DATA ────────────────────────────────────────────────────
-  // If the user mentioned specific teams ("how is Galatasaray doing?"),
-  // pull their injuries / form / fixtures / season stats on demand.
-  // Detection is local + instant; the API fan-out is bounded to 3 teams
-  // and ~4 calls each, all guarded with timeouts.
+  // Collect team names for deep-data fetch from BOTH the user's message
+  // AND the teams in their pending bets. So when they ask "who's injured?"
+  // about a bet they made, the injury data is already loaded.
   const activeLeagueIdNum = parseInt(String(leagueId), 10) || 39
   let deepDataBlock = ''
   try {
-    const detectedTeams = await detectTeams(message)
-    if (detectedTeams.length > 0) {
+    const messageTeams = await detectTeams(message)
+    // Build a synthetic "text" containing all active-bet team names so we
+    // can re-use the fast local detector. Cap to keep fan-out bounded.
+    const betTeamsText = activeItems
+      .slice(0, 8)
+      .map((it) => it.matchName)
+      .join(' . ')
+    const betTeams = betTeamsText ? await detectTeams(betTeamsText) : []
+    // Merge + dedupe by id, cap at 4 teams (3 message + 1 from bets, or vice versa).
+    const seen = new Set<number>()
+    const merged: typeof messageTeams = []
+    for (const t of [...messageTeams, ...betTeams]) {
+      if (seen.has(t.id)) continue
+      seen.add(t.id)
+      merged.push(t)
+      if (merged.length >= 4) break
+    }
+    if (merged.length > 0) {
       const deepData = await Promise.all(
-        detectedTeams.map(t =>
+        merged.map(t =>
           getTeamDeepData(t.id, t.leagueId ?? activeLeagueIdNum).catch(() => null),
         ),
       )
@@ -217,7 +348,7 @@ export async function POST(req: NextRequest) {
         .map(renderDeepDataBlock)
       if (blocks.length > 0) {
         deepDataBlock =
-          '\n=== TEAM-SPECIFIC DEEP DATA (fetched on demand for teams the user mentioned) ===\n' +
+          '\n=== TEAM-SPECIFIC DEEP DATA (fetched on demand for teams the user mentioned + teams in their active bets) ===\n' +
           blocks.join('\n\n') +
           '\n\nWhen you see a 🔬 DEEP DATA block above for a team, use it as the AUTHORITATIVE source for that team\'s form, injuries, fixtures, and stats. Reference specific players and numbers from it — never contradict it with training-data guesses.\n'
       }
@@ -274,7 +405,7 @@ ${userPrefs.monthly_pl_estimate === 'consistent_profit' ? 'This user is profitab
 ${leaguesPromptBlock()}
 
 ${BET_REC_PROMPT_INSTRUCTIONS}
-${financialContextBlock ? `\n${financialContextBlock}\n` : ''}${personalisation}${memoryBlock}${deepDataBlock}
+${myBetsBlock}${financialContextBlock ? `\n${financialContextBlock}\n` : ''}${personalisation}${memoryBlock}${deepDataBlock}
 === LIVE FOOTBALL DATA — ${leagueName} (${season}/${String(season + 1).slice(2)} season) ===
 
 📅 TODAY'S MATCHES (across ALL ${TRACKED_LEAGUES.length} tracked leagues — kicks off today, ${today}):
@@ -306,6 +437,7 @@ Recent bets (last 15):
 ${betsText}
 
 === YOUR ROLE ===
+- ABSOLUTE RULE — questions about "my bet", "my acca", "my pick", "my slip", "where is it played", "what time", "who's playing", "is my bet alive", "who's injured for [team]", "which stadium" — answer SPECIFICALLY from the USER'S CURRENT ACTIVE BETS block above. Use the venue, kickoff, league exactly as listed. For player injuries / recent form / lineups, reference the DEEP DATA block which has the relevant teams pre-loaded.
 - Reference specific upcoming matches by name and date when giving advice
 - When the user asks about "today" or "tonight" specifically — recommend matches from the TODAY'S MATCHES block ONLY. Don't suggest tomorrow/Saturday matches if they asked about today.
 - ABSOLUTE RULE: When the user asks "what's the best bet" / "value bets" / "should I bet on X" / "find me a bet" — you MUST recommend a SPECIFIC pick from MATCHMIND'S CURRENT VALUE PICKS list above. Each entry has a real fixture, real odds, real EV, and a fixtureId. Pick the highest-EV one that matches the user's filter (today / specific league / specific market) and emit a [BET_REC] block with its exact data: home, away, market, selection, odds, league, kickoff (the date shown), fixtureId. Never say "wait for odds to be released" — the picks are right there with odds.
