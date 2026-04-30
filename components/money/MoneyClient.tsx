@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import MoneyHeader from './MoneyHeader'
 import BankrollTab from './BankrollTab'
 import GoalsTab from './GoalsTab'
+import DailyPlanTab from './DailyPlanTab'
 import HistoryTab from './HistoryTab'
 import StatsTab from './StatsTab'
 
@@ -24,11 +25,12 @@ import StatsTab from './StatsTab'
  * bankroll down so the BankrollTab doesn't duplicate the request.
  */
 
-type TabKey = 'bankroll' | 'goals' | 'history' | 'stats'
+type TabKey = 'bankroll' | 'goals' | 'dailyplan' | 'history' | 'stats'
 
 const TABS: Array<{ key: TabKey; label: string }> = [
   { key: 'bankroll', label: 'Bankroll' },
   { key: 'goals', label: 'Goals' },
+  { key: 'dailyplan', label: 'Daily Plan' },
   { key: 'history', label: 'History' },
   { key: 'stats', label: 'Stats' },
 ]
@@ -198,7 +200,18 @@ export default function MoneyClient({
           onSnapshotsChange={reloadSnapshots}
         />
       )}
-      {tab === 'goals' && <GoalsTab currency={currency} />}
+      {tab === 'goals' && (
+        <GoalsTab
+          currency={currency}
+          onViewDailyPlan={() => handleTabChange('dailyplan')}
+        />
+      )}
+      {tab === 'dailyplan' && (
+        <DailyPlanTab
+          currency={currency}
+          onSwitchToGoals={() => handleTabChange('goals')}
+        />
+      )}
       {tab === 'history' && <HistoryTab currency={currency} />}
       {tab === 'stats' && <StatsTab currency={currency} />}
     </main>

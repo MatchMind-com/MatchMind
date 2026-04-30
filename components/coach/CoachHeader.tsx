@@ -10,6 +10,8 @@ interface CoachHeaderProps {
   voiceMode: boolean
   onToggleVoice: () => void
   onOpenMemories: () => void
+  onToggleNews: () => void
+  newsOpen: boolean
 }
 
 function MemoryIcon() {
@@ -38,7 +40,13 @@ function VoiceWaveIcon() {
   )
 }
 
-export default function CoachHeader({ voiceMode, onToggleVoice, onOpenMemories }: CoachHeaderProps) {
+export default function CoachHeader({
+  voiceMode,
+  onToggleVoice,
+  onOpenMemories,
+  onToggleNews,
+  newsOpen,
+}: CoachHeaderProps) {
   return (
     <header className="flex items-start justify-between gap-6 pb-6 border-b border-border-subtle">
       <div className="min-w-0 flex-1">
@@ -52,6 +60,20 @@ export default function CoachHeader({ voiceMode, onToggleVoice, onOpenMemories }
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={onToggleNews}
+          title={newsOpen ? 'Close news panel' : 'Open football news'}
+          aria-pressed={newsOpen}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+            newsOpen
+              ? 'bg-brand/10 border-brand text-brand'
+              : 'border-border-subtle text-fg-secondary hover:border-brand hover:text-brand'
+          }`}
+        >
+          <span aria-hidden>📰</span>
+          <span className="hidden sm:inline">News</span>
+        </button>
+
         <button
           onClick={onOpenMemories}
           title="Open Coach memory"

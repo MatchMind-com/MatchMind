@@ -25,6 +25,8 @@ interface NewsItem {
   team: string | null
   language: Language
   flag: string
+  category: 'transfer' | 'general'
+  journalist: string | null
 }
 
 interface RssSource {
@@ -72,6 +74,15 @@ const RSS_SOURCES: RssSource[] = [
   { name: 'Daily Mail Football', url: 'https://www.dailymail.co.uk/sport/football/index.rss', language: 'English', flag: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}' },
   { name: 'Reddit /r/soccer', url: 'https://www.reddit.com/r/soccer/.rss?limit=20', language: 'Other', flag: '\u{1F30D}' },
   { name: 'Reuters Sports', url: 'https://feeds.reuters.com/reuters/sportsNews', language: 'English', flag: '\u{1F1FA}\u{1F1F8}' },
+
+  // Transfer-journalist sources (Fabrizio Romano, Yağız Sabuncuoğlu and friends)
+  { name: 'CaughtOffside', url: 'https://www.caughtoffside.com/feed/', language: 'English', flag: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}' },
+  { name: 'Football Transfers', url: 'https://www.footballtransfers.com/en/rss', language: 'Other', flag: '\u{1F30D}' },
+  { name: 'Transfermarkt News', url: 'https://www.transfermarkt.com/rss/news', language: 'Other', flag: '\u{1F30D}' },
+  { name: 'Sport Witness', url: 'https://www.sportwitness.co.uk/feed/', language: 'English', flag: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}' },
+  { name: 'Aksam Spor', url: 'https://www.aksam.com.tr/rss/spor.xml', language: 'Turkish', flag: '\u{1F1F9}\u{1F1F7}' },
+  { name: 'Hurriyet Spor', url: 'https://www.hurriyet.com.tr/rss/spor', language: 'Turkish', flag: '\u{1F1F9}\u{1F1F7}' },
+  { name: 'Mundo Deportivo', url: 'https://e00-mundodeportivo.uecdn.es/rss/home.xml', language: 'Spanish', flag: '\u{1F1EA}\u{1F1F8}' },
 ]
 
 const FETCH_TIMEOUT_MS = 5000
@@ -212,6 +223,53 @@ function detectLeague(title: string): string | null {
   return null
 }
 
+// Transfer signal keywords — matched case-insensitively against title + summary.
+// "X:" patterns use a leading word-boundary only because `:` is a non-word char.
+const TRANSFER_KEYWORDS: RegExp[] = [
+  /\bfabrizio romano\b/i,
+  /\bromano:/i,
+  /\bya[ğg][ıi]z sabuncuo[ğg]lu\b/i,
+  /\bhere we go\b/i,
+  /\btransfer\b/i,
+  /\bagreed personal terms\b/i,
+  /\bdeal sheet\b/i,
+  /\bofficial:/i,
+  /\bloaned to\b/i,
+  /\bfree agent\b/i,
+  /\brelease clause\b/i,
+  /\bbonservis\b/i,        // Turkish: transfer fee
+  /\bsözle[şs]me\b/i,      // Turkish: contract
+]
+
+// Journalist name → canonical display name. Matched case-insensitively against
+// title + summary so we can show a callout in the UI. Note: "Romano:" patterns
+// use a leading word-boundary only (no trailing \b after `:` — `:` is a
+// non-word char and `\b` after it would only match before another word char).
+const JOURNALIST_PATTERNS: Array<[RegExp, string]> = [
+  [/\bfabrizio romano\b/i, 'Fabrizio Romano'],
+  [/\bromano:/i, 'Fabrizio Romano'],
+  [/\bya[ğg][ıi]z sabuncuo[ğg]lu\b/i, 'Yağız Sabuncuoğlu'],
+  [/\bdavid ornstein\b/i, 'David Ornstein'],
+  [/\bornstein:/i, 'David Ornstein'],
+  [/\bben jacobs\b/i, 'Ben Jacobs'],
+  [/\bgianluca di marzio\b/i, 'Gianluca Di Marzio'],
+  [/\bnicol[ói] schira\b/i, 'Nicolò Schira'],
+]
+
+function detectTransfer(haystack: string): boolean {
+  for (const re of TRANSFER_KEYWORDS) {
+    if (re.test(haystack)) return true
+  }
+  return false
+}
+
+function detectJournalist(haystack: string): string | null {
+  for (const [re, name] of JOURNALIST_PATTERNS) {
+    if (re.test(haystack)) return name
+  }
+  return null
+}
+
 async function fetchFeed(source: RssSource): Promise<NewsItem[]> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
@@ -272,6 +330,9 @@ function parseFeed(xml: string, source: RssSource): NewsItem[] {
 
     const cleanTitle = stripHtml(title)
     const cleanLink = decodeXmlEntities(link.trim())
+    const haystack = `${cleanTitle} ${summary}`
+    const journalist = detectJournalist(haystack)
+    const isTransfer = !!journalist || detectTransfer(haystack)
 
     items.push({
       id: hashString(cleanLink),
@@ -285,6 +346,8 @@ function parseFeed(xml: string, source: RssSource): NewsItem[] {
       team: null,
       language: source.language,
       flag: source.flag,
+      category: isTransfer ? 'transfer' : 'general',
+      journalist,
     })
   }
 
@@ -315,6 +378,9 @@ function parseFeed(xml: string, source: RssSource): NewsItem[] {
 
     const cleanTitle = stripHtml(title)
     const cleanLink = decodeXmlEntities(link.trim())
+    const haystack = `${cleanTitle} ${summary}`
+    const journalist = detectJournalist(haystack)
+    const isTransfer = !!journalist || detectTransfer(haystack)
 
     items.push({
       id: hashString(cleanLink),
@@ -328,6 +394,8 @@ function parseFeed(xml: string, source: RssSource): NewsItem[] {
       team: null,
       language: source.language,
       flag: source.flag,
+      category: isTransfer ? 'transfer' : 'general',
+      journalist,
     })
   }
 
@@ -363,6 +431,8 @@ function buildFallback(): NewsItem[] {
       team: null,
       language: 'English',
       flag: englishFlag,
+      category: 'general',
+      journalist: null,
     },
     {
       id: 'fallback-2',
@@ -377,6 +447,8 @@ function buildFallback(): NewsItem[] {
       team: null,
       language: 'English',
       flag: englishFlag,
+      category: 'general',
+      journalist: null,
     },
     {
       id: 'fallback-3',
@@ -391,6 +463,8 @@ function buildFallback(): NewsItem[] {
       team: null,
       language: 'English',
       flag: englishFlag,
+      category: 'general',
+      journalist: null,
     },
   ]
 }

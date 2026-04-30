@@ -3,8 +3,11 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import MemoriesDrawer from '@/components/coach/MemoriesDrawer'
 import CoachHeader from '@/components/coach/CoachHeader'
 import QuickPrompts from '@/components/coach/QuickPrompts'
+import CoachNewsPanel from '@/components/coach/CoachNewsPanel'
 import { BetRecInline } from '@/components/coach/BetRecSidebar'
 import type { BetRecommendation } from '@/lib/parse-bet-rec'
+
+const NEWS_OPEN_STORAGE_KEY = 'mm_coach_news_open'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -212,6 +215,36 @@ export default function CoachPageWithData({
   const [memoriesOpen, setMemoriesOpen] = useState(false)
   const [memoriesRefreshKey, setMemoriesRefreshKey] = useState(0)
 
+  // News drawer — defaults closed; preference persisted via localStorage
+  const [newsOpen, setNewsOpen] = useState(false)
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(NEWS_OPEN_STORAGE_KEY)
+      if (saved === '1') setNewsOpen(true)
+    } catch {
+      // localStorage may be blocked (private mode / SSR); silent fallback
+    }
+  }, [])
+  const toggleNews = useCallback(() => {
+    setNewsOpen(prev => {
+      const next = !prev
+      try {
+        window.localStorage.setItem(NEWS_OPEN_STORAGE_KEY, next ? '1' : '0')
+      } catch {
+        // ignore
+      }
+      return next
+    })
+  }, [])
+  const closeNews = useCallback(() => {
+    setNewsOpen(false)
+    try {
+      window.localStorage.setItem(NEWS_OPEN_STORAGE_KEY, '0')
+    } catch {
+      // ignore
+    }
+  }, [])
+
   // Toast for "Added to your tracker" feedback
   const [toast, setToast] = useState<string | null>(null)
   useEffect(() => {
@@ -411,6 +444,8 @@ export default function CoachPageWithData({
           voiceMode={voiceMode}
           onToggleVoice={toggleVoiceMode}
           onOpenMemories={() => setMemoriesOpen(true)}
+          onToggleNews={toggleNews}
+          newsOpen={newsOpen}
         />
 
         {/* Browser warning */}
@@ -557,6 +592,9 @@ export default function CoachPageWithData({
         onClose={() => setMemoriesOpen(false)}
         refreshKey={memoriesRefreshKey}
       />
+
+      {/* News slide-in panel */}
+      <CoachNewsPanel open={newsOpen} onClose={closeNews} />
 
       {/* Toast */}
       {toast && (
