@@ -14,7 +14,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
 
-export const maxDuration = 30
+// Vercel Hobby plan caps function duration at 10s. We aim to return well
+// under that (typically 3-5s) so the panel never spins forever.
+export const maxDuration = 10
+const TOTAL_BUDGET_MS = 9000 // leave 1s of buffer for response serialisation
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const API_KEY = process.env.API_FOOTBALL_KEY!
@@ -445,30 +448,47 @@ ${lines.join('\n')}`
 async function evaluateWithGpt(
   fixture: { home: string; away: string; league: string; kickoff: string },
   formSummary: string,
-  markets: Market[]
+  markets: Market[],
+  /** Hard wall-clock budget in ms — Vercel Hobby caps at 10s total. */
+  budgetMs: number
 ): Promise<Map<string, GptVerdict>> {
   if (!markets.length) return new Map()
   const { system, user } = buildPrompt(fixture, formSummary, markets)
 
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    temperature: 0,
-    seed: 42,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: system },
-      { role: 'user', content: user },
-    ],
-    max_tokens: 2500,
-  })
+  // Race the OpenAI call against a tight timeout so this can never burn
+  // the entire 10s function budget on a slow GPT response. If it times
+  // out we return an empty Map and the caller falls back to neutral.
+  const aborter = new AbortController()
+  const timer = setTimeout(() => aborter.abort(), Math.max(2000, budgetMs))
 
-  const raw = completion.choices[0]?.message?.content || '{"verdicts":[]}'
+  let raw = '{"verdicts":[]}'
+  try {
+    const completion = await openai.chat.completions.create(
+      {
+        model: 'gpt-4o-mini',
+        temperature: 0,
+        seed: 42,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+        // 1200 is plenty for ~30 verdicts (id + verdict + prob + 14-word
+        // reason, ~30 tokens each → ~900 tokens). Down from 2500.
+        max_tokens: 1200,
+      },
+      { signal: aborter.signal as any }
+    )
+    raw = completion.choices[0]?.message?.content || '{"verdicts":[]}'
+  } finally {
+    clearTimeout(timer)
+  }
+
   const parsed = JSON.parse(raw)
   const out = new Map<string, GptVerdict>()
   for (const v of parsed.verdicts || []) {
     if (!v?.id) continue
     const id = String(v.id).trim()
-    // Validate id format "M.S" with non-negative integers
     if (!/^\d+\.\d+$/.test(id)) continue
     out.set(id, {
       id,
@@ -560,6 +580,8 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { fixtureId: string } }
 ) {
+  const t0 = Date.now()
+  const remaining = () => Math.max(500, TOTAL_BUDGET_MS - (Date.now() - t0))
   try {
     const supabase = createClient()
     const {
@@ -621,8 +643,12 @@ export async function GET(
     }))
 
     let markets = extractAllMarkets(bookmakers)
-    // Cap at 30 markets (keep most popular ones — already in extractAllMarkets order)
-    markets = markets.slice(0, 30)
+    // Cap at 18 markets — covers the popular ones (1X2, Double Chance,
+    // BTTS, Total/HT goals, Corners, Cards, HT result, Win to Nil) AND
+    // keeps the GPT prompt small enough to evaluate inside our 10s budget.
+    // Was 30 — caused timeouts because 30 markets × 3 selections = up to
+    // 90 verdicts which sometimes blew the budget on slower OpenAI calls.
+    markets = markets.slice(0, 18)
 
     // Decide on a useful diagnostic note for the UI when there's nothing to show.
     // Live/finished games and lower-tier fixtures often have no bookmaker odds.
@@ -641,10 +667,11 @@ export async function GET(
       diagnosticNote = 'Bookmakers are listed but none currently offer the markets we track for this fixture.'
     }
 
-    // Pull recent form for AI context (cheap, cached on API-Football side).
-    // Skip if there are no markets to evaluate — saves two API calls.
+    // Pull recent form for AI context — but only if we have at least 5
+    // seconds of budget left. The form fetch is cheap (~500ms) but not
+    // worth the risk of timing out the whole route on slow upstream.
     let formSummary = ''
-    if (markets.length && homeId && awayId) {
+    if (markets.length && homeId && awayId && remaining() > 5000) {
       const [homeForm, awayForm] = await Promise.all([
         apiFetch(`/fixtures?team=${homeId}&last=5`),
         apiFetch(`/fixtures?team=${awayId}&last=5`),
@@ -652,35 +679,55 @@ export async function GET(
       formSummary = summarizeForm(homeForm || [], awayForm || [], homeName, awayName)
     }
 
-    // Single GPT call to evaluate every market — robust to failure.
+    // Single GPT call to evaluate every market — racing against the
+    // remaining wall-clock budget. If the budget is too tight we skip
+    // the AI step entirely and return markets with neutral verdicts.
     let evaluated = markets
     let aiEvaluated = false
-    if (markets.length) {
+    const gptBudget = remaining() - 1500 // reserve 1.5s for serialisation
+    if (markets.length && gptBudget > 2000) {
       try {
         const verdicts = await evaluateWithGpt(
           { home: homeName, away: awayName, league: leagueName, kickoff },
           formSummary,
-          markets
+          markets,
+          gptBudget
         )
         evaluated = applyVerdicts(markets, verdicts)
         aiEvaluated = verdicts.size > 0
         if (!aiEvaluated && !diagnosticNote) {
-          diagnosticNote = 'Markets loaded but the AI did not return verdicts in time. Try refresh.'
+          diagnosticNote = 'AI verdicts not ready yet — refresh in a moment to grade these markets.'
         }
       } catch (err: any) {
-        console.warn('[all-markets] GPT eval failed:', err?.message)
+        console.warn('[all-markets] GPT eval failed:', err?.name, err?.message)
         // Mark every selection as skip with a label-aware reason; EV = 0
         for (const m of evaluated) {
           for (const s of m.selections) {
             s.aiVerdict = 'skip'
-            s.aiReason = `Neutral on ${s.label} — AI evaluation temporarily unavailable.`
+            s.aiReason = `${s.label} — AI verdicts not ready, showing odds only.`
             s.aiProb = s.impliedProb
             s.ev = 0
           }
         }
         if (!diagnosticNote) {
-          diagnosticNote = 'Markets loaded but the AI evaluator timed out. Try refresh.'
+          diagnosticNote = err?.name === 'AbortError'
+            ? 'AI verdicts timed out — markets shown with neutral grading. Try refresh.'
+            : 'AI evaluator unavailable — markets shown with neutral grading.'
         }
+      }
+    } else if (markets.length && gptBudget <= 2000) {
+      // Not enough budget left for AI — return markets with neutral verdicts
+      // immediately so the user at least sees the bookmaker lines.
+      for (const m of evaluated) {
+        for (const s of m.selections) {
+          s.aiVerdict = 'skip'
+          s.aiReason = `${s.label} — refresh to grade with AI.`
+          s.aiProb = s.impliedProb
+          s.ev = 0
+        }
+      }
+      if (!diagnosticNote) {
+        diagnosticNote = 'Markets loaded — refresh to grade with AI.'
       }
     }
 

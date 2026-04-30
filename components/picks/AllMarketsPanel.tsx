@@ -384,8 +384,15 @@ export default function AllMarketsPanel({
     let cancelled = false
     setLoading(true)
     setError(null)
+
+    // Hard 12s client-side timeout so the panel never spins forever even
+    // if a bad upstream gateway holds the connection open.
+    const aborter = new AbortController()
+    const timeoutId = setTimeout(() => aborter.abort(), 12_000)
+
     fetch(`/api/fixtures/${fixtureId}/all-markets`, {
       cache: refreshTick > 0 ? 'no-store' : 'default',
+      signal: aborter.signal,
     })
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -398,11 +405,17 @@ export default function AllMarketsPanel({
       })
       .catch((e) => {
         if (cancelled) return
-        setError(e.message || 'Failed to load markets')
+        const msg = e?.name === 'AbortError'
+          ? 'Took too long to load markets — tap Retry to try again.'
+          : (e?.message || 'Failed to load markets')
+        setError(msg)
         setLoading(false)
       })
+      .finally(() => clearTimeout(timeoutId))
     return () => {
       cancelled = true
+      clearTimeout(timeoutId)
+      aborter.abort()
     }
   }, [fixtureId, refreshTick])
 

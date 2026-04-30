@@ -448,49 +448,85 @@ function LineupBlock({ lineup }: { lineup: Lineup }) {
 
 function StatsTab({ data }: { data: FixtureDetail }) {
   const stats = data.statistics
-  if (!stats || (Array.isArray(stats) && stats.length === 0)) {
+  // The /api/fixtures/[fixtureId] endpoint pre-processes match stats into
+  // a fixed shape: { home: { possession, shots_total, shots_on_goal, xg,
+  // corners, fouls, yellow_cards, red_cards, saves, pass_accuracy,
+  // offsides, ... }, away: {...} }. We DON'T use the raw API-Football
+  // string types here — those would all read as null.
+  const home = (stats as any)?.home
+  const away = (stats as any)?.away
+  if (!home && !away) {
+    const status = data.fixture.status
+    const live = ['1H', '2H', 'HT', 'ET'].includes(status)
     return (
       <div className="text-center py-8 text-fg-muted text-sm">
-        Live stats appear once the match is underway.
+        {live
+          ? 'Live stats not available for this fixture yet — they usually populate within a few minutes of kickoff.'
+          : status === 'NS'
+            ? 'Live stats appear once the match is underway.'
+            : 'No stats available for this fixture.'}
       </div>
     )
   }
-  // statistics is { home: {...}, away: {...} } in the existing endpoint
-  const home = stats.home || stats[0]
-  const away = stats.away || stats[1]
-  const rows: Array<{ label: string; key: string }> = [
-    { label: 'Shots on Goal', key: 'Shots on Goal' },
-    { label: 'Shots off Goal', key: 'Shots off Goal' },
-    { label: 'Total Shots', key: 'Total Shots' },
-    { label: 'Possession', key: 'Ball Possession' },
-    { label: 'Corners', key: 'Corner Kicks' },
-    { label: 'Fouls', key: 'Fouls' },
-    { label: 'Yellow Cards', key: 'Yellow Cards' },
-    { label: 'Red Cards', key: 'Red Cards' },
-    { label: 'Saves', key: 'Goalkeeper Saves' },
-    { label: 'Passes %', key: 'Passes %' },
-    { label: 'expected_goals', key: 'expected_goals' },
+  type Row = { label: string; key: string; suffix?: string }
+  const rows: Row[] = [
+    { label: 'Possession', key: 'possession', suffix: '%' },
+    { label: 'Total Shots', key: 'shots_total' },
+    { label: 'Shots on Goal', key: 'shots_on_goal' },
+    { label: 'Expected Goals (xG)', key: 'xg' },
+    { label: 'Corners', key: 'corners' },
+    { label: 'Fouls', key: 'fouls' },
+    { label: 'Yellow Cards', key: 'yellow_cards' },
+    { label: 'Red Cards', key: 'red_cards' },
+    { label: 'Saves', key: 'saves' },
+    { label: 'Pass Accuracy', key: 'pass_accuracy', suffix: '%' },
+    { label: 'Offsides', key: 'offsides' },
   ]
-  function pickStat(side: any, key: string): string {
-    if (!side) return '—'
-    if (typeof side === 'object' && Array.isArray(side.statistics)) {
-      const found = side.statistics.find((s: any) => s.type === key)
-      return found?.value ?? '—'
-    }
-    if (typeof side === 'object' && key in side) return String(side[key] ?? '—')
-    return '—'
+  function show(v: any): string {
+    if (v === null || v === undefined) return '—'
+    if (typeof v === 'number') return Number.isInteger(v) ? String(v) : v.toFixed(2)
+    return String(v)
+  }
+  // Visual bar: % of the larger value of the two — gives a quick "who's
+  // doing what" read at a glance.
+  function bar(h: any, a: any): { hPct: number; aPct: number } {
+    const hn = Number(h) || 0
+    const an = Number(a) || 0
+    const total = hn + an
+    if (total <= 0) return { hPct: 0, aPct: 0 }
+    return { hPct: Math.round((hn / total) * 100), aPct: Math.round((an / total) * 100) }
+  }
+  const visibleRows = rows.filter((r) => {
+    const hv = home?.[r.key]
+    const av = away?.[r.key]
+    return (hv != null && hv !== '') || (av != null && av !== '')
+  })
+  if (visibleRows.length === 0) {
+    return (
+      <div className="text-center py-8 text-fg-muted text-sm">
+        Live stats not yet populated. Refreshing every minute.
+      </div>
+    )
   }
   return (
-    <div className="space-y-2">
-      {rows.map((r) => {
-        const hv = pickStat(home, r.key)
-        const av = pickStat(away, r.key)
-        if (hv === '—' && av === '—') return null
+    <div className="space-y-2.5">
+      {visibleRows.map((r) => {
+        const hv = home?.[r.key]
+        const av = away?.[r.key]
+        const { hPct, aPct } = bar(hv, av)
+        const hStr = show(hv) + (hv != null && r.suffix ? r.suffix : '')
+        const aStr = show(av) + (av != null && r.suffix ? r.suffix : '')
         return (
-          <div key={r.key} className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center py-2 px-3 rounded-lg bg-bg-base/40">
-            <span className="font-stat text-fg text-right tabular-nums text-sm">{hv}</span>
-            <span className="text-fg-muted text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">{r.label}</span>
-            <span className="font-stat text-fg text-left tabular-nums text-sm">{av}</span>
+          <div key={r.key} className="py-2 px-3 rounded-lg bg-bg-base/40">
+            <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center mb-1.5">
+              <span className="font-stat text-fg text-right tabular-nums text-sm font-bold">{hStr}</span>
+              <span className="text-fg-muted text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">{r.label}</span>
+              <span className="font-stat text-fg text-left tabular-nums text-sm font-bold">{aStr}</span>
+            </div>
+            <div className="flex h-1 rounded-full overflow-hidden bg-bg-elevated">
+              <div className="bg-brand/70" style={{ width: `${hPct}%` }} />
+              <div className="bg-fg-secondary/40" style={{ width: `${aPct}%` }} />
+            </div>
           </div>
         )
       })}
