@@ -6,9 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import MoneyHeader from './MoneyHeader'
 import BankrollTab from './BankrollTab'
 import GoalsTab from './GoalsTab'
-import HistoryTab from './HistoryTab'
-import StatsTab from './StatsTab'
-import MyLiveBets from '@/components/home/MyLiveBets'
+import MyBetsTab from './MyBetsTab'
 
 /**
  * MoneyClient — orchestrator for /dashboard/money.
@@ -25,22 +23,23 @@ import MyLiveBets from '@/components/home/MyLiveBets'
  * bankroll down so the BankrollTab doesn't duplicate the request.
  */
 
-type TabKey = 'bankroll' | 'goals' | 'mybets' | 'history' | 'stats'
+type TabKey = 'bankroll' | 'mybets'
 
 const TABS: Array<{ key: TabKey; label: string }> = [
   { key: 'bankroll', label: 'Bankroll' },
-  { key: 'goals', label: 'Goals' },
   { key: 'mybets', label: 'My Bets' },
-  { key: 'history', label: 'History' },
-  { key: 'stats', label: 'Stats' },
 ]
 
-// Back-compat: any old `?tab=dailyplan` link from the previous version
-// silently routes to the new `mybets` tab so bookmarks don't 404 the
-// user into Bankroll.
+// Back-compat for old links — Goals folded into Bankroll, History/Stats
+// folded into My Bets. So:
+//   ?tab=goals          → bankroll
+//   ?tab=history        → mybets
+//   ?tab=stats          → mybets
+//   ?tab=dailyplan      → mybets (legacy)
 function normalizeTabParam(raw: string | null): TabKey | null {
   if (!raw) return null
-  if (raw === 'dailyplan') return 'mybets'
+  if (raw === 'goals') return 'bankroll'
+  if (raw === 'history' || raw === 'stats' || raw === 'dailyplan') return 'mybets'
   return TABS.some((t) => t.key === raw) ? (raw as TabKey) : null
 }
 
@@ -214,38 +213,36 @@ export default function MoneyClient({
       </nav>
 
       {tab === 'bankroll' && (
-        <BankrollTab
-          userId={userId}
-          snapshots={snapshots}
-          snapshotsLoaded={snapshotsLoaded}
-          startingBankroll={startingBankroll}
-          currentBankroll={currentBankroll}
-          lossLimit={lossLimit}
-          currency={currency}
-          onCurrencyChange={saveCurrency}
-          onSnapshotsChange={reloadSnapshots}
-        />
-      )}
-      {tab === 'goals' && (
-        <GoalsTab
-          currency={currency}
-          onViewDailyPlan={() => handleTabChange('mybets')}
-        />
-      )}
-      {tab === 'mybets' && (
-        <div className="space-y-5">
-          <MyLiveBets />
+        <div className="space-y-8">
+          <BankrollTab
+            userId={userId}
+            snapshots={snapshots}
+            snapshotsLoaded={snapshotsLoaded}
+            startingBankroll={startingBankroll}
+            currentBankroll={currentBankroll}
+            lossLimit={lossLimit}
+            currency={currency}
+            onCurrencyChange={saveCurrency}
+            onSnapshotsChange={reloadSnapshots}
+          />
+          {/* Goals folded into the Bankroll tab — they're tightly coupled
+              ("how much have I got" + "where am I trying to get to"). */}
+          <div className="border-t border-border-subtle pt-6">
+            <GoalsTab
+              currency={currency}
+              onViewDailyPlan={() => handleTabChange('mybets')}
+            />
+          </div>
         </div>
       )}
-      {tab === 'history' && (
-        <HistoryTab
+      {tab === 'mybets' && (
+        <MyBetsTab
           key={historyKey}
           currency={currency}
           initialLeague={initialLeague}
           initialBetType={initialBetType}
         />
       )}
-      {tab === 'stats' && <StatsTab currency={currency} />}
     </main>
   )
 }
