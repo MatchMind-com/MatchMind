@@ -2,6 +2,18 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
+
+// Lazy-load — keeps initial PickCard bundle slim, panel JS only ships when toggled.
+const AllMarketsPanel = dynamic(() => import('./AllMarketsPanel'), {
+  ssr: false,
+  loading: () => (
+    <div className="bg-bg-surface border border-border-subtle rounded-xl p-4 mt-3">
+      <div className="bg-bg-elevated rounded-lg h-12 animate-pulse mb-2" />
+      <div className="bg-bg-elevated rounded-lg h-12 animate-pulse" />
+    </div>
+  ),
+})
 
 /**
  * PickCard — editorial pick card used in Today / Tomorrow / Weekend tabs.
@@ -94,6 +106,7 @@ export default function PickCard({ pred }: Props) {
   const [error, setError] = useState(false)
   const [expandedWhy, setExpandedWhy] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
+  const [marketsOpen, setMarketsOpen] = useState(false)
 
   const label = pickLabel(pred)
   const odds = pred.best_value?.odds ?? null
@@ -343,11 +356,25 @@ export default function PickCard({ pred }: Props) {
 
         <button
           type="button"
+          onClick={() => setMarketsOpen((v) => !v)}
+          className={`text-xs font-semibold py-2 px-3 rounded-lg border transition-all duration-200 inline-flex items-center gap-1.5 ${
+            marketsOpen
+              ? 'bg-brand text-bg-base border-brand'
+              : 'bg-bg-elevated hover:bg-bg-base hover:border-border-strong text-fg border-border-subtle'
+          }`}
+          aria-expanded={marketsOpen}
+        >
+          <span className="text-[12px] leading-none">📊</span>
+          {marketsOpen ? 'Hide markets' : 'All Markets'}
+        </button>
+
+        <button
+          type="button"
           onClick={() => setStatsOpen((v) => !v)}
           className="text-xs font-semibold py-2 px-3 rounded-lg border border-border-subtle bg-bg-elevated hover:bg-bg-base hover:border-border-strong text-fg transition-all duration-200 inline-flex items-center gap-1.5"
           aria-expanded={statsOpen}
         >
-          <span className="text-[12px] leading-none">📊</span>
+          <span className="text-[12px] leading-none">📈</span>
           {statsOpen ? 'Hide stats' : 'Stats →'}
         </button>
 
@@ -360,6 +387,17 @@ export default function PickCard({ pred }: Props) {
           Discuss in coach
         </button>
       </div>
+
+      {/* Inline All Markets panel — lazy-loaded */}
+      {marketsOpen && (
+        <AllMarketsPanel
+          fixtureId={pred.id}
+          homeTeam={pred.home_team}
+          awayTeam={pred.away_team}
+          league={pred.league}
+          kickoff={pred.date}
+        />
+      )}
     </article>
   )
 }
