@@ -6,14 +6,31 @@ import {
   type SofaScoreStats,
 } from '@/lib/sofascore'
 
+// Force this route to run dynamically per-request — no Next route-level
+// cache. Pairs with `Cache-Control: no-store` on the response so the
+// browser/CDN never serves a stale fixture payload during a live game.
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const API_KEY = process.env.API_FOOTBALL_KEY!
 const BASE = 'https://v3.football.api-sports.io'
 
-async function apiFetch(path: string) {
+/**
+ * Fetch from API-Football with a per-call cache TTL.
+ *
+ *   - LIVE_TTL  (30s)  — for endpoints whose values change during a match
+ *                        (fixture status / score, statistics, events).
+ *   - DEFAULT_TTL (5m) — for stable lookups (h2h, season stats, squads,
+ *                        injuries, recent form, predictions).
+ */
+const LIVE_TTL = 30
+const DEFAULT_TTL = 300
+
+async function apiFetch(path: string, ttlSeconds: number = DEFAULT_TTL) {
   try {
     const res = await fetch(`${BASE}${path}`, {
       headers: { 'x-apisports-key': API_KEY },
-      next: { revalidate: 300 },
+      next: { revalidate: ttlSeconds },
     })
     if (!res.ok) return null
     const json = await res.json()
@@ -32,13 +49,14 @@ export async function GET(
 ) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } })
 
   const fixtureId = params.fixtureId
   const season = getCurrentSeason()
 
   // Fetch fixture details first to get team IDs
-  const fixtureData = await apiFetch(`/fixtures?id=${fixtureId}`)
+  // Fixture status + score change every minute during a live match — short TTL.
+  const fixtureData = await apiFetch(`/fixtures?id=${fixtureId}`, LIVE_TTL)
   if (!fixtureData || fixtureData.length === 0) {
     return NextResponse.json({ error: 'Fixture not found' }, { status: 404 })
   }
@@ -50,18 +68,18 @@ export async function GET(
 
   // Fetch all detail data in parallel
   const [injuries, h2h, homeForm, awayForm, homeSquad, awaySquad, predictions, matchStats, homeSeasonStats, awaySeasonStats, lineupsRaw, eventsRaw] = await Promise.all([
-    apiFetch(`/injuries?fixture=${fixtureId}`),
-    apiFetch(`/fixtures/headtohead?h2h=${homeTeamId}-${awayTeamId}&last=5`),
-    apiFetch(`/fixtures?team=${homeTeamId}&league=${leagueId}&season=${season}&last=5&status=FT`),
-    apiFetch(`/fixtures?team=${awayTeamId}&league=${leagueId}&season=${season}&last=5&status=FT`),
-    apiFetch(`/players/squads?team=${homeTeamId}`),
-    apiFetch(`/players/squads?team=${awayTeamId}`),
-    apiFetch(`/predictions?fixture=${fixtureId}`),
-    apiFetch(`/fixtures/statistics?fixture=${fixtureId}`),
-    apiFetch(`/teams/statistics?league=${leagueId}&season=${season}&team=${homeTeamId}`),
-    apiFetch(`/teams/statistics?league=${leagueId}&season=${season}&team=${awayTeamId}`),
-    apiFetch(`/fixtures/lineups?fixture=${fixtureId}`),
-    apiFetch(`/fixtures/events?fixture=${fixtureId}`),
+    apiFetch(`/injuries?fixture=${fixtureId}`),                                                 // stable
+    apiFetch(`/fixtures/headtohead?h2h=${homeTeamId}-${awayTeamId}&last=5`),                     // stable
+    apiFetch(`/fixtures?team=${homeTeamId}&league=${leagueId}&season=${season}&last=5&status=FT`), // stable
+    apiFetch(`/fixtures?team=${awayTeamId}&league=${leagueId}&season=${season}&last=5&status=FT`), // stable
+    apiFetch(`/players/squads?team=${homeTeamId}`),                                              // stable
+    apiFetch(`/players/squads?team=${awayTeamId}`),                                              // stable
+    apiFetch(`/predictions?fixture=${fixtureId}`),                                               // stable
+    apiFetch(`/fixtures/statistics?fixture=${fixtureId}`, LIVE_TTL),                             // changes mid-match
+    apiFetch(`/teams/statistics?league=${leagueId}&season=${season}&team=${homeTeamId}`),         // stable
+    apiFetch(`/teams/statistics?league=${leagueId}&season=${season}&team=${awayTeamId}`),         // stable
+    apiFetch(`/fixtures/lineups?fixture=${fixtureId}`, LIVE_TTL),                                // can update at HT (subs)
+    apiFetch(`/fixtures/events?fixture=${fixtureId}`, LIVE_TTL),                                 // changes mid-match
   ])
 
   // Process lineups — split per team, normalise grid → coords for layout
@@ -419,5 +437,10 @@ export async function GET(
     home_lineup: homeLineup,
     away_lineup: awayLineup,
     events,
+  }, {
+    // Live data — never let the browser, CDN, or Vercel data cache hold a
+    // stale payload during a match. Per-fetch revalidate above (LIVE_TTL=30s)
+    // already keeps API-Football costs sane.
+    headers: { 'Cache-Control': 'no-store, must-revalidate' },
   })
 }

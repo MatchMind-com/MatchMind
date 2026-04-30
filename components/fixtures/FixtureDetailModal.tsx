@@ -150,17 +150,44 @@ export default function FixtureDetailModal({ fixtureId, homeName, awayName, onCl
   }
 
   useEffect(() => {
-    void fetchDetail()
+    let cancelled = false
     let timer: ReturnType<typeof setTimeout> | null = null
-    function tick() {
-      void fetchDetail().finally(() => {
-        // Only keep polling if game is in-play
-        const isLive = data && ['1H', '2H', 'HT', 'ET'].includes(data.fixture.status)
-        if (isLive) timer = setTimeout(tick, POLL_MS)
-      })
+
+    async function tick() {
+      if (cancelled) return
+      // Capture the result of THIS fetch, not the (stale) closed-over `data`
+      // state — that bug stopped polling after the first tick because state
+      // updates batched after the .finally() callback fired.
+      try {
+        const res = await fetch(`/api/fixtures/${fixtureId}`, { cache: 'no-store' })
+        if (cancelled) return
+        if (res.ok) {
+          const json = (await res.json()) as FixtureDetail
+          if (cancelled) return
+          setData(json)
+          setError(null)
+          // Only keep polling if game is in-play OR not yet started (could
+          // start mid-session). Stop polling on FT / postponed / cancelled.
+          const status = json.fixture?.status
+          const keepPolling =
+            ['1H', '2H', 'HT', 'ET', 'BT', 'P', 'INT', 'LIVE', 'NS', 'TBD'].includes(status)
+          if (keepPolling) timer = setTimeout(tick, POLL_MS)
+        }
+      } catch {
+        // Best-effort — silently retry next tick if a network blip happened.
+        if (!cancelled) timer = setTimeout(tick, POLL_MS)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-    timer = setTimeout(tick, POLL_MS)
-    return () => { if (timer) clearTimeout(timer) }
+
+    // Initial fetch + start the poll chain.
+    void tick()
+
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fixtureId])
 
