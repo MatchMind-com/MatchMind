@@ -7,12 +7,12 @@
  *
  * The public /api/predictions route reads from these tables — no computation there.
  *
- * Tiering: accepts ?tier=1|2|3|all to refresh a subset of the 25 supported leagues.
+ * Tiering: accepts ?tier=1|2|3|all to refresh a subset of the 50 tracked leagues.
  * Three Vercel crons (refresh-predictions-tier1/2/3) each call this with their tier
- * so a single 60s budget never has to cover all 25 leagues.
+ * so a single 60s budget never has to cover all 50 leagues.
  *
  * NOTE: The Mac LaunchAgent at ~/Library/LaunchAgents/com.matchmind.seed-predictions.plist
- * can call this with ?tier=all to refresh all 25 leagues at once (no Vercel timeout locally).
+ * can call this with ?tier=all to refresh every tracked league at once (no Vercel timeout locally).
  *
  * Auth: Vercel cron (x-vercel-cron: 1) OR Bearer ${CRON_SECRET}
  */
@@ -35,7 +35,7 @@ const supabaseAdmin = createAdmin(
 
 type FetchDiag = { path: string; reason: string; status?: number }
 // League shape now lives in lib/leagues.ts as TrackedLeague (single source
-// of truth for the 25 competitions MatchMind covers).
+// of truth for the 50 competitions MatchMind covers).
 type League = TrackedLeague
 
 function getCurrentSeason(): number {

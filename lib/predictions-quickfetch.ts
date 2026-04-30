@@ -7,15 +7,19 @@
  * Goal: complete in <8s, return ≥5 future picks.
  *
  * Strategy:
- *   - Pull fixtures + odds for ~8 hottest leagues only (top European + UEFA).
+ *   - Pull fixtures + odds for the entire tier-1 set (top European leagues,
+ *     UEFA cups, big domestic cups). Pulled live from `lib/leagues.ts` via
+ *     `leaguesByTier(1)` so the list grows automatically when we add more.
  *   - Skip the heavy stuff the main cron does: NO form, NO H2H, NO season
  *     stats, NO injuries, NO standings, NO lineups.
+ *   - Throttle league fan-out so we never burst past API-Football's
+ *     ~450/min limit (each league = 3 calls: fixtures + 2× odds).
  *   - One batched gpt-4o-mini call covers ALL fixtures at once.
  *   - Same EV math as the main cron so the picks slot into the existing UI
  *     without surprises.
  */
 import OpenAI from 'openai'
-import { TRACKED_LEAGUES, type TrackedLeague } from './leagues'
+import { leaguesByTier, type TrackedLeague } from './leagues'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const API_KEY = process.env.API_FOOTBALL_KEY!
@@ -23,10 +27,17 @@ const BASE = 'https://v3.football.api-sports.io'
 
 type FetchDiag = { path: string; reason: string; status?: number }
 
-// The "hot 8" — top 5 European leagues + 3 UEFA competitions.
-// These are the leagues most users care about and they're guaranteed to
-// have rich bookmaker odds, which is the whole point of the fallback.
-const HOT_LEAGUE_IDS: readonly number[] = [39, 140, 135, 78, 61, 2, 3, 848] as const
+// Default upper-bound on how many tier-1 leagues we pull per quickfetch.
+// Tier-1 currently holds ~14 leagues; we cap at the full set so the list
+// auto-expands as new tier-1 entries are added to lib/leagues.ts.
+// 14 leagues × 3 calls = 42 API calls — well inside the 450/min limit
+// when batched 5-at-a-time.
+const DEFAULT_MAX_LEAGUES = 14
+// Concurrency cap: how many leagues we fetch simultaneously. Each league
+// fires 3 parallel API calls (fixtures + odds today + odds tomorrow), so
+// batch=5 means at most 15 in-flight requests — comfortably under the
+// per-second rate-limit headroom.
+const LEAGUE_BATCH_SIZE = 5
 
 function getCurrentSeason(): number {
   const now = new Date()
@@ -88,7 +99,7 @@ export type Prediction = Record<string, any>
 /**
  * Quick on-demand prediction fetcher.
  *
- * @param maxLeagues - upper bound on how many of the hot leagues to pull (default 8).
+ * @param maxLeagues - upper bound on how many tier-1 leagues to pull (default 14, the full tier-1 set).
  * @param maxPicks   - upper bound on returned picks (default 12).
  * @returns up to `maxPicks` predictions sorted by value_score desc.
  *
@@ -96,7 +107,7 @@ export type Prediction = Record<string, any>
  * legitimate "no fixtures right now" signal, not an error.
  */
 export async function quickFetchPredictions(
-  maxLeagues = 8,
+  maxLeagues = DEFAULT_MAX_LEAGUES,
   maxPicks = 12
 ): Promise<Prediction[]> {
   const diag: FetchDiag[] = []
@@ -105,59 +116,62 @@ export async function quickFetchPredictions(
   const in3days = getDatePlusDays(3)
   const tomorrow = getDatePlusDays(1)
 
-  const hotLeagueIds = HOT_LEAGUE_IDS.slice(0, maxLeagues)
-  const leagueMeta: Record<number, TrackedLeague> = {}
-  for (const id of hotLeagueIds) {
-    const l = TRACKED_LEAGUES.find(t => t.id === id)
-    if (l) leagueMeta[id] = l
-  }
+  // Pull the entire tier-1 set from lib/leagues.ts so this list grows
+  // automatically when we promote a new league into tier-1. Truncate to
+  // maxLeagues for callers that want a tighter bound.
+  const tier1 = leaguesByTier(1)
+  const targetLeagues: TrackedLeague[] = tier1.slice(0, Math.max(1, maxLeagues))
 
-  // Fetch fixtures + odds for the top 8 leagues in parallel. ~16 API calls,
-  // all kicked off at once — should complete in 1-3s.
-  const leagueResults = await Promise.all(
-    hotLeagueIds.map(async (leagueId) => {
-      const meta = leagueMeta[leagueId]
-      if (!meta) return [] as any[]
+  // Process leagues in throttled batches so we never burst past
+  // API-Football's per-second rate limit (each league = 3 parallel calls).
+  const leagueResults: any[][] = []
+  for (let i = 0; i < targetLeagues.length; i += LEAGUE_BATCH_SIZE) {
+    const batch = targetLeagues.slice(i, i + LEAGUE_BATCH_SIZE)
+    const batchResults = await Promise.all(
+      batch.map(async (meta) => {
+        const leagueId = meta.id
 
-      const [fixtures, oddsToday, oddsTomorrow] = await Promise.all([
-        apiFetch(`/fixtures?league=${leagueId}&season=${season}&from=${today}&to=${in3days}&status=NS`, diag),
-        apiFetch(`/odds?league=${leagueId}&season=${season}&date=${today}`, diag),
-        apiFetch(`/odds?league=${leagueId}&season=${season}&date=${tomorrow}`, diag),
-      ])
+        const [fixtures, oddsToday, oddsTomorrow] = await Promise.all([
+          apiFetch(`/fixtures?league=${leagueId}&season=${season}&from=${today}&to=${in3days}&status=NS`, diag),
+          apiFetch(`/odds?league=${leagueId}&season=${season}&date=${today}`, diag),
+          apiFetch(`/odds?league=${leagueId}&season=${season}&date=${tomorrow}`, diag),
+        ])
 
-      const oddsData = [...(oddsToday || []), ...(oddsTomorrow || [])]
-      const oddsMap: Record<number, ReturnType<typeof extractOdds>> = {}
-      const oddsBookmakerName: Record<number, string> = {}
+        const oddsData = [...(oddsToday || []), ...(oddsTomorrow || [])]
+        const oddsMap: Record<number, ReturnType<typeof extractOdds>> = {}
+        const oddsBookmakerName: Record<number, string> = {}
 
-      for (const entry of oddsData) {
-        const fid = entry.fixture?.id
-        if (!fid) continue
-        const bookmakers: any[] = entry.bookmakers || []
-        const bet365Raw = bookmakers.find((b: any) => b.id === 1)
-        const pinnacleRaw = bookmakers.find((b: any) => b.id === 29)
-        const anyRaw = bookmakers[0]
-        const chosen = bet365Raw || pinnacleRaw || anyRaw
-        if (chosen) {
-          oddsMap[fid] = extractOdds(chosen)
-          oddsBookmakerName[fid] = chosen.name || 'Live'
+        for (const entry of oddsData) {
+          const fid = entry.fixture?.id
+          if (!fid) continue
+          const bookmakers: any[] = entry.bookmakers || []
+          const bet365Raw = bookmakers.find((b: any) => b.id === 1)
+          const pinnacleRaw = bookmakers.find((b: any) => b.id === 29)
+          const anyRaw = bookmakers[0]
+          const chosen = bet365Raw || pinnacleRaw || anyRaw
+          if (chosen) {
+            oddsMap[fid] = extractOdds(chosen)
+            oddsBookmakerName[fid] = chosen.name || 'Live'
+          }
         }
-      }
 
-      // Take the top 3 fixtures per league with odds — the rest get pruned
-      // by the round-robin below anyway, no need to ship them to GPT.
-      return (fixtures || [])
-        .filter((f: any) => oddsMap[f.fixture?.id])
-        .slice(0, 3)
-        .map((f: any) => ({
-          ...f,
-          _leagueName: meta.name,
-          _leagueFlag: meta.flag,
-          _leagueId: leagueId,
-          _odds: oddsMap[f.fixture?.id] ?? null,
-          _oddsBookmaker: oddsBookmakerName[f.fixture?.id] ?? null,
-        }))
-    })
-  )
+        // Take the top 3 fixtures per league with odds — the rest get pruned
+        // by the round-robin below anyway, no need to ship them to GPT.
+        return (fixtures || [])
+          .filter((f: any) => oddsMap[f.fixture?.id])
+          .slice(0, 3)
+          .map((f: any) => ({
+            ...f,
+            _leagueName: meta.name,
+            _leagueFlag: meta.flag,
+            _leagueId: leagueId,
+            _odds: oddsMap[f.fixture?.id] ?? null,
+            _oddsBookmaker: oddsBookmakerName[f.fixture?.id] ?? null,
+          }))
+      })
+    )
+    leagueResults.push(...batchResults)
+  }
 
   // Round-robin so every league gets one pick before any league gets two.
   const perLeague: any[][] = leagueResults

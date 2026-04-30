@@ -21,6 +21,10 @@ import BetCalendar, { type CalendarBet } from './BetCalendar'
 
 interface Props {
   currency: Currency
+  /** Optional initial league filter (cross-link from Stats tab). */
+  initialLeague?: string | null
+  /** Optional initial bet-type filter (cross-link from Stats tab). */
+  initialBetType?: string | null
 }
 
 interface BetRow {
@@ -70,7 +74,7 @@ function computePL(result: BetRow['result'], odds: number, stake: number): numbe
   return 0
 }
 
-export default function HistoryTab({ currency }: Props) {
+export default function HistoryTab({ currency, initialLeague, initialBetType }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [records, setRecords] = useState<BetRow[]>([])
@@ -83,11 +87,14 @@ export default function HistoryTab({ currency }: Props) {
   const [showAddModal, setShowAddModal] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
 
-  // Filters
-  const [league, setLeague] = useState<string>('all')
+  // Filters — when arriving from Stats with cross-link params, widen the
+  // date range to "all time" so the user actually sees those bets.
+  const hasCrossLink = !!(initialLeague || initialBetType)
+  const [league, setLeague] = useState<string>(initialLeague || 'all')
+  const [betType, setBetType] = useState<string>(initialBetType || 'all')
   const [result, setResult] = useState<ResultFilter>('all')
-  const [from, setFrom] = useState<string>(isoDaysAgo(30))
-  const [to, setTo] = useState<string>(todayISO())
+  const [from, setFrom] = useState<string>(hasCrossLink ? '' : isoDaysAgo(30))
+  const [to, setTo] = useState<string>(hasCrossLink ? '' : todayISO())
 
   // Sort + paginate
   const [sortKey, setSortKey] = useState<SortKey>('date')
@@ -121,6 +128,13 @@ export default function HistoryTab({ currency }: Props) {
     return Array.from(set).sort()
   }, [records])
 
+  // Unique bet types for the dropdown
+  const betTypes = useMemo(() => {
+    const set = new Set<string>()
+    for (const r of records) if (r.bet_type) set.add(r.bet_type)
+    return Array.from(set).sort()
+  }, [records])
+
   // Filtered + sorted (used by table). Calendar always sees the full set so
   // the dot grid stays accurate independent of filters.
   const filtered = useMemo(() => {
@@ -130,8 +144,9 @@ export default function HistoryTab({ currency }: Props) {
     let rows = records.filter((r) => {
       if (selectedDate && betDate(r) !== selectedDate) return false
       if (league !== 'all' && r.league !== league) return false
+      if (betType !== 'all' && r.bet_type !== betType) return false
       if (result !== 'all' && r.result !== result) return false
-      if (!selectedDate) {
+      if (!selectedDate && (from || to)) {
         const ts = betDate(r) ? new Date(betDate(r)).getTime() : 0
         if (ts < fromMs || ts > toMs) return false
       }
@@ -156,12 +171,12 @@ export default function HistoryTab({ currency }: Props) {
     })
 
     return rows
-  }, [records, league, result, from, to, sortKey, sortDir, selectedDate])
+  }, [records, league, betType, result, from, to, sortKey, sortDir, selectedDate])
 
   // Reset paginate + selection when filters change
   useEffect(() => {
     setShown(PAGE_SIZE)
-  }, [league, result, from, to, selectedDate])
+  }, [league, betType, result, from, to, selectedDate])
 
   // Drop selections that no longer match the filtered view
   useEffect(() => {
@@ -429,9 +444,36 @@ export default function HistoryTab({ currency }: Props) {
               className="w-full bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
             >
               <option value="all">All leagues</option>
+              {/* Cross-link: ensure the value renders even if it's not in
+                  the user's existing leagues yet */}
+              {league !== 'all' && !leagues.includes(league) && (
+                <option value={league}>{league}</option>
+              )}
               {leagues.map((l) => (
                 <option key={l} value={l}>
                   {l}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Bet type */}
+          <div className="min-w-[160px]">
+            <label className="block text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-1.5">
+              Market
+            </label>
+            <select
+              value={betType}
+              onChange={(e) => setBetType(e.target.value)}
+              className="w-full bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
+            >
+              <option value="all">All markets</option>
+              {betType !== 'all' && !betTypes.includes(betType) && (
+                <option value={betType}>{betType}</option>
+              )}
+              {betTypes.map((t) => (
+                <option key={t} value={t}>
+                  {t}
                 </option>
               ))}
             </select>

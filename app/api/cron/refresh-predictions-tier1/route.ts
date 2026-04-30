@@ -1,5 +1,6 @@
 /**
- * Tier 1 refresh — top 8 leagues. Thin wrapper around /api/cron/refresh-predictions?tier=1.
+ * Tier 1 refresh — top European leagues + UEFA cups + major domestic cups
+ * (~14 leagues). Thin wrapper around /api/cron/refresh-predictions?tier=1.
  * Scheduled separately in vercel.json so each tier gets its own 60s budget.
  */
 import { NextResponse } from 'next/server'

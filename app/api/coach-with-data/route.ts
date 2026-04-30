@@ -3,7 +3,7 @@ import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
 import { retrieveMemories, saveMemory } from '@/lib/memory-lane'
 import { getUserContext, renderContextBlock } from '@/lib/user-context'
-import { leaguesPromptBlock, findLeague } from '@/lib/leagues'
+import { leaguesPromptBlock, findLeague, TRACKED_LEAGUES } from '@/lib/leagues'
 import { parseBetRec, BET_REC_PROMPT_INSTRUCTIONS } from '@/lib/parse-bet-rec'
 import { detectTeams } from '@/lib/team-resolver'
 import { getTeamDeepData, renderDeepDataBlock } from '@/lib/team-deep-data'
@@ -84,10 +84,12 @@ export async function POST(req: NextRequest) {
     apiFetch(`/injuries?league=${leagueId}&season=${season}&date=${today}`),
   ])
 
-  // TRACKED league IDs — only show fixtures for leagues we actually cover
-  const TRACKED_IDS = new Set([39,140,135,78,61,2,3,848,88,94,203,40,144,113,262,253,71,128,13,11,307,98,179,106,1])
+  // TRACKED league IDs — only show fixtures for leagues we actually cover.
+  // Derived from lib/leagues.ts so adding a league there auto-includes it
+  // in the today's-matches block here.
+  const TRACKED_IDS = new Set(TRACKED_LEAGUES.map(l => l.id))
 
-  // Today's fixtures across all 25 leagues — sort by kickoff time
+  // Today's fixtures across all tracked leagues — sort by kickoff time
   const todayFiltered = (todayAll || [])
     .filter((f: any) => TRACKED_IDS.has(f.league?.id))
     .filter((f: any) => ['NS','TBD','1H','HT','2H','ET','BT','P','LIVE'].includes(f.fixture?.status?.short))
@@ -103,9 +105,10 @@ export async function POST(req: NextRequest) {
     return `• ${home} vs ${away} — ${lge} · ${status}`
   }).join('\n') || 'No tracked-league matches today'
 
-  // Flatten all the AI's pre-computed value picks across all leagues, take the best
-  // by EV/value_score. The AI MUST recommend from these — they have real fixture IDs,
-  // real odds, and proven +EV. No more "wait for odds to be released" excuses.
+  // Flatten all the AI's pre-computed value picks across all tracked leagues,
+  // take the best by EV/value_score. The AI MUST recommend from these — they
+  // have real fixture IDs, real odds, and proven +EV. No more "wait for odds
+  // to be released" excuses.
   const allPicks: any[] = []
   for (const row of (predictionRows || [])) {
     const arr = Array.isArray(row.payload) ? row.payload : []
@@ -274,13 +277,13 @@ ${BET_REC_PROMPT_INSTRUCTIONS}
 ${financialContextBlock ? `\n${financialContextBlock}\n` : ''}${personalisation}${memoryBlock}${deepDataBlock}
 === LIVE FOOTBALL DATA — ${leagueName} (${season}/${String(season + 1).slice(2)} season) ===
 
-📅 TODAY'S MATCHES (across ALL 25 tracked leagues — kicks off today, ${today}):
+📅 TODAY'S MATCHES (across ALL ${TRACKED_LEAGUES.length} tracked leagues — kicks off today, ${today}):
 ${todayText}
 
 📅 UPCOMING FIXTURES — ${leagueName} (next 7 days):
 ${upcomingText}
 
-🎯 MATCHMIND'S CURRENT VALUE PICKS (pre-computed by the daily prediction pipeline — these are the bets the AI has already identified as +EV across all 25 leagues. WHEN THE USER ASKS FOR A BET RECOMMENDATION, RECOMMEND FROM THIS LIST FIRST — these have real odds, real edges, and exact fixture IDs):
+🎯 MATCHMIND'S CURRENT VALUE PICKS (pre-computed by the daily prediction pipeline — these are the bets the AI has already identified as +EV across all ${TRACKED_LEAGUES.length} tracked leagues. WHEN THE USER ASKS FOR A BET RECOMMENDATION, RECOMMEND FROM THIS LIST FIRST — these have real odds, real edges, and exact fixture IDs):
 ${aiPicksText}
 
 ✅ RECENT RESULTS (last 7 days):

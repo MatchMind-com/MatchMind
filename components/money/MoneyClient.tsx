@@ -85,6 +85,15 @@ export default function MoneyClient({
     writeTab(next)
   }
 
+  // Cross-link filters: when Stats tab links to History with ?league=X or
+  // ?bet_type=X, HistoryTab needs to know about it on mount. We pull them
+  // off the URL and pass them down — HistoryTab consumes them as initial
+  // filter state. We also keep a key bound to these so the component
+  // re-mounts cleanly when navigating Stats → History.
+  const initialLeague = searchParams.get('league') ?? null
+  const initialBetType = searchParams.get('bet_type') ?? null
+  const historyKey = `${initialLeague ?? ''}|${initialBetType ?? ''}`
+
   // ── Shared currency preference (browser-saved) ─────────────────────
   const [currency, setCurrency] = useState<Currency>('£')
   useEffect(() => {
@@ -212,7 +221,14 @@ export default function MoneyClient({
           onSwitchToGoals={() => handleTabChange('goals')}
         />
       )}
-      {tab === 'history' && <HistoryTab currency={currency} />}
+      {tab === 'history' && (
+        <HistoryTab
+          key={historyKey}
+          currency={currency}
+          initialLeague={initialLeague}
+          initialBetType={initialBetType}
+        />
+      )}
       {tab === 'stats' && <StatsTab currency={currency} />}
     </main>
   )

@@ -1,5 +1,6 @@
 /**
- * Tier 2 refresh — middle 8 leagues. Thin wrapper around /api/cron/refresh-predictions?tier=2.
+ * Tier 2 refresh — mid-tier European, N. American + 2nd divisions
+ * (~17 leagues). Thin wrapper around /api/cron/refresh-predictions?tier=2.
  */
 import { NextResponse } from 'next/server'
 import { GET as refreshGET } from '../refresh-predictions/route'

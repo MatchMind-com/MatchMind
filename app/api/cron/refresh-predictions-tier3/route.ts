@@ -1,5 +1,6 @@
 /**
- * Tier 3 refresh — last 9 leagues. Thin wrapper around /api/cron/refresh-predictions?tier=3.
+ * Tier 3 refresh — South America, Asia, intl + smaller European
+ * (~18 leagues). Thin wrapper around /api/cron/refresh-predictions?tier=3.
  */
 import { NextResponse } from 'next/server'
 import { GET as refreshGET } from '../refresh-predictions/route'
