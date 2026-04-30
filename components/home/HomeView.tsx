@@ -7,6 +7,7 @@ import GoalRing from '@/components/home/GoalRing'
 import TodaysEdgeCarousel from '@/components/home/TodaysEdgeCarousel'
 import LiveTicker from '@/components/home/LiveTicker'
 import NewsHeadlines from '@/components/home/NewsHeadlines'
+import MyLiveBets from '@/components/home/MyLiveBets'
 
 interface Props {
   firstName: string
@@ -40,6 +41,9 @@ export default function HomeView({ firstName }: Props) {
           <GoalRing onProgressChange={setGoalProgress} />
         </div>
       </section>
+
+      {/* Row 1.5 — User's currently active bets (live + today) with quick "+ New bet" CTA */}
+      <MyLiveBets />
 
       {/* Row 2 — Today's Edge */}
       <TodaysEdgeCarousel onPicksCount={setPicksCount} />
