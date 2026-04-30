@@ -453,6 +453,7 @@ Return JSON with this exact structure:
     const MAX_REAL_ODDS = 4.0
     const valueBets = [
       { label: 'Home Win',  ev: homeEV,   odds: o?.home,   aiPct: homeWinPct },
+      { label: 'Draw',      ev: drawEV,   odds: o?.draw,   aiPct: drawPct },
       { label: 'Away Win',  ev: awayEV,   odds: o?.away,   aiPct: awayWinPct },
       { label: 'Over 2.5',  ev: over25EV, odds: o?.over25, aiPct: over25Pct },
       { label: 'BTTS',      ev: bttsEV,   odds: o?.btts,   aiPct: bttsPct },
@@ -496,7 +497,10 @@ Return JSON with this exact structure:
       ev: { home: homeEV, draw: drawEV, away: awayEV, over25: over25EV, btts: bttsEV },
       best_value: bestValue,
       pinnacle_edge: pinnacleEdge,
-      is_value_bet: (bestValue !== null && (bestValue.ev ?? 0) >= 5) || pinnacleEdge !== null,
+      // Lowered from >=5 to >=2 so EV 2-4% picks count too. The daily plan
+      // route still tags edge_strength so the UI can communicate that thin
+      // edges are thin — but we no longer hide them from the consumer.
+      is_value_bet: (bestValue !== null && (bestValue.ev ?? 0) >= 2) || pinnacleEdge !== null,
       value_score: pinnacleEdge?.edge_pct ?? bestValue?.ev ?? null,
       home_injuries: f._homeInjuries ?? [],
       away_injuries: f._awayInjuries ?? [],

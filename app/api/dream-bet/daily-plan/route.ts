@@ -41,6 +41,17 @@ type SuggestedBet = {
   kickoff: string
   /** 'in-range' if odds match the user's risk window, otherwise 'out-of-range'. */
   tierMatch: 'in-range' | 'out-of-range'
+  /**
+   * Strength of the edge. 'strong' = EV >= 5%, 'medium' = EV >= 2%,
+   * 'thin' = EV between 0 and 2%. Set when `isFallback` is false.
+   */
+  edgeStrength?: 'strong' | 'medium' | 'thin'
+  /**
+   * True when this row was surfaced even though the pick has no positive EV
+   * (or the day had no qualifying picks). The UI labels these as context-only
+   * and discourages auto-add.
+   */
+  isFallback?: boolean
   /** True when this row is an accumulator built from multiple legs. */
   isAcca?: boolean
   accaLegs?: Array<{
@@ -154,6 +165,8 @@ function topPicksForDay(
   // Generous filter: fixture is on this day, has odds + an EV signal.
   // We DON'T filter on odds-range or even strict EV>0 — the goal is to
   // always show SOMETHING. We sort by EV desc and tag tier_match.
+  // is_value_bet is intentionally IGNORED here — it's just a hint for other
+  // surfaces. The daily plan wants the day's top edges regardless of tier.
   const candidates = predictions.filter((p) => {
     if (!p?.date) return false
     const t = new Date(p.date).getTime()
@@ -171,18 +184,40 @@ function topPicksForDay(
     return evB - evA
   })
 
-  const out: any[] = []
+  // First pass: positive-EV picks only.
+  const positive: any[] = []
+  for (const p of sorted) {
+    const id = Number(p?.id)
+    if (id && seen.has(id)) continue
+    const ev = Number(p?.value_score ?? p?.best_value?.ev ?? 0)
+    if (ev <= 0) continue
+    if (id) seen.add(id)
+    const odds = Number(p?.best_value?.odds ?? 0)
+    p.__tierMatch = odds >= oddsMin && odds <= oddsMax ? 'in-range' : 'out-of-range'
+    p.__isFallback = false
+    p.__edgeStrength = ev >= 5 ? 'strong' : ev >= 2 ? 'medium' : 'thin'
+    positive.push(p)
+    if (positive.length >= maxPicks) break
+  }
+
+  if (positive.length > 0) return positive
+
+  // Fallback pass: no positive-EV picks for this day, but fixtures DO exist
+  // in cache. Surface the closest-to-positive picks so the user has context
+  // — clearly tagged as fallback in the UI.
+  const fallback: any[] = []
   for (const p of sorted) {
     const id = Number(p?.id)
     if (id && seen.has(id)) continue
     if (id) seen.add(id)
-    // Mark tier match against the user's preferred odds window.
     const odds = Number(p?.best_value?.odds ?? 0)
     p.__tierMatch = odds >= oddsMin && odds <= oddsMax ? 'in-range' : 'out-of-range'
-    out.push(p)
-    if (out.length >= maxPicks) break
+    p.__isFallback = true
+    p.__edgeStrength = 'thin'
+    fallback.push(p)
+    if (fallback.length >= 3) break
   }
-  return out
+  return fallback
 }
 
 function maxPicksFor(risk: RiskLevel): number {
@@ -267,21 +302,30 @@ function defaultNote(
     return `Day ${dayLabelStr.split('·')[1]?.trim() ?? ''}: fixtures not yet published — refresh closer to the date.`
   }
   if (picks.length === 0) {
-    return 'No fixtures yet for the tracked leagues today — likely a slow midweek. Focus on the busier days.'
+    return 'No qualifying picks today — full prediction refresh tomorrow.'
   }
-  const inRange = picks.filter((p) => p.tierMatch === 'in-range' && !p.isAcca).length
-  const outOfRange = picks.filter((p) => p.tierMatch === 'out-of-range' && !p.isAcca).length
+  const allFallback = picks.every((p) => p.isFallback)
+  if (allFallback) {
+    return `No clear edge today on tracked leagues. Top fixtures shown for context — consider skipping or take a small position only.`
+  }
+  const realPicks = picks.filter((p) => !p.isAcca && !p.isFallback)
+  const inRange = realPicks.filter((p) => p.tierMatch === 'in-range').length
+  const outOfRange = realPicks.filter((p) => p.tierMatch === 'out-of-range').length
   const hasAcca = picks.some((p) => p.isAcca)
+  const hasThin = realPicks.some((p) => p.edgeStrength === 'thin')
 
   if (hasAcca) {
     return `Aggressive goal — built an ACCA to push toward target. High variance, sized smaller. ${inRange} singles also in your odds range.`
   }
   if (inRange === 0 && outOfRange > 0) {
-    const top = picks[0]
+    const top = realPicks[0] ?? picks[0]
     return `No picks in your ${riskLevel} odds range today — top option is ${top.selection} @ ${top.odds.toFixed(2)} (out of range). Take it anyway, or wait for tomorrow.`
   }
   if (!isOnTrack) {
     return `${inRange} qualifying ${inRange === 1 ? 'bet' : 'bets'} — bigger sizing today to claw back the gap, but stick to the math.`
+  }
+  if (hasThin) {
+    return `${inRange} qualifying ${inRange === 1 ? 'bet' : 'bets'} for ${dayLabelStr.toLowerCase()} — some edges are thin, take only the matchups you trust.`
   }
   return `${inRange} qualifying ${inRange === 1 ? 'bet' : 'bets'} for ${dayLabelStr.toLowerCase()} — keep the discipline.`
 }
@@ -312,7 +356,12 @@ async function generateDailyNotes(
         }
         const picks = d.picks
           .map((b) => {
-            const tag = b.isAcca ? '[ACCA] ' : b.tierMatch === 'out-of-range' ? '[out-of-range] ' : ''
+            const tags: string[] = []
+            if (b.isAcca) tags.push('ACCA')
+            if (b.isFallback) tags.push('fallback')
+            else if (b.edgeStrength === 'thin') tags.push('thin')
+            if (b.tierMatch === 'out-of-range') tags.push('out-of-range')
+            const tag = tags.length ? `[${tags.join(',')}] ` : ''
             return `${tag}${b.selection} @${b.odds} (+${b.ev}% EV, £${b.stake})`
           })
           .join('; ')
@@ -326,11 +375,17 @@ async function generateDailyNotes(
 - ${goal?.onTrack ? 'On track' : 'Behind pace'}
 - Risk: ${riskLevel} (preferred odds ${RISK_ODDS_RANGE[riskLevel][0]}-${RISK_ODDS_RANGE[riskLevel][1]})
 
-Here is the ${days.length}-day plan (picks tagged [ACCA] are bundled accumulators; [out-of-range] means odds outside the user's window):
+Here is the ${days.length}-day plan. Tag meanings:
+- [ACCA]: bundled accumulator
+- [fallback]: no positive edge, shown for CONTEXT only — recommend skip or tiny stake
+- [thin]: real edge but under 2% EV — only take if user trusts the matchup
+- [out-of-range]: odds outside the user's preferred window
 ${summary}
 
 For EACH day, write ONE short note (≤24 words). Honest, not hype. No emojis. Rules:
+- If ALL picks are [fallback]: say no clear edge today, suggest skip or tiny position only.
 - If picks include an ACCA: explain it's an aggressive push toward target, high variance, size carefully.
+- If picks include [thin]: warn the edge is small, take only the matchups they trust.
 - If picks are only out-of-range: tell user the top pick + odds, suggest take it anyway or wait.
 - If fixtures-pending: say picks aren't published yet, refresh closer to date.
 - If no picks: frame as a slow day — focus on busier days.
@@ -478,11 +533,20 @@ export async function GET(req: Request) {
         const ev = Number(p?.value_score ?? p?.best_value?.ev ?? 0)
         const label: string = p?.best_value?.label ?? p?.recommended_bet ?? 'Top pick'
         const market = deriveBetType(label)
-        if (ev > 0) positiveEvPicks++
+        const isFallback = (p?.__isFallback as boolean | undefined) === true
+        if (ev > 0 && !isFallback) positiveEvPicks++
         marketCounter[market] = (marketCounter[market] ?? 0) + 1
-        // For sizing: only positive-EV picks get a real Kelly stake. Out-of-range
-        // is ok (we still show them), but a 0-EV pick gets no recommended stake.
-        const rec = recommendStake(ctx, odds, ev > 0 ? ev : 0)
+        // For sizing: only positive-EV non-fallback picks get a real Kelly stake.
+        // Out-of-range is ok (we still show them), but a 0-EV pick gets no
+        // recommended stake — and fallback picks NEVER get a stake suggestion.
+        const stakeEv = !isFallback && ev > 0 ? ev : 0
+        const rec = recommendStake(ctx, odds, stakeEv)
+        const edgeStrength = (p?.__edgeStrength as 'strong' | 'medium' | 'thin' | undefined) ??
+          (ev >= 5 ? 'strong' : ev >= 2 ? 'medium' : 'thin')
+        const reasoning = isFallback
+          ? `${label} — no clear edge today, shown for context only. EV ${ev > 0 ? '+' : ''}${Math.round(ev * 10) / 10}%.`
+          : (typeof p?.edge_explanation === 'string' && p.edge_explanation) ||
+            `${label} — top value pick (+${ev}% EV).`
         return {
           home: String(p?.home_team ?? ''),
           away: String(p?.away_team ?? ''),
@@ -493,19 +557,20 @@ export async function GET(req: Request) {
           stake: rec.suggestedStake > 0 ? rec.suggestedStake : 0,
           ev: Math.round(ev * 10) / 10,
           fixtureId: p?.id ? Number(p.id) : null,
-          reasoning:
-            (typeof p?.edge_explanation === 'string' && p.edge_explanation) ||
-            `${label} — top value pick (+${ev}% EV).`,
+          reasoning,
           kickoff: String(p?.date ?? ''),
           tierMatch: (p?.__tierMatch as 'in-range' | 'out-of-range') ?? 'in-range',
+          edgeStrength,
+          isFallback,
         }
       })
 
       // ACCA bundle — only if the user qualifies AND there are 2+ in-range
-      // singles with positive EV to combine.
+      // singles with positive EV to combine. Fallback picks (no edge) are
+      // never bundled.
       if (wantsAcca) {
         const accaCandidates = suggestedBets.filter(
-          (b) => b.tierMatch === 'in-range' && b.ev > 0 && b.stake > 0,
+          (b) => b.tierMatch === 'in-range' && b.ev > 0 && b.stake > 0 && !b.isFallback,
         )
         const acca = buildAcca(accaCandidates, ctx)
         if (acca) suggestedBets.unshift(acca)

@@ -31,6 +31,10 @@ interface SuggestedBet {
   reasoning: string
   kickoff: string
   tierMatch: 'in-range' | 'out-of-range'
+  /** 'strong' EV>=5, 'medium' EV>=2, 'thin' EV<2 — set when not a fallback. */
+  edgeStrength?: 'strong' | 'medium' | 'thin'
+  /** True when this pick has no positive EV — context-only. */
+  isFallback?: boolean
   isAcca?: boolean
   accaLegs?: Array<{
     home: string
@@ -381,7 +385,7 @@ function DayCard({
           <p className="text-fg-muted text-sm font-medium">
             {day.fixturesPending
               ? 'Picks not yet available — refresh closer to the date.'
-              : 'No fixtures on the tracked leagues today.'}
+              : 'No qualifying picks today — full prediction refresh tomorrow.'}
           </p>
         </div>
       ) : (
@@ -440,17 +444,35 @@ function BetRow({ bet, currency }: { bet: SuggestedBet; currency: Currency }) {
   const hasStake = bet.stake > 0
   const isAcca = bet.isAcca === true
   const outOfRange = bet.tierMatch === 'out-of-range'
+  const isFallback = bet.isFallback === true
+  const isThin = !isFallback && bet.edgeStrength === 'thin'
 
   return (
     <div className={`bg-bg-elevated rounded-xl px-4 py-3.5 ${
-      isAcca ? 'border border-value/30' : ''
+      isAcca ? 'border border-value/30' : isFallback ? 'border border-border-subtle/60 opacity-80' : ''
     }`}>
-      {/* Top row: match + league/kickoff eyebrow + ACCA badge */}
+      {/* Top row: match + league/kickoff eyebrow + chips */}
       <div className="flex items-baseline justify-between gap-3 mb-2 flex-wrap">
-        <div className="flex items-baseline gap-2 min-w-0">
+        <div className="flex items-baseline gap-2 min-w-0 flex-wrap">
           {isAcca && (
             <span className="font-stat text-[10px] font-bold tracking-wider px-1.5 py-0.5 rounded bg-value/15 text-value border border-value/30 uppercase shrink-0">
               ACCA
+            </span>
+          )}
+          {isFallback && (
+            <span
+              className="font-stat text-[10px] font-bold tracking-wider px-1.5 py-0.5 rounded bg-fg-muted/15 text-fg-muted border border-border-subtle uppercase shrink-0"
+              title="No positive edge today — context only."
+            >
+              Fallback pick
+            </span>
+          )}
+          {isThin && (
+            <span
+              className="font-stat text-[10px] font-bold tracking-wider px-1.5 py-0.5 rounded bg-value/10 text-value border border-value/30 uppercase shrink-0"
+              title="EV under 2% — small but real edge."
+            >
+              Thin edge
             </span>
           )}
           <p className="text-fg font-bold text-sm md:text-base truncate">
@@ -511,12 +533,20 @@ function BetRow({ bet, currency }: { bet: SuggestedBet; currency: Currency }) {
         </div>
       </div>
 
-      {/* Out-of-range note */}
-      {outOfRange && !isAcca && (
+      {/* Edge-strength notes (one at a time, fallback > thin > out-of-range) */}
+      {isFallback ? (
+        <p className="text-fg-muted text-[11px] mb-3 italic">
+          No clear edge today on tracked leagues. Shown for context — consider skipping or take a small position only.
+        </p>
+      ) : isThin ? (
+        <p className="text-fg-muted text-[11px] mb-3 italic">
+          Edge under 2% — consider taking only if you trust the matchup.
+        </p>
+      ) : outOfRange && !isAcca ? (
         <p className="text-fg-muted text-[11px] mb-3 italic">
           Outside your preferred odds range — still the day's top value pick.
         </p>
-      )}
+      ) : null}
 
       {/* Stake row */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
