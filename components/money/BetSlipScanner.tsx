@@ -55,6 +55,21 @@ type Step = 'pick' | 'parsing' | 'review' | 'saving' | 'done'
 const inputCls =
   'w-full bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand'
 
+// HEIC/HEIF (iPhone default) and a few other formats can't be rendered by
+// the browser <img> tag and the OpenAI vision API also rejects HEIC. We
+// detect and ask the user to convert / re-take.
+const UNSUPPORTED_TYPES = /^image\/(heic|heif|tiff|x-icon|svg\+xml)$/i
+
+function unsupportedReason(file: File): string | null {
+  if (UNSUPPORTED_TYPES.test(file.type) || /\.heic$|\.heif$/i.test(file.name)) {
+    return 'iPhone HEIC photos aren’t supported. On iPhone go to Settings → Camera → Formats → "Most Compatible" then re-take the photo, or take a screenshot of the slip and upload that instead.'
+  }
+  if (file.size < 5 * 1024) {
+    return 'That image is too small to read. Please use a clearer / larger photo of the slip.'
+  }
+  return null
+}
+
 // Browser-side image compression — accept any image, scale down to max
 // 1600px on the longer side and re-encode at q=0.85 JPEG. Drops typical
 // phone-camera 8-12MB shots to ~600KB without losing OCR accuracy.
@@ -93,8 +108,11 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [originalFile, setOriginalFile] = useState<File | null>(null)
+  const [imgFailed, setImgFailed] = useState(false)
   const [parsed, setParsed] = useState<ParsedSlip | null>(null)
   const [savedId, setSavedId] = useState<string | null>(null)
+  // Track repeated failures so we can offer "switch to manual entry"
+  const [failureCount, setFailureCount] = useState(0)
 
   // Revoke blob URL on unmount / change
   useEffect(() => {
@@ -117,12 +135,19 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
   function onFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
     if (!f) return
-    if (!f.type.startsWith('image/')) {
+    if (!f.type.startsWith('image/') && !/\.(heic|heif|jpe?g|png|webp|gif)$/i.test(f.name)) {
       setError('That file isn’t an image. Try a JPG or PNG photo.')
+      return
+    }
+    const reason = unsupportedReason(f)
+    if (reason) {
+      setError(reason)
+      // Don't set the preview — they need to pick a different file.
       return
     }
     setError(null)
     setOriginalFile(f)
+    setImgFailed(false)
     const url = URL.createObjectURL(f)
     setPreviewUrl(url)
     setParsed(null)
@@ -133,18 +158,70 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
     setStep('parsing')
     setError(null)
     try {
-      const blob = await compressImage(originalFile)
+      let blob: Blob
+      try {
+        blob = await compressImage(originalFile)
+      } catch (compressErr: any) {
+        throw new Error(
+          `Couldn't process this image (${compressErr?.message || 'compression failed'}). Try a JPG or PNG photo.`
+        )
+      }
+
       const fd = new FormData()
       fd.append('image', blob, originalFile.name.replace(/\.[^.]+$/, '') + '.jpg')
-      const res = await fetch('/api/upload-bet', {
-        method: 'POST',
-        body: fd,
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data?.error || `HTTP ${res.status}`)
+
+      let res: Response
+      try {
+        res = await fetch('/api/upload-bet', { method: 'POST', body: fd })
+      } catch (netErr: any) {
+        throw new Error('Network error — check your connection and try again.')
       }
+
+      // Try to parse JSON. The API always returns JSON for our paths but a
+      // proxy/edge-layer error could return HTML — guard against that.
+      let data: any = null
+      try {
+        data = await res.json()
+      } catch {
+        throw new Error(
+          `Server returned non-JSON response (HTTP ${res.status}). The slip parser may be temporarily down.`
+        )
+      }
+
+      if (!res.ok) {
+        // Status-specific messaging — the user deserves better than "Failed".
+        if (res.status === 401) {
+          throw new Error('You need to be signed in to scan slips. Refresh and try again.')
+        }
+        if (res.status === 413) {
+          throw new Error('Image too large — please use a photo under 10MB.')
+        }
+        if (res.status === 422) {
+          // No bets detected. Prefer the AI's parse_notes if present.
+          const note = data?.parse_notes
+          throw new Error(
+            note
+              ? `Couldn't read any bets on this image. AI noted: "${note}". Try a clearer / better-lit photo, or one that fits the whole slip in frame.`
+              : "Couldn't read any bets on this image. Make sure the photo is sharp, well-lit, and shows the whole slip."
+          )
+        }
+        if (res.status === 429) {
+          throw new Error('AI quota exceeded. Try again in a few minutes.')
+        }
+        if (res.status === 502) {
+          throw new Error('AI couldn\'t read the slip — try a clearer / sharper photo, or crop to just the slip.')
+        }
+        throw new Error(data?.error || `Server error (HTTP ${res.status})`)
+      }
+
       const slip = data as ParsedSlip
+      if (!Array.isArray(slip.legs) || slip.legs.length === 0) {
+        throw new Error(
+          slip?.parse_notes
+            ? `No bets found on this image. AI noted: "${slip.parse_notes}". Try a clearer photo.`
+            : 'No bets found on this image. Try a clearer photo of the slip.'
+        )
+      }
       // Sane defaults so the review form is filled in
       if (!slip.total_stake) slip.total_stake = 10
       if (!slip.total_odds && slip.legs.length) {
@@ -152,10 +229,44 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
       }
       setParsed(slip)
       setStep('review')
+      setFailureCount(0)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to analyse slip')
+      const msg = e instanceof Error && e.message ? e.message : 'Failed to analyse slip'
+      // eslint-disable-next-line no-console
+      console.error('[BetSlipScanner] analyse failed:', e)
+      setError(msg)
       setStep('pick')
+      setFailureCount((n) => n + 1)
     }
+  }
+
+  /**
+   * Hand off to a clean manual-entry review screen so the user isn't stuck
+   * when AI vision can't read their slip. Pre-fills with a sensible blank
+   * single-leg form they can edit and save.
+   */
+  function startBlankAcca() {
+    setError(null)
+    setParsed({
+      type: 'single',
+      bookmaker: null,
+      currency: null,
+      total_stake: 10,
+      total_odds: 2.0,
+      potential_return: 20,
+      legs: [
+        {
+          match_name: '',
+          selection: '',
+          odds: 2.0,
+          league: null,
+          match_date: new Date().toISOString().slice(0, 10),
+          bet_type: 'Match Result (1X2)',
+        },
+      ],
+      parse_notes: 'Manual entry — AI vision skipped',
+    })
+    setStep('review')
   }
 
   function updateLeg(idx: number, patch: Partial<ParsedLeg>) {
@@ -281,15 +392,31 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
         <div className="p-5">
           {/* Error banner */}
           {error && (
-            <div className="bg-loss/10 border border-loss/30 text-loss text-xs rounded-lg p-2.5 mb-4 flex items-start justify-between gap-3">
-              <span>{error}</span>
-              <button
-                type="button"
-                onClick={() => setError(null)}
-                className="text-loss/70 hover:text-loss text-[10px] font-bold uppercase tracking-wider"
-              >
-                Dismiss
-              </button>
+            <div className="bg-loss/10 border border-loss/30 text-loss text-xs rounded-lg p-3 mb-4 space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <span className="leading-relaxed">{error}</span>
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="text-loss/70 hover:text-loss text-[10px] font-bold uppercase tracking-wider shrink-0"
+                >
+                  Dismiss
+                </button>
+              </div>
+              {failureCount >= 2 && step === 'pick' && (
+                <div className="pt-2 border-t border-loss/20 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-loss/80 text-[11px]">
+                    Photo not working? You can enter the bet manually.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={startBlankAcca}
+                    className="text-[10px] font-bold uppercase tracking-wider py-1 px-2.5 rounded border border-loss/40 text-loss hover:bg-loss/10 transition-colors"
+                  >
+                    Enter manually →
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -308,12 +435,28 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
               {previewUrl ? (
                 <>
                   <div className="bg-bg-base border border-border-subtle rounded-xl p-3">
-                    <img
-                      src={previewUrl}
-                      alt="Bet slip preview"
-                      className="w-full max-h-[50vh] object-contain rounded-lg"
-                    />
+                    {imgFailed ? (
+                      <div className="w-full bg-loss/5 border border-loss/30 rounded-lg p-6 text-center">
+                        <p className="text-loss text-sm font-semibold mb-1">Can’t display this image</p>
+                        <p className="text-fg-muted text-[11px] leading-relaxed">
+                          Your browser couldn’t render this file format. iPhone HEIC photos are a common cause —
+                          try a screenshot of the slip, or change Camera → Formats to "Most Compatible" in Settings.
+                        </p>
+                      </div>
+                    ) : (
+                      <img
+                        src={previewUrl}
+                        alt="Bet slip preview"
+                        className="w-full max-h-[50vh] object-contain rounded-lg"
+                        onError={() => setImgFailed(true)}
+                      />
+                    )}
                   </div>
+                  {originalFile && (
+                    <p className="text-fg-muted text-[10px] text-center font-stat">
+                      {originalFile.name} · {(originalFile.size / 1024).toFixed(0)}KB · {originalFile.type || 'unknown type'}
+                    </p>
+                  )}
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <button
                       type="button"
@@ -325,7 +468,8 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
                     <button
                       type="button"
                       onClick={analyse}
-                      className="px-5 py-2.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors"
+                      disabled={imgFailed}
+                      className="px-5 py-2.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       Analyse slip →
                     </button>
@@ -352,6 +496,15 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
                   <p className="text-fg-muted text-[11px] text-center">
                     Photos are sent to AI for parsing only — never shared, never stored after the upload completes.
                   </p>
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={startBlankAcca}
+                      className="text-fg-muted hover:text-brand text-[11px] font-bold uppercase tracking-wider transition-colors"
+                    >
+                      or enter manually →
+                    </button>
+                  </div>
                 </>
               )}
             </div>

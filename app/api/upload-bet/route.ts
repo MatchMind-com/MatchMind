@@ -335,14 +335,35 @@ Strict rules:
     })
     raw = response.choices[0]?.message?.content || '{}'
   } catch (e: any) {
+    // Log the actual OpenAI error so we can debug from Vercel logs.
+    console.error('[upload-bet OCR] OpenAI call failed:', {
+      status: e?.status,
+      code: e?.code,
+      message: e?.message,
+    })
     if (e?.status === 429) {
       return NextResponse.json(
-        { error: 'OpenAI quota exceeded. Add credits at platform.openai.com/billing' },
+        { error: 'AI quota exceeded — try again in a few minutes.' },
         { status: 429 }
       )
     }
+    if (e?.status === 401) {
+      return NextResponse.json(
+        { error: 'AI vision is misconfigured (auth). Please contact support.' },
+        { status: 500 }
+      )
+    }
+    if (e?.code === 'invalid_image' || /image|format/i.test(e?.message || '')) {
+      return NextResponse.json(
+        {
+          error:
+            'AI couldn\'t read this image format. iPhone HEIC photos aren\'t supported — try a screenshot or change Settings → Camera → Formats to "Most Compatible".',
+        },
+        { status: 502 }
+      )
+    }
     return NextResponse.json(
-      { error: 'AI failed to read the slip — try a clearer photo' },
+      { error: e?.message ? `AI failed to read the slip — ${e.message}` : 'AI failed to read the slip — try a clearer photo.' },
       { status: 502 }
     )
   }
