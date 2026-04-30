@@ -161,7 +161,10 @@ function SelectionRow({
   const [adding, setAdding] = useState(false)
   const [added, setAdded] = useState(false)
   const [error, setError] = useState(false)
-  const canAdd = sel.aiVerdict === 'bet' || sel.aiVerdict === 'lean'
+  // Every selection is addable — the user picks what they want. The AI
+  // verdict only changes the visual emphasis of the button (brand-colored
+  // for bet/lean, muted for skip/avoid). Power users override AI all the time.
+  const isRecommended = sel.aiVerdict === 'bet' || sel.aiVerdict === 'lean'
   const evClass =
     sel.ev > 0 ? 'text-success' : sel.ev < 0 ? 'text-loss' : 'text-fg-muted'
 
@@ -182,7 +185,11 @@ function SelectionRow({
           stake: 10,
           league,
           kickoff,
-          reasoning: sel.aiReason || `${marketName} — ${sel.label}`,
+          // For non-AI-recommended bets we mark the reason so the user
+          // knows in History this was their own override, not an AI pick.
+          reasoning: isRecommended
+            ? (sel.aiReason || `${marketName} — ${sel.label}`)
+            : `Manual pick (AI verdict: ${sel.aiVerdict.toUpperCase()}) — ${marketName}: ${sel.label}`,
           fixtureId,
         }),
       })
@@ -195,6 +202,17 @@ function SelectionRow({
       setAdding(false)
     }
   }
+
+  // Recommended → solid brand-on-hover button, prominent.
+  // Other  → muted ghost button with subtle hover so it's still clickable
+  //           but doesn't compete for attention with the AI's actual pick.
+  const buttonStateCls = added
+    ? 'bg-success/10 text-success border-success/30 cursor-default'
+    : error
+    ? 'bg-loss/10 text-loss border-loss/30'
+    : isRecommended
+    ? 'bg-bg-elevated hover:bg-brand hover:text-bg-base text-fg border-border-subtle hover:border-brand'
+    : 'bg-transparent hover:bg-bg-elevated text-fg-muted hover:text-fg border-border-subtle/50 hover:border-border-subtle opacity-60 hover:opacity-100'
 
   return (
     <div className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-bg-base/50 transition-colors group">
@@ -231,24 +249,23 @@ function SelectionRow({
         {sel.aiReason}
       </span>
 
-      {/* Add button — only for bet/lean */}
-      {canAdd && (
-        <button
-          type="button"
-          onClick={add}
-          disabled={adding || added}
-          className={`shrink-0 text-[10px] font-bold uppercase tracking-wider py-1 px-2 rounded border transition-all ${
-            added
-              ? 'bg-success/10 text-success border-success/30 cursor-default'
-              : error
-              ? 'bg-loss/10 text-loss border-loss/30'
-              : 'bg-bg-elevated hover:bg-brand hover:text-bg-base text-fg border-border-subtle hover:border-brand'
-          }`}
-          aria-label={added ? 'Added' : 'Add to bets'}
-        >
-          {added ? '✓' : error ? '!' : adding ? '…' : '+'}
-        </button>
-      )}
+      {/* Add button — every row is addable. */}
+      <button
+        type="button"
+        onClick={add}
+        disabled={adding || added}
+        className={`shrink-0 text-[10px] font-bold uppercase tracking-wider py-1 px-2 rounded border transition-all ${buttonStateCls}`}
+        aria-label={added ? 'Added' : `Add ${sel.label} to bets`}
+        title={
+          added
+            ? 'Added to your bets'
+            : isRecommended
+            ? `Add ${sel.label} to your bets (AI ${dot.label})`
+            : `Add ${sel.label} to your bets — your call, AI rates this ${dot.label}`
+        }
+      >
+        {added ? '✓' : error ? '!' : adding ? '…' : '+'}
+      </button>
     </div>
   )
 }
@@ -419,7 +436,8 @@ export default function AllMarketsPanel({
           {data && (
             <p className="text-fg-muted text-[11px] mt-0.5">
               <span className="font-stat">{data.markets.length}</span> markets ·{' '}
-              <span className="font-stat text-success font-bold">{totalBets}</span> AI bets
+              <span className="font-stat text-success font-bold">{totalBets}</span> AI bets ·{' '}
+              <span className="text-fg-secondary">tap “+” on any row to add to your bets</span>
             </p>
           )}
         </div>

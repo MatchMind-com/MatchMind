@@ -101,7 +101,13 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const noteParts: string[] = ['Added from AI recommendation']
+  // If the caller provided reasoning that already starts with "Manual pick"
+  // (the AllMarketsPanel signals user-overrides this way), don't prepend the
+  // "Added from AI recommendation" tag — it would be misleading. Otherwise
+  // the AI Coach / Live Co-Pilot path keeps the original tag intact.
+  const isManualOverride = !!reasoning && /^manual pick/i.test(reasoning)
+  const noteParts: string[] = []
+  if (!isManualOverride) noteParts.push('Added from AI recommendation')
   if (reasoning) noteParts.push(reasoning)
   const notes = noteParts.join(' — ')
 
