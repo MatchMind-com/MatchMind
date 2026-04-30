@@ -866,12 +866,25 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
                       </tr>
                       {isAcca && isExpanded && accaLegs && (
                         <tr className="border-t border-border-subtle bg-bg-base/40">
-                          <td colSpan={10} className="px-3 lg:px-4 py-4">
-                            <AccaLegsBreakdown
-                              betId={r.id}
-                              fallbackLegs={accaLegs}
-                              foldLabel={r.bet_type ?? 'Accumulator legs'}
-                            />
+                          <td colSpan={10} className="p-0 align-top">
+                            {/*
+                              The parent table scrolls horizontally because of all
+                              the bet columns, so a normal expanded row would inherit
+                              that wide width and create a huge empty space to the
+                              right. We pin the panel sticky-left and constrain its
+                              width to the viewport (minus the 240px sidebar on lg+)
+                              so it stays vertically anchored in the visible area no
+                              matter how far the user has scrolled the table sideways.
+                            */}
+                            <div
+                              className="sticky left-0 px-3 lg:px-4 py-4 w-[calc(100vw-1.5rem)] lg:w-[calc(100vw-15rem-3rem)] max-w-[1100px]"
+                            >
+                              <AccaLegsBreakdown
+                                betId={r.id}
+                                fallbackLegs={accaLegs}
+                                foldLabel={r.bet_type ?? 'Accumulator legs'}
+                              />
+                            </div>
                           </td>
                         </tr>
                       )}
