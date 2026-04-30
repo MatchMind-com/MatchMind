@@ -8,8 +8,10 @@
  *
  * Body (all optional):
  *   {
- *     "legs":   4,        // how many picks to combine (default 4)
- *     "dryRun": false     // if true, returns the tweet text WITHOUT posting
+ *     "legs":         4,    // how many picks to combine (default 4)
+ *     "windowHours":  18,   // how far ahead to look for kickoffs (default 18,
+ *                           // covers "tonight" through tomorrow morning)
+ *     "dryRun":       false // if true, returns the tweet text WITHOUT posting
  *   }
  *
  * Source of picks: /api/predictions, filtered to fixtures kicking off
@@ -62,14 +64,14 @@ function legSummary(p: Pick): { label: string; odds: number; ev: number } | null
   return null
 }
 
-function isTonightISO(iso: string | undefined): boolean {
+function isTonightISO(iso: string | undefined, windowHours: number): boolean {
   if (!iso) return false
   const t = new Date(iso).getTime()
   if (!Number.isFinite(t)) return false
   const now = Date.now()
-  // Within the next 12 hours OR within the past 3 hours (mid-game still
-  // counts as "tonight" — we'll ditch already-finished games via odds 1.0).
-  return t > now - 3 * 3_600_000 && t < now + 12 * 3_600_000
+  // Within the configured window (default 18h, covers "tonight" + next-day
+  // morning) or within the past 3 hours (mid-game still counts).
+  return t > now - 3 * 3_600_000 && t < now + windowHours * 3_600_000
 }
 
 function fmtKickoff(iso: string | undefined): string {
@@ -161,7 +163,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { legs?: number; dryRun?: boolean } = {}
+  let body: { legs?: number; windowHours?: number; dryRun?: boolean } = {}
   try {
     const text = await req.text()
     if (text.trim()) body = JSON.parse(text)
@@ -169,6 +171,7 @@ export async function POST(req: Request) {
     // Empty body is fine — defaults below.
   }
   const legCount = Math.max(2, Math.min(8, Number(body.legs) || 4))
+  const windowHours = Math.max(3, Math.min(72, Number(body.windowHours) || 18))
   const dryRun = body.dryRun === true
 
   // Pull predictions
@@ -185,9 +188,12 @@ export async function POST(req: Request) {
   }
 
   // Filter to tonight + sort by EV (descending)
-  const tonight = all.filter((p) => isTonightISO(p.date))
+  const tonight = all.filter((p) => isTonightISO(p.date, windowHours))
   if (tonight.length === 0) {
-    return NextResponse.json({ error: 'No predictions kicking off in the next 12h' }, { status: 404 })
+    return NextResponse.json({
+      error: `No predictions kicking off in the next ${windowHours}h. Try { windowHours: 36 }.`,
+      hint: 'Predictions cache may not yet contain tonight\'s fixtures. Bumping windowHours captures next-day games.',
+    }, { status: 404 })
   }
   const ranked = tonight
     .map((p) => ({ pick: p, sum: legSummary(p) }))
