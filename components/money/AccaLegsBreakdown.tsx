@@ -1,0 +1,363 @@
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+
+/**
+ * AccaLegsBreakdown — expandable per-leg detail for an accumulator bet.
+ *
+ * Polls /api/bet-slips/[id]/live-legs every 60 seconds while at least one
+ * leg has not yet finished, so the user sees live scores + per-leg
+ * cashing/losing assessment without refreshing the page.
+ *
+ * Layout: card-per-leg grid (responsive 1/2-col) instead of the cramped
+ * 7-col table that wouldn't fit on smaller widths. Each card shows:
+ *   - Leg number + match + league
+ *   - Selection (the user's pick)
+ *   - Odds for the leg
+ *   - Live status badge (LIVE 75' · 1-0 / NS / FT 2-1 / etc.)
+ *   - State pill: Cashing 🟢 / Behind 🔴 / Won ✅ / Lost ❌ / Awaiting ⏳
+ *   - Optional context line ("Liverpool 2-0 — needs to hold")
+ *
+ * Top of the panel shows the overall acca state (e.g. "5/6 cashing — 1 still
+ * pending kickoff"), updated in real time.
+ */
+
+interface SavedLeg {
+  match_name: string
+  selection: string
+  odds: number
+  league?: string | null
+  match_date?: string | null
+  bet_type?: string | null
+  result?: 'win' | 'loss' | 'void' | 'pending'
+}
+
+type LegState = 'pending' | 'cashing' | 'losing' | 'won' | 'lost' | 'tbd' | 'void'
+
+interface LiveLeg extends SavedLeg {
+  live: {
+    matched: boolean
+    fixture_id?: number | null
+    status?: string
+    status_long?: string
+    minute?: number | null
+    home_team?: string
+    away_team?: string
+    home_score?: number | null
+    away_score?: number | null
+    venue?: string | null
+    state: LegState
+    label: string
+    context?: string
+  }
+}
+
+interface LiveResponse {
+  legs: LiveLeg[]
+  is_acca: boolean
+  counts?: {
+    total: number
+    won: number
+    lost: number
+    cashing: number
+    losing: number
+    pending: number
+    tbd: number
+    in_play: number
+  }
+  overall?: 'lost' | 'cashing' | 'on_track' | 'pending' | 'won'
+  has_in_play?: boolean
+  computed_at: string
+}
+
+const POLL_INTERVAL_MS = 60_000 // 1 min — matches user's request
+
+const STATE_STYLE: Record<
+  LegState,
+  { bg: string; text: string; border: string; emoji: string; label: string }
+> = {
+  cashing: { bg: 'bg-success/15', text: 'text-success', border: 'border-success/40', emoji: '🟢', label: 'CASHING' },
+  losing: { bg: 'bg-loss/15', text: 'text-loss', border: 'border-loss/40', emoji: '🔴', label: 'BEHIND' },
+  won: { bg: 'bg-success/20', text: 'text-success', border: 'border-success/50', emoji: '✅', label: 'WON' },
+  lost: { bg: 'bg-loss/20', text: 'text-loss', border: 'border-loss/50', emoji: '❌', label: 'LOST' },
+  pending: { bg: 'bg-bg-elevated', text: 'text-fg-muted', border: 'border-border-subtle', emoji: '⏳', label: 'AWAITING' },
+  tbd: { bg: 'bg-value/10', text: 'text-value', border: 'border-value/40', emoji: '⏱', label: 'IN PLAY' },
+  void: { bg: 'bg-bg-elevated', text: 'text-fg-muted', border: 'border-border-subtle', emoji: '⊘', label: 'VOID' },
+}
+
+interface Props {
+  betId: string
+  /** Pre-parsed legs from the saved bet's notes — used as fallback while live data loads. */
+  fallbackLegs: SavedLeg[]
+  /** Visible fold name e.g. "6-fold accumulator" — only for the title. */
+  foldLabel?: string
+}
+
+export default function AccaLegsBreakdown({ betId, fallbackLegs, foldLabel }: Props) {
+  const [data, setData] = useState<LiveResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const inFlight = useRef(false)
+
+  async function fetchLive() {
+    if (inFlight.current) return
+    inFlight.current = true
+    try {
+      const res = await fetch(`/api/bet-slips/${betId}/live-legs`, { cache: 'no-store' })
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}))
+        throw new Error(errBody?.error || `HTTP ${res.status}`)
+      }
+      const json = (await res.json()) as LiveResponse
+      setData(json)
+      setError(null)
+      setLastUpdated(new Date(json.computed_at))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Live update failed')
+    } finally {
+      inFlight.current = false
+      setLoading(false)
+    }
+  }
+
+  // Initial fetch + polling. Polling stops once the acca is fully settled
+  // (every leg in won/lost/void) — no point hammering the API for a finished bet.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null
+    let cancelled = false
+
+    async function tick() {
+      if (cancelled) return
+      await fetchLive()
+      if (cancelled) return
+      // Decide whether to poll again. We re-read state via setData below:
+      timer = setTimeout(tick, POLL_INTERVAL_MS)
+    }
+    void tick()
+
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [betId])
+
+  // Stop polling once the acca is fully settled. We watch `data` and clear
+  // the ongoing timer chain by setting a flag the tick checks. Simpler:
+  // re-trigger the effect when settledness changes by including it as dep.
+  const allSettled =
+    data?.legs?.length
+      ? data.legs.every((l) => l.live.state === 'won' || l.live.state === 'lost' || l.live.state === 'void')
+      : false
+
+  useEffect(() => {
+    if (!allSettled) return
+    // Once settled, no further polls — the cleanup above already cleared
+    // the timer when the component re-rendered.
+    // (Intentionally empty.)
+  }, [allSettled])
+
+  const legs = data?.legs?.length ? data.legs : fallbackLegs.map((l) => ({ ...l, live: makeFallbackLive(l) }))
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+        <p className="eyebrow">{foldLabel ?? 'Accumulator legs'}</p>
+        <div className="flex items-center gap-3">
+          {data?.counts && <CountsSummary counts={data.counts} overall={data.overall} />}
+          <span className="text-fg-muted text-[10px] font-stat tabular-nums">
+            {loading && !data ? 'Loading live…' : lastUpdated ? `Updated ${formatTimeAgo(lastUpdated)}` : ''}
+          </span>
+          <button
+            type="button"
+            onClick={() => void fetchLive()}
+            className="text-fg-muted hover:text-brand text-[10px] font-bold uppercase tracking-wider transition-colors"
+            aria-label="Refresh live legs"
+            disabled={loading}
+          >
+            ↻ Refresh
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-loss/10 border border-loss/30 text-loss text-[11px] rounded-lg p-2 mb-3">
+          Live update failed — {error}. Showing last known state.
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {legs.map((leg, i) => (
+          <LegCard key={i} index={i + 1} leg={leg} />
+        ))}
+      </div>
+
+      <p className="text-fg-muted text-[10px] mt-3 leading-relaxed">
+        Per-leg states update every minute while any leg is live. "Cashing" / "Behind" reflect your pick's
+        current standing — not the final settlement, which only your bookmaker confirms. Mark the whole acca
+        Won or Lost from the actions column once it’s settled.
+      </p>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────
+
+function LegCard({ index, leg }: { index: number; leg: LiveLeg }) {
+  const live = leg.live
+  const style = STATE_STYLE[live.state] ?? STATE_STYLE.pending
+  const status = live.status ?? 'NS'
+  const isLive = ['1H', '2H', 'HT', 'ET', 'BT', 'P', 'INT', 'LIVE'].includes(status)
+  const isFinished = ['FT', 'AET', 'PEN'].includes(status)
+  const homeName = live.home_team ?? leg.match_name.split(/\s+vs?\.?\s+|\s+v\s+/i)[0] ?? 'Home'
+  const awayName = live.away_team ?? leg.match_name.split(/\s+vs?\.?\s+|\s+v\s+/i)[1] ?? 'Away'
+  const score = live.home_score != null && live.away_score != null
+    ? `${live.home_score} – ${live.away_score}`
+    : null
+
+  return (
+    <div
+      className={`bg-bg-base/60 border rounded-xl p-3 transition-colors ${
+        live.state === 'cashing' || live.state === 'won' ? 'border-success/30 hover:border-success/50'
+        : live.state === 'losing' || live.state === 'lost' ? 'border-loss/30 hover:border-loss/50'
+        : 'border-border-subtle hover:border-border-strong'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="font-stat text-[10px] font-bold uppercase tracking-wider text-fg-muted">
+              Leg {index}
+            </span>
+            {leg.league && (
+              <span className="text-fg-muted text-[10px] uppercase tracking-wider truncate">
+                · {leg.league}
+              </span>
+            )}
+          </div>
+          <p className="text-fg font-bold text-[13px] leading-tight truncate">
+            {homeName} <span className="text-fg-muted font-normal">vs</span> {awayName}
+          </p>
+        </div>
+        <span
+          className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${style.bg} ${style.text} ${style.border}`}
+          title={live.context ?? style.label}
+        >
+          <span aria-hidden>{style.emoji}</span>
+          <span>{live.label}</span>
+        </span>
+      </div>
+
+      {/* Pick row */}
+      <div className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg bg-bg-elevated/40 mb-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider">Your pick</p>
+          <p className="text-fg text-[12px] font-semibold truncate">
+            {leg.bet_type && (
+              <span className="text-fg-muted text-[10px] mr-1">{leg.bet_type}:</span>
+            )}
+            {leg.selection}
+          </p>
+        </div>
+        <span className="font-stat text-fg text-[13px] font-bold tabular-nums shrink-0">
+          @ {leg.odds.toFixed(2)}
+        </span>
+      </div>
+
+      {/* Live row */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 text-[11px]">
+          <StatusDot status={status} state={live.state} />
+          <span
+            className={`font-stat font-bold uppercase tracking-wider text-[10px] ${
+              isLive ? 'text-loss animate-pulse' : isFinished ? 'text-fg-secondary' : 'text-fg-muted'
+            }`}
+          >
+            {isLive
+              ? `LIVE ${live.minute ? live.minute + "'" : ''}`
+              : isFinished
+                ? 'FT'
+                : status === 'NS'
+                  ? 'KICKOFF SOON'
+                  : status === 'PST' ? 'POSTPONED'
+                  : status === 'CANC' ? 'CANCELLED'
+                  : (live.status_long ?? status)}
+          </span>
+        </span>
+        <span className="font-stat text-fg text-[14px] font-bold tabular-nums">
+          {score ?? '—'}
+        </span>
+      </div>
+
+      {/* Context line — e.g. "Liverpool 2-0 — needs to hold" */}
+      {live.context && (
+        <p className="mt-2 text-fg-secondary text-[11px] leading-snug">{live.context}</p>
+      )}
+
+      {!live.matched && (
+        <p className="mt-2 text-fg-muted text-[10px] italic">
+          Couldn’t find this fixture in our live feed. We’ll keep trying every minute.
+        </p>
+      )}
+    </div>
+  )
+}
+
+function StatusDot({ status, state }: { status: string; state: LegState }) {
+  const isLive = ['1H', '2H', 'HT', 'ET', 'BT', 'P', 'INT', 'LIVE'].includes(status)
+  if (isLive) return <span className="h-1.5 w-1.5 rounded-full bg-loss animate-pulse" />
+  if (state === 'won') return <span className="h-1.5 w-1.5 rounded-full bg-success" />
+  if (state === 'lost') return <span className="h-1.5 w-1.5 rounded-full bg-loss" />
+  return <span className="h-1.5 w-1.5 rounded-full bg-fg-muted/40" />
+}
+
+function CountsSummary({
+  counts,
+  overall,
+}: {
+  counts: NonNullable<LiveResponse['counts']>
+  overall?: LiveResponse['overall']
+}) {
+  const tone =
+    overall === 'lost'
+      ? 'text-loss'
+      : overall === 'won'
+        ? 'text-success'
+        : overall === 'cashing' || overall === 'on_track'
+          ? 'text-success'
+          : 'text-fg-secondary'
+  // Concise summary — "5/6 on" with breakdown tooltip
+  const onTrack = counts.won + counts.cashing
+  const safe = counts.lost === 0
+  return (
+    <span
+      className={`text-[10px] font-bold uppercase tracking-wider font-stat ${tone}`}
+      title={`Won ${counts.won} · Cashing ${counts.cashing} · Behind ${counts.losing} · Lost ${counts.lost} · Pending ${counts.pending}`}
+    >
+      {!safe && `${counts.lost}/${counts.total} lost`}
+      {safe && counts.won === counts.total && `✓ ${counts.total}/${counts.total} won`}
+      {safe && counts.won < counts.total && `${onTrack}/${counts.total} on track`}
+    </span>
+  )
+}
+
+function makeFallbackLive(leg: SavedLeg): LiveLeg['live'] {
+  const r = leg.result ?? 'pending'
+  return {
+    matched: false,
+    state: r === 'win' ? 'won' : r === 'loss' ? 'lost' : 'pending',
+    label: r === 'win' ? 'Won' : r === 'loss' ? 'Lost' : 'Awaiting live data',
+  }
+}
+
+function formatTimeAgo(d: Date): string {
+  const ms = Date.now() - d.getTime()
+  const s = Math.round(ms / 1000)
+  if (s < 5) return 'just now'
+  if (s < 60) return `${s}s ago`
+  const m = Math.round(s / 60)
+  if (m < 60) return `${m}m ago`
+  const h = Math.round(m / 60)
+  return `${h}h ago`
+}

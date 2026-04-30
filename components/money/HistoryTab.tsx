@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import type { Currency } from './MoneyClient'
 import BetCalendar, { type CalendarBet } from './BetCalendar'
 import BetSlipScanner from './BetSlipScanner'
+import AccaLegsBreakdown from './AccaLegsBreakdown'
 
 /**
  * HistoryTab — editable history of every bet the user has logged.
@@ -865,8 +866,12 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
                       </tr>
                       {isAcca && isExpanded && accaLegs && (
                         <tr className="border-t border-border-subtle bg-bg-base/40">
-                          <td colSpan={10} className="px-3 lg:px-4 py-3">
-                            <AccaLegsBreakdown legs={accaLegs} />
+                          <td colSpan={10} className="px-3 lg:px-4 py-4">
+                            <AccaLegsBreakdown
+                              betId={r.id}
+                              fallbackLegs={accaLegs}
+                              foldLabel={r.bet_type ?? 'Accumulator legs'}
+                            />
                           </td>
                         </tr>
                       )}
@@ -1395,63 +1400,6 @@ function Td({
   className?: string
 }) {
   return <td className={`px-3 lg:px-4 py-3 ${className}`}>{children}</td>
-}
-
-function AccaLegsBreakdown({ legs }: { legs: AccaLeg[] }) {
-  return (
-    <div>
-      <p className="eyebrow mb-2">Accumulator legs</p>
-      <div className="overflow-x-auto -mx-1">
-        <table className="w-full text-[12px]">
-          <thead>
-            <tr className="text-fg-muted text-[10px] font-bold uppercase tracking-wider">
-              <th className="px-2 py-1.5 text-left w-6">#</th>
-              <th className="px-2 py-1.5 text-left">Match</th>
-              <th className="px-2 py-1.5 text-left">League</th>
-              <th className="px-2 py-1.5 text-left">Selection</th>
-              <th className="px-2 py-1.5 text-right">Odds</th>
-              <th className="px-2 py-1.5 text-right">Date</th>
-              <th className="px-2 py-1.5 text-right">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {legs.map((leg, i) => {
-              const r = leg.result ?? 'pending'
-              const tint = r === 'win' ? 'text-success' : r === 'loss' ? 'text-loss' : 'text-fg-muted'
-              return (
-                <tr key={i} className="border-t border-border-subtle/60">
-                  <td className="px-2 py-1.5 font-stat text-fg-muted">{i + 1}</td>
-                  <td className="px-2 py-1.5 text-fg font-semibold">{leg.match_name}</td>
-                  <td className="px-2 py-1.5 text-fg-secondary">{leg.league || '—'}</td>
-                  <td className="px-2 py-1.5 text-fg">
-                    <span className="block text-[10px] text-fg-muted">{leg.bet_type ?? ''}</span>
-                    <span>{leg.selection}</span>
-                  </td>
-                  <td className="px-2 py-1.5 font-stat text-fg text-right">
-                    {leg.odds ? leg.odds.toFixed(2) : '—'}
-                  </td>
-                  <td className="px-2 py-1.5 font-stat text-fg-secondary text-right whitespace-nowrap">
-                    {leg.match_date
-                      ? new Date(leg.match_date).toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: 'short',
-                        })
-                      : '—'}
-                  </td>
-                  <td className={`px-2 py-1.5 text-right text-[10px] font-bold uppercase tracking-wider ${tint}`}>
-                    {r === 'pending' ? 'Pending' : r === 'win' ? 'Won' : r === 'loss' ? 'Lost' : 'Void'}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-      <p className="text-fg-muted text-[10px] mt-2">
-        Per-leg results follow the overall accumulator. Mark the whole acca won or lost from the actions column to settle the slip.
-      </p>
-    </div>
-  )
 }
 
 function ResultPill({ result }: { result: BetRow['result'] }) {
