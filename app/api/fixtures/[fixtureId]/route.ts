@@ -45,7 +45,7 @@ export async function GET(
   const leagueId = fixture.league?.id
 
   // Fetch all detail data in parallel
-  const [injuries, h2h, homeForm, awayForm, homeSquad, awaySquad, predictions, matchStats, homeSeasonStats, awaySeasonStats] = await Promise.all([
+  const [injuries, h2h, homeForm, awayForm, homeSquad, awaySquad, predictions, matchStats, homeSeasonStats, awaySeasonStats, lineupsRaw, eventsRaw] = await Promise.all([
     apiFetch(`/injuries?fixture=${fixtureId}`),
     apiFetch(`/fixtures/headtohead?h2h=${homeTeamId}-${awayTeamId}&last=5`),
     apiFetch(`/fixtures?team=${homeTeamId}&league=${leagueId}&season=${season}&last=5&status=FT`),
@@ -56,7 +56,55 @@ export async function GET(
     apiFetch(`/fixtures/statistics?fixture=${fixtureId}`),
     apiFetch(`/teams/statistics?league=${leagueId}&season=${season}&team=${homeTeamId}`),
     apiFetch(`/teams/statistics?league=${leagueId}&season=${season}&team=${awayTeamId}`),
+    apiFetch(`/fixtures/lineups?fixture=${fixtureId}`),
+    apiFetch(`/fixtures/events?fixture=${fixtureId}`),
   ])
+
+  // Process lineups — split per team, normalise grid → coords for layout
+  function processLineup(raw: any) {
+    if (!raw) return null
+    return {
+      team_id: raw.team?.id ?? null,
+      team_name: raw.team?.name ?? null,
+      team_logo: raw.team?.logo ?? null,
+      formation: raw.formation ?? null,
+      coach: raw.coach?.name ?? null,
+      starting_xi: (raw.startXI ?? []).map((p: any) => ({
+        id: p.player?.id,
+        name: p.player?.name,
+        number: p.player?.number,
+        pos: p.player?.pos,
+        grid: p.player?.grid ?? null, // "row:col" e.g. "2:3"
+      })),
+      substitutes: (raw.substitutes ?? []).map((p: any) => ({
+        id: p.player?.id,
+        name: p.player?.name,
+        number: p.player?.number,
+        pos: p.player?.pos,
+      })),
+    }
+  }
+  const homeLineup = Array.isArray(lineupsRaw)
+    ? processLineup(lineupsRaw.find((l: any) => l?.team?.id === homeTeamId) ?? lineupsRaw[0])
+    : null
+  const awayLineup = Array.isArray(lineupsRaw)
+    ? processLineup(lineupsRaw.find((l: any) => l?.team?.id === awayTeamId) ?? lineupsRaw[1])
+    : null
+
+  // Process events — goals, cards, subs, VAR
+  const events = Array.isArray(eventsRaw)
+    ? eventsRaw.map((e: any) => ({
+        minute: e.time?.elapsed,
+        extra: e.time?.extra,
+        team_id: e.team?.id,
+        team_name: e.team?.name,
+        player: e.player?.name,
+        assist: e.assist?.name,
+        type: e.type, // Goal, Card, subst, Var
+        detail: e.detail, // Normal Goal, Yellow Card, etc
+        comments: e.comments,
+      }))
+    : []
 
   // Process injuries by team
   const homeInjuries: any[] = []
@@ -327,5 +375,8 @@ export async function GET(
     statistics,
     home_stats: homeStats,
     away_stats: awayStats,
+    home_lineup: homeLineup,
+    away_lineup: awayLineup,
+    events,
   })
 }

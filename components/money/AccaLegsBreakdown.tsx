@@ -1,6 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
+
+const FixtureDetailModal = dynamic(
+  () => import('@/components/fixtures/FixtureDetailModal'),
+  { ssr: false, loading: () => null }
+)
 
 /**
  * AccaLegsBreakdown — expandable per-leg detail for an accumulator bet.
@@ -98,6 +104,7 @@ export default function AccaLegsBreakdown({ betId, fallbackLegs, foldLabel }: Pr
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [openFixture, setOpenFixture] = useState<{ id: number; home: string; away: string } | null>(null)
   const inFlight = useRef(false)
 
   async function fetchLive() {
@@ -175,9 +182,27 @@ export default function AccaLegsBreakdown({ betId, fallbackLegs, foldLabel }: Pr
       {/* Vertical stack — one card per row so it reads as a list, not a grid. */}
       <div className="flex flex-col gap-2">
         {legs.map((leg, i) => (
-          <LegCard key={i} index={i + 1} leg={leg} />
+          <LegCard
+            key={i}
+            index={i + 1}
+            leg={leg}
+            onOpen={() => {
+              if (leg.live.fixture_id && leg.live.home_team && leg.live.away_team) {
+                setOpenFixture({ id: leg.live.fixture_id, home: leg.live.home_team, away: leg.live.away_team })
+              }
+            }}
+          />
         ))}
       </div>
+
+      {openFixture && (
+        <FixtureDetailModal
+          fixtureId={openFixture.id}
+          homeName={openFixture.home}
+          awayName={openFixture.away}
+          onClose={() => setOpenFixture(null)}
+        />
+      )}
 
       {/* Footer bar — orange status summary + last-updated + refresh */}
       <div className="mt-4 pt-3 border-t border-border-subtle flex flex-wrap items-center justify-between gap-3">
@@ -209,7 +234,7 @@ export default function AccaLegsBreakdown({ betId, fallbackLegs, foldLabel }: Pr
 
 // ─────────────────────────────────────────────────────────────────────
 
-function LegCard({ index, leg }: { index: number; leg: LiveLeg }) {
+function LegCard({ index, leg, onOpen }: { index: number; leg: LiveLeg; onOpen?: () => void }) {
   const live = leg.live
   const style = STATE_STYLE[live.state] ?? STATE_STYLE.pending
   const status = live.status ?? 'NS'
@@ -229,14 +254,20 @@ function LegCard({ index, leg }: { index: number; leg: LiveLeg }) {
         : status === 'PST' ? 'POSTPONED'
         : status === 'CANC' ? 'CANCELLED'
         : (live.status_long ?? status)
+  const canOpen = !!(live.fixture_id && onOpen)
 
   return (
     <div
-      className={`bg-bg-base/60 border rounded-xl p-4 transition-colors ${
+      onClick={canOpen ? onOpen : undefined}
+      role={canOpen ? 'button' : undefined}
+      tabIndex={canOpen ? 0 : undefined}
+      onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen!() } } : undefined}
+      title={canOpen ? 'Click for full match detail — lineups, stats, events, injuries' : undefined}
+      className={`bg-bg-base/60 border rounded-xl p-4 transition-all ${
         live.state === 'cashing' || live.state === 'won' ? 'border-success/30 hover:border-success/50'
         : live.state === 'losing' || live.state === 'lost' ? 'border-loss/30 hover:border-loss/50'
         : 'border-border-subtle hover:border-border-strong'
-      }`}
+      } ${canOpen ? 'cursor-pointer hover:bg-bg-base/80 hover:scale-[1.005]' : ''}`}
     >
       {/* HEADER ROW — leg index + match + state pill ─────────────── */}
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -319,6 +350,12 @@ function LegCard({ index, leg }: { index: number; leg: LiveLeg }) {
       {!live.matched && (
         <p className="mt-3 text-fg-muted text-[10px] italic">
           Couldn’t find this fixture in our live feed. We’ll keep trying every minute.
+        </p>
+      )}
+
+      {canOpen && (
+        <p className="mt-3 pt-2 border-t border-border-subtle/50 text-brand text-[10px] font-bold uppercase tracking-wider text-right">
+          View match detail →
         </p>
       )}
     </div>

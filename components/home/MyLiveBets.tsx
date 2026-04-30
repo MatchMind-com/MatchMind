@@ -24,6 +24,11 @@ const BetSlipScanner = dynamic(() => import('@/components/money/BetSlipScanner')
   loading: () => null,
 })
 
+const FixtureDetailModal = dynamic(() => import('@/components/fixtures/FixtureDetailModal'), {
+  ssr: false,
+  loading: () => null,
+})
+
 type LegState = 'pending' | 'cashing' | 'losing' | 'won' | 'lost' | 'tbd' | 'void'
 
 interface LiveSingle {
@@ -108,6 +113,7 @@ export default function MyLiveBets() {
   const [error, setError] = useState<string | null>(null)
   const [showScanner, setShowScanner] = useState(false)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [openFixture, setOpenFixture] = useState<{ id: number; home: string; away: string } | null>(null)
   const inFlight = useRef(false)
 
   async function fetchLive() {
@@ -251,6 +257,7 @@ export default function MyLiveBets() {
               bet={bet}
               expanded={expanded.has(bet.id)}
               onToggle={() => toggleExpand(bet.id)}
+              onOpenFixture={(id, home, away) => setOpenFixture({ id, home, away })}
             />
           ))}
         </div>
@@ -281,6 +288,16 @@ export default function MyLiveBets() {
           }}
         />
       )}
+
+      {/* Fixture detail modal */}
+      {openFixture && (
+        <FixtureDetailModal
+          fixtureId={openFixture.id}
+          homeName={openFixture.home}
+          awayName={openFixture.away}
+          onClose={() => setOpenFixture(null)}
+        />
+      )}
     </section>
   )
 }
@@ -291,18 +308,26 @@ function BetCard({
   bet,
   expanded,
   onToggle,
+  onOpenFixture,
 }: {
   bet: ActiveBet
   expanded: boolean
   onToggle: () => void
+  onOpenFixture: (id: number, home: string, away: string) => void
 }) {
   if (bet.is_acca && bet.legs && bet.counts) {
-    return <AccaBetCard bet={bet} expanded={expanded} onToggle={onToggle} />
+    return <AccaBetCard bet={bet} expanded={expanded} onToggle={onToggle} onOpenFixture={onOpenFixture} />
   }
-  return <SingleBetCard bet={bet} />
+  return <SingleBetCard bet={bet} onOpenFixture={onOpenFixture} />
 }
 
-function SingleBetCard({ bet }: { bet: ActiveBet }) {
+function SingleBetCard({
+  bet,
+  onOpenFixture,
+}: {
+  bet: ActiveBet
+  onOpenFixture: (id: number, home: string, away: string) => void
+}) {
   const live = bet.live ?? { matched: false, state: 'pending' as LegState, label: 'Awaiting' }
   const style = STATE_STYLE[live.state] ?? STATE_STYLE.pending
   const status = live.status ?? 'NS'
@@ -311,13 +336,22 @@ function SingleBetCard({ bet }: { bet: ActiveBet }) {
   const score = live.home_score != null && live.away_score != null
     ? `${live.home_score} – ${live.away_score}`
     : null
+  const canOpen = !!(live.fixture_id && live.home_team && live.away_team)
+  const open = () => { if (canOpen) onOpenFixture(live.fixture_id!, live.home_team!, live.away_team!) }
 
   return (
-    <div className={`bg-bg-base/60 border rounded-xl p-3.5 transition-colors ${
-      live.state === 'cashing' || live.state === 'won' ? 'border-success/30'
-      : live.state === 'losing' || live.state === 'lost' ? 'border-loss/30'
-      : 'border-border-subtle'
-    }`}>
+    <div
+      onClick={canOpen ? open : undefined}
+      role={canOpen ? 'button' : undefined}
+      tabIndex={canOpen ? 0 : undefined}
+      onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open() } } : undefined}
+      title={canOpen ? 'Click for full match detail' : undefined}
+      className={`bg-bg-base/60 border rounded-xl p-3.5 transition-all ${
+        live.state === 'cashing' || live.state === 'won' ? 'border-success/30 hover:border-success/50'
+        : live.state === 'losing' || live.state === 'lost' ? 'border-loss/30 hover:border-loss/50'
+        : 'border-border-subtle hover:border-border-strong'
+      } ${canOpen ? 'cursor-pointer hover:bg-bg-base/80' : ''}`}
+    >
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-0.5 flex-wrap">
@@ -384,10 +418,12 @@ function AccaBetCard({
   bet,
   expanded,
   onToggle,
+  onOpenFixture,
 }: {
   bet: ActiveBet
   expanded: boolean
   onToggle: () => void
+  onOpenFixture: (id: number, home: string, away: string) => void
 }) {
   const counts = bet.counts!
   const legs = bet.legs!
@@ -462,7 +498,16 @@ function AccaBetCard({
       {expanded && (
         <div className="px-3.5 pb-3.5 space-y-1.5">
           {legs.map((leg, i) => (
-            <LegMiniRow key={i} index={i + 1} leg={leg} />
+            <LegMiniRow
+              key={i}
+              index={i + 1}
+              leg={leg}
+              onOpen={() => {
+                if (leg.live.fixture_id && leg.live.home_team && leg.live.away_team) {
+                  onOpenFixture(leg.live.fixture_id, leg.live.home_team, leg.live.away_team)
+                }
+              }}
+            />
           ))}
           <a
             href="/dashboard/money"
@@ -476,7 +521,7 @@ function AccaBetCard({
   )
 }
 
-function LegMiniRow({ index, leg }: { index: number; leg: LiveLeg }) {
+function LegMiniRow({ index, leg, onOpen }: { index: number; leg: LiveLeg; onOpen?: () => void }) {
   const style = STATE_STYLE[leg.live.state] ?? STATE_STYLE.pending
   const status = leg.live.status ?? 'NS'
   const isLive = ['1H', '2H', 'HT', 'ET'].includes(status)
@@ -484,8 +529,16 @@ function LegMiniRow({ index, leg }: { index: number; leg: LiveLeg }) {
   const score = leg.live.home_score != null && leg.live.away_score != null
     ? `${leg.live.home_score}–${leg.live.away_score}`
     : null
+  const canOpen = !!(leg.live.fixture_id && onOpen)
   return (
-    <div className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-bg-elevated/30 text-[11px]">
+    <div
+      onClick={(e) => { e.stopPropagation(); if (canOpen) onOpen!() }}
+      role={canOpen ? 'button' : undefined}
+      tabIndex={canOpen ? 0 : undefined}
+      onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onOpen!() } } : undefined}
+      className={`flex items-center gap-2 py-1.5 px-2 rounded-lg bg-bg-elevated/30 text-[11px] ${canOpen ? 'cursor-pointer hover:bg-bg-elevated/60 transition-colors' : ''}`}
+      title={canOpen ? 'Open match detail' : undefined}
+    >
       <span className="font-stat text-[10px] text-fg-muted w-5 shrink-0">{index}</span>
       <span className="text-fg font-semibold min-w-0 truncate flex-1">
         {leg.match_name}
