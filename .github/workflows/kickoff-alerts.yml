@@ -1,0 +1,55 @@
+name: Kickoff alerts
+
+# Vercel Hobby caps Vercel-native crons at 1/day per path. GitHub Actions
+# is the cheapest reliable way to poll our /api/admin/post-kickoff-alerts
+# endpoint every few minutes during football hours so we can tweet "🔴
+# URGENT — KICKED OFF" the moment an AI pick goes live.
+#
+# Schedule: every 5 min between 11:00–22:30 UTC (covers basically every
+# major European kickoff — early-afternoon kickoffs from 12:00 UTC, prime
+# evening slots 18:00/19:00/20:00 UTC). GitHub Actions cron has no
+# guarantees inside a 5-min window — actual fires drift 5-15 min — but
+# that's fine for our use case (the endpoint dedupes, and we accept a
+# tweet at minute 6 instead of minute 1 occasionally).
+#
+# Manual trigger via the workflow_dispatch button works too if you want
+# to test or fire one-off scans.
+
+on:
+  schedule:
+    # Every 5 min from 11:00–22:55 UTC, every day
+    - cron: '*/5 11-22 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: kickoff-alerts
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Hit /api/admin/post-kickoff-alerts
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET secret not set on this repo"
+            exit 1
+          fi
+          set -e
+          response=$(curl -sS -X POST "https://www.matchmindcom.com/api/admin/post-kickoff-alerts" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d '{"minutesWindow":5}' \
+            --max-time 60 \
+            -w "\nHTTP_STATUS:%{http_code}")
+          status=$(echo "$response" | grep -o 'HTTP_STATUS:[0-9]*' | cut -d':' -f2)
+          body=$(echo "$response" | sed '/HTTP_STATUS:/d')
+          echo "Status: $status"
+          echo "Body: $body"
+          if [ "$status" -ge 400 ]; then
+            echo "::error::Endpoint returned $status"
+            exit 1
+          fi
