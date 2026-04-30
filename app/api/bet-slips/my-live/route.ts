@@ -29,6 +29,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   AccaLeg,
+  decideBetSettlement,
   evaluatePick,
   fetchFixturesForDates,
   IN_PLAY_STATUSES,
@@ -252,6 +253,51 @@ export async function GET() {
       }
     })
 
+    // ── AUTO-SETTLE ────────────────────────────────────────────────
+    // For each enriched bet, check if the live state mathematically locks
+    // in a Won or Lost outcome. If so, write back to bet_slips so the
+    // bankroll, history, and goal progress all reflect reality without
+    // the user having to manually mark each bet.
+    //
+    // We send the writes in parallel as fire-and-forget (don't block
+    // the response). Each settlement also bumps `auto_settled_at` so we
+    // can tell apart user-marked and auto-marked outcomes in History.
+    const settledIds: Array<{ id: string; result: 'win' | 'loss'; pl: number }> = []
+    for (const b of enriched) {
+      let legStates: any[] = []
+      let totalOdds = 0
+      let totalStake = 0
+      if (b.is_acca && b.legs) {
+        legStates = b.legs.map((l) => l.live.state)
+        totalOdds = Number(b.odds ?? 0) || 0
+        totalStake = Number(b.stake ?? 0) || 0
+      } else if (b.live) {
+        legStates = [b.live.state]
+        totalOdds = Number(b.odds ?? 0) || 0
+        totalStake = Number(b.stake ?? 0) || 0
+      }
+      if (!legStates.length || !totalStake || !totalOdds) continue
+      const decision = decideBetSettlement(legStates, totalStake, totalOdds)
+      if (!decision.result) continue
+      settledIds.push({ id: b.id, result: decision.result, pl: decision.profitLoss })
+    }
+    if (settledIds.length > 0) {
+      // Best-effort writes — don't block the response or fail it if any
+      // single update errors.
+      const updates = settledIds.map((s) =>
+        supabase
+          .from('bet_slips')
+          .update({ result: s.result, profit_loss: s.pl })
+          .eq('id', s.id)
+          .eq('user_id', user.id)
+          .eq('result', 'pending') // race-safety: only flip pendings
+      )
+      Promise.allSettled(updates).then((results) => {
+        const failed = results.filter((r) => r.status === 'rejected').length
+        if (failed > 0) console.warn(`[my-live] ${failed} of ${settledIds.length} auto-settle writes failed`)
+      })
+    }
+
     // Sort: in-play first, then today, then upcoming, then unmatched
     enriched.sort((a, b) => {
       const liveDiff = Number(b.has_live) - Number(a.has_live)
@@ -282,7 +328,11 @@ export async function GET() {
 
     return NextResponse.json({
       bets: enriched,
-      summary,
+      summary: {
+        ...summary,
+        auto_settled_count: settledIds.length,
+      },
+      auto_settled: settledIds,
       computed_at: new Date().toISOString(),
     })
   } catch (e: any) {

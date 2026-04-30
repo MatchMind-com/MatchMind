@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
 
 interface BestValue {
   label: string
@@ -42,7 +43,7 @@ function pickLabel(pred: Prediction): string {
   return pred.recommended_bet || 'Top pick'
 }
 
-function PickCard({ pred }: { pred: Prediction }) {
+function PickCard({ pred, onOpenDetail }: { pred: Prediction; onOpenDetail?: (id: number, home: string, away: string) => void }) {
   const [adding, setAdding] = useState(false)
   const [added, setAdded] = useState(false)
   const [error, setError] = useState(false)
@@ -145,20 +146,31 @@ function PickCard({ pred }: { pred: Prediction }) {
         </p>
       )}
 
-      {/* Add to bets */}
-      <button
-        onClick={addToBets}
-        disabled={adding || added}
-        className={`mt-auto text-xs font-semibold py-2 px-3 rounded-lg border transition-all duration-200 ${
-          added
-            ? 'bg-success/10 text-success border-success/30 cursor-default'
-            : error
-            ? 'bg-loss/10 text-loss border-loss/30'
-            : 'bg-bg-elevated hover:bg-brand hover:text-bg-base text-fg border-border-subtle hover:border-brand'
-        }`}
-      >
-        {added ? 'Added ✓' : error ? 'Try again' : adding ? 'Adding…' : 'Add to bets'}
-      </button>
+      {/* Action row — Add to bets + Detail trigger */}
+      <div className="mt-auto flex items-stretch gap-2">
+        <button
+          onClick={addToBets}
+          disabled={adding || added}
+          className={`flex-1 text-xs font-semibold py-2 px-3 rounded-lg border transition-all duration-200 ${
+            added
+              ? 'bg-success/10 text-success border-success/30 cursor-default'
+              : error
+              ? 'bg-loss/10 text-loss border-loss/30'
+              : 'bg-bg-elevated hover:bg-brand hover:text-bg-base text-fg border-border-subtle hover:border-brand'
+          }`}
+        >
+          {added ? 'Added ✓' : error ? 'Try again' : adding ? 'Adding…' : 'Add to bets'}
+        </button>
+        {onOpenDetail && pred.id && (
+          <button
+            onClick={() => onOpenDetail(pred.id, pred.home_team, pred.away_team)}
+            className="px-2.5 py-2 rounded-lg border border-border-subtle hover:border-brand text-fg-muted hover:text-brand text-xs font-bold uppercase tracking-wider transition-colors"
+            title="Open full match detail — lineups, stats, events"
+          >
+            📊
+          </button>
+        )}
+      </div>
     </article>
   )
 }
@@ -178,10 +190,18 @@ function PickSkeleton() {
 /* ────────────────────────────────────────────────────────────
  * TodaysEdgeCarousel — top 3 value picks from /api/predictions
  * ──────────────────────────────────────────────────────────── */
+// Lazy-load the fixture detail modal — only ships JS when a user opens
+// the "📊" button on a pick card.
+const FixtureDetailModal = dynamic(() => import('@/components/fixtures/FixtureDetailModal'), {
+  ssr: false,
+  loading: () => null,
+})
+
 export default function TodaysEdgeCarousel({ onPicksCount }: Props) {
   const [picks, setPicks] = useState<Prediction[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [openFixture, setOpenFixture] = useState<{ id: number; home: string; away: string } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -256,8 +276,23 @@ export default function TodaysEdgeCarousel({ onPicksCount }: Props) {
 
       {!loading && !error && picks && picks.length > 0 && (
         <div className="flex md:grid md:grid-cols-3 gap-4 overflow-x-auto snap-x snap-mandatory -mx-5 px-5 lg:-mx-0 lg:px-0 pb-2 scrollbar-hide">
-          {picks.map(p => <PickCard key={p.id} pred={p} />)}
+          {picks.map(p => (
+            <PickCard
+              key={p.id}
+              pred={p}
+              onOpenDetail={(id, home, away) => setOpenFixture({ id, home, away })}
+            />
+          ))}
         </div>
+      )}
+
+      {openFixture && (
+        <FixtureDetailModal
+          fixtureId={openFixture.id}
+          homeName={openFixture.home}
+          awayName={openFixture.away}
+          onClose={() => setOpenFixture(null)}
+        />
       )}
     </section>
   )

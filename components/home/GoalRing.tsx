@@ -99,9 +99,13 @@ export default function GoalRing({ onProgressChange }: { onProgressChange?: (pct
     load()
     const onFocus = () => load()
     window.addEventListener('focus', onFocus)
+    // Poll on the same cadence as BankrollHero so goal progress updates
+    // after the live evaluator auto-settles bets in the background.
+    const poll = setInterval(() => load(), 90_000)
     return () => {
       cancelled = true
       window.removeEventListener('focus', onFocus)
+      clearInterval(poll)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

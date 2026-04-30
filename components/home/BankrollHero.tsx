@@ -12,6 +12,15 @@ interface BankrollData {
   snapshots: Snapshot[]
   starting_bankroll: number
   current_bankroll: number
+  in_play_stake: number
+  in_play_potential: number
+  available: number
+  settled_pl: number
+  counts: {
+    pending: number
+    won: number
+    lost: number
+  }
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -121,6 +130,11 @@ export default function BankrollHero() {
             snapshots: json.snapshots ?? [],
             starting_bankroll: Number(json.starting_bankroll ?? 0),
             current_bankroll: Number(json.current_bankroll ?? 0),
+            in_play_stake: Number(json.in_play_stake ?? 0),
+            in_play_potential: Number(json.in_play_potential ?? 0),
+            available: Number(json.available ?? json.current_bankroll ?? 0),
+            settled_pl: Number(json.settled_pl ?? 0),
+            counts: json.counts ?? { pending: 0, won: 0, lost: 0 },
           })
         }
       } catch {
@@ -134,9 +148,15 @@ export default function BankrollHero() {
     // Refresh on tab focus
     const onFocus = () => load()
     window.addEventListener('focus', onFocus)
+
+    // Refresh every 90s — picks up auto-settled bet outcomes from the
+    // /api/bet-slips/my-live writes without the user having to refresh.
+    const poll = setInterval(() => load(), 90_000)
+
     return () => {
       cancelled = true
       window.removeEventListener('focus', onFocus)
+      clearInterval(poll)
     }
   }, [])
 
@@ -166,7 +186,7 @@ export default function BankrollHero() {
     )
   }
 
-  const { snapshots, starting_bankroll, current_bankroll } = data
+  const { snapshots, starting_bankroll, current_bankroll, in_play_stake, in_play_potential, available, counts } = data
 
   // 7-day P&L
   const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000
@@ -210,6 +230,35 @@ export default function BankrollHero() {
         </span>
         <span className="text-fg-muted text-xs">this week</span>
       </div>
+
+      {/* In-play exposure — only shown if user has pending bets. Lets the
+          user see at a glance: "out of my £100, £25 is locked in pending
+          bets and £75 is free to stake." Tracks live as bets auto-settle. */}
+      {in_play_stake > 0 && (
+        <div className="mt-4 grid grid-cols-3 gap-3 p-3 rounded-xl bg-bg-base/50 border border-border-subtle">
+          <div>
+            <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">In play</p>
+            <p className="font-stat text-loss text-base font-bold tabular-nums leading-tight">
+              {fmtMoney(in_play_stake)}
+            </p>
+            <p className="text-fg-muted text-[10px] mt-0.5">{counts.pending} bet{counts.pending === 1 ? '' : 's'}</p>
+          </div>
+          <div>
+            <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">Available</p>
+            <p className="font-stat text-fg text-base font-bold tabular-nums leading-tight">
+              {fmtMoney(available)}
+            </p>
+            <p className="text-fg-muted text-[10px] mt-0.5">free to stake</p>
+          </div>
+          <div>
+            <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">If all win</p>
+            <p className="font-stat text-success text-base font-bold tabular-nums leading-tight">
+              {fmtMoney(available + in_play_potential)}
+            </p>
+            <p className="text-fg-muted text-[10px] mt-0.5">+{fmtMoney(in_play_potential - in_play_stake)}</p>
+          </div>
+        </div>
+      )}
 
       {/* Sparkline */}
       <div className="mt-5">

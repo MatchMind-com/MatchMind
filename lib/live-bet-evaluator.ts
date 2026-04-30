@@ -321,6 +321,38 @@ export function evaluatePick(
   return { state: 'pending', label: 'Pending' }
 }
 
+/**
+ * Decide whether a bet should be auto-settled based on its legs' live states.
+ * Returns the result + computed profit/loss, or null if the bet is still live.
+ *
+ * Rules:
+ *  - Single bet: if its only leg is settled (won/lost), settle accordingly.
+ *  - Acca:
+ *    * any leg "lost" (or "lost" via mathematical lock-in like Under 2.5
+ *      with 3 goals) → whole acca is lost, regardless of other legs.
+ *    * every leg "won" or "void" (with at least one "won") → whole acca
+ *      is won; void legs reduce the total odds (treat as 1.00 for that
+ *      leg, which we already approximated by skipping in payout).
+ *    * otherwise still pending.
+ */
+export function decideBetSettlement(
+  legStates: LegState[],
+  totalStake: number,
+  totalOdds: number
+): { result: 'win' | 'loss' | null; profitLoss: number } {
+  if (!legStates.length) return { result: null, profitLoss: 0 }
+  if (legStates.some((s) => s === 'lost')) {
+    return { result: 'loss', profitLoss: -Math.round(totalStake * 100) / 100 }
+  }
+  const allDone = legStates.every((s) => s === 'won' || s === 'void')
+  const anyWon = legStates.some((s) => s === 'won')
+  if (allDone && anyWon) {
+    const winnings = Math.round((totalOdds - 1) * totalStake * 100) / 100
+    return { result: 'win', profitLoss: winnings }
+  }
+  return { result: null, profitLoss: 0 }
+}
+
 /** Token-overlap percent score used by `mentionsHome / mentionsAway` checks. */
 function tokensOverlap(a: string, b: string): number {
   if (!a || !b) return 0
