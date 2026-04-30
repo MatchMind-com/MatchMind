@@ -162,24 +162,9 @@ export default function AccaLegsBreakdown({ betId, fallbackLegs, foldLabel }: Pr
 
   return (
     <div>
-      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
-        <p className="eyebrow">{foldLabel ?? 'Accumulator legs'}</p>
-        <div className="flex items-center gap-3">
-          {data?.counts && <CountsSummary counts={data.counts} overall={data.overall} />}
-          <span className="text-fg-muted text-[10px] font-stat tabular-nums">
-            {loading && !data ? 'Loading live…' : lastUpdated ? `Updated ${formatTimeAgo(lastUpdated)}` : ''}
-          </span>
-          <button
-            type="button"
-            onClick={() => void fetchLive()}
-            className="text-fg-muted hover:text-brand text-[10px] font-bold uppercase tracking-wider transition-colors"
-            aria-label="Refresh live legs"
-            disabled={loading}
-          >
-            ↻ Refresh
-          </button>
-        </div>
-      </div>
+      {/* Compact title row only — counts/refresh moved to the BOTTOM bar
+          so the leg cards lead and the meta ends the section. */}
+      <p className="eyebrow mb-3">{foldLabel ?? 'Accumulator legs'}</p>
 
       {error && (
         <div className="bg-loss/10 border border-loss/30 text-loss text-[11px] rounded-lg p-2 mb-3">
@@ -187,13 +172,33 @@ export default function AccaLegsBreakdown({ betId, fallbackLegs, foldLabel }: Pr
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {/* Vertical stack — one card per row so it reads as a list, not a grid. */}
+      <div className="flex flex-col gap-2">
         {legs.map((leg, i) => (
           <LegCard key={i} index={i + 1} leg={leg} />
         ))}
       </div>
 
-      <p className="text-fg-muted text-[10px] mt-3 leading-relaxed">
+      {/* Footer bar — orange status summary + last-updated + refresh */}
+      <div className="mt-4 pt-3 border-t border-border-subtle flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          {data?.counts && <CountsSummary counts={data.counts} overall={data.overall} />}
+          <span className="text-fg-muted text-[10px] font-stat tabular-nums">
+            {loading && !data ? 'Loading live…' : lastUpdated ? `Updated ${formatTimeAgo(lastUpdated)}` : ''}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => void fetchLive()}
+          className="text-fg-muted hover:text-brand text-[10px] font-bold uppercase tracking-wider transition-colors"
+          aria-label="Refresh live legs"
+          disabled={loading}
+        >
+          ↻ Refresh
+        </button>
+      </div>
+
+      <p className="text-fg-muted text-[10px] mt-2 leading-relaxed">
         Per-leg states update every minute while any leg is live. "Cashing" / "Behind" reflect your pick's
         current standing — not the final settlement, which only your bookmaker confirms. Mark the whole acca
         Won or Lost from the actions column once it’s settled.
@@ -215,18 +220,28 @@ function LegCard({ index, leg }: { index: number; leg: LiveLeg }) {
   const score = live.home_score != null && live.away_score != null
     ? `${live.home_score} – ${live.away_score}`
     : null
+  const liveStatusLabel = isLive
+    ? `LIVE ${live.minute ? live.minute + "'" : ''}`
+    : isFinished
+      ? 'FT'
+      : status === 'NS'
+        ? 'KICKOFF SOON'
+        : status === 'PST' ? 'POSTPONED'
+        : status === 'CANC' ? 'CANCELLED'
+        : (live.status_long ?? status)
 
   return (
     <div
-      className={`bg-bg-base/60 border rounded-xl p-3 transition-colors ${
+      className={`bg-bg-base/60 border rounded-xl p-4 transition-colors ${
         live.state === 'cashing' || live.state === 'won' ? 'border-success/30 hover:border-success/50'
         : live.state === 'losing' || live.state === 'lost' ? 'border-loss/30 hover:border-loss/50'
         : 'border-border-subtle hover:border-border-strong'
       }`}
     >
-      <div className="flex items-start justify-between gap-3 mb-2">
+      {/* HEADER ROW — leg index + match + state pill ─────────────── */}
+      <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-0.5">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="font-stat text-[10px] font-bold uppercase tracking-wider text-fg-muted">
               Leg {index}
             </span>
@@ -235,13 +250,18 @@ function LegCard({ index, leg }: { index: number; leg: LiveLeg }) {
                 · {leg.league}
               </span>
             )}
+            {leg.match_date && (
+              <span className="text-fg-muted text-[10px] tracking-wider font-stat">
+                · {new Date(leg.match_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+              </span>
+            )}
           </div>
-          <p className="text-fg font-bold text-[13px] leading-tight truncate">
+          <p className="text-fg font-bold text-[15px] leading-tight">
             {homeName} <span className="text-fg-muted font-normal">vs</span> {awayName}
           </p>
         </div>
         <span
-          className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${style.bg} ${style.text} ${style.border}`}
+          className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${style.bg} ${style.text} ${style.border}`}
           title={live.context ?? style.label}
         >
           <span aria-hidden>{style.emoji}</span>
@@ -249,54 +269,55 @@ function LegCard({ index, leg }: { index: number; leg: LiveLeg }) {
         </span>
       </div>
 
-      {/* Pick row */}
-      <div className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg bg-bg-elevated/40 mb-2">
-        <div className="min-w-0 flex-1">
-          <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider">Your pick</p>
-          <p className="text-fg text-[12px] font-semibold truncate">
+      {/* MAIN GRID — pick / odds / live status / score in 4 columns
+           on desktop, stacking nicely on mobile ─────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] sm:items-center gap-3 sm:gap-4 py-2.5 px-3 rounded-lg bg-bg-elevated/40">
+        <div className="min-w-0">
+          <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">Your pick</p>
+          <p className="text-fg text-[13px] font-semibold leading-tight">
             {leg.bet_type && (
-              <span className="text-fg-muted text-[10px] mr-1">{leg.bet_type}:</span>
+              <span className="text-fg-muted text-[10px] block mb-0.5">{leg.bet_type}</span>
             )}
             {leg.selection}
           </p>
         </div>
-        <span className="font-stat text-fg text-[13px] font-bold tabular-nums shrink-0">
-          @ {leg.odds.toFixed(2)}
-        </span>
-      </div>
 
-      {/* Live row */}
-      <div className="flex items-center justify-between gap-2">
-        <span className="flex items-center gap-1.5 text-[11px]">
-          <StatusDot status={status} state={live.state} />
-          <span
-            className={`font-stat font-bold uppercase tracking-wider text-[10px] ${
-              isLive ? 'text-loss animate-pulse' : isFinished ? 'text-fg-secondary' : 'text-fg-muted'
-            }`}
-          >
-            {isLive
-              ? `LIVE ${live.minute ? live.minute + "'" : ''}`
-              : isFinished
-                ? 'FT'
-                : status === 'NS'
-                  ? 'KICKOFF SOON'
-                  : status === 'PST' ? 'POSTPONED'
-                  : status === 'CANC' ? 'CANCELLED'
-                  : (live.status_long ?? status)}
+        <div className="text-left sm:text-right">
+          <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">Odds</p>
+          <p className="font-stat text-fg text-[14px] font-bold tabular-nums">
+            @ {leg.odds.toFixed(2)}
+          </p>
+        </div>
+
+        <div className="text-left sm:text-right">
+          <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">Status</p>
+          <span className="flex items-center gap-1.5 sm:justify-end">
+            <StatusDot status={status} state={live.state} />
+            <span
+              className={`font-stat font-bold uppercase tracking-wider text-[11px] ${
+                isLive ? 'text-loss animate-pulse' : isFinished ? 'text-fg-secondary' : 'text-fg-muted'
+              }`}
+            >
+              {liveStatusLabel}
+            </span>
           </span>
-        </span>
-        <span className="font-stat text-fg text-[14px] font-bold tabular-nums">
-          {score ?? '—'}
-        </span>
+        </div>
+
+        <div className="text-left sm:text-right">
+          <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">Score</p>
+          <p className="font-stat text-fg text-[15px] font-bold tabular-nums">
+            {score ?? '—'}
+          </p>
+        </div>
       </div>
 
       {/* Context line — e.g. "Liverpool 2-0 — needs to hold" */}
       {live.context && (
-        <p className="mt-2 text-fg-secondary text-[11px] leading-snug">{live.context}</p>
+        <p className="mt-3 text-fg-secondary text-[12px] leading-snug">{live.context}</p>
       )}
 
       {!live.matched && (
-        <p className="mt-2 text-fg-muted text-[10px] italic">
+        <p className="mt-3 text-fg-muted text-[10px] italic">
           Couldn’t find this fixture in our live feed. We’ll keep trying every minute.
         </p>
       )}
