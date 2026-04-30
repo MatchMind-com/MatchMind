@@ -258,3 +258,74 @@ export async function getSofaScoreLiveStats(
   if (id === null) return emptyStats(null)
   return getSofaScoreStats(id)
 }
+
+// ── Lineups ──────────────────────────────────────────────────────────
+//
+// SofaScore covers lineups for nearly every league API-Football misses —
+// notably Saudi Pro League, J1, Liga MX, Eredivisie reserves, etc.
+// Used as a fallback in /api/fixtures/[fixtureId] when API-Football
+// returns no lineup data.
+
+export type SofaScorePlayer = {
+  id: number
+  name: string
+  number: number | null
+  pos: string | null
+  rating?: number | null
+}
+
+export type SofaScoreLineup = {
+  team_name: string | null
+  formation: string | null
+  coach: string | null
+  starting_xi: SofaScorePlayer[]
+  substitutes: SofaScorePlayer[]
+}
+
+function processSofaSide(side: any, teamName: string | null): SofaScoreLineup | null {
+  if (!side) return null
+  const players: any[] = Array.isArray(side.players) ? side.players : []
+  const startingXI: SofaScorePlayer[] = []
+  const substitutes: SofaScorePlayer[] = []
+  for (const p of players) {
+    const player: SofaScorePlayer = {
+      id: Number(p?.player?.id ?? 0),
+      name: String(p?.player?.name ?? p?.player?.shortName ?? '—'),
+      number: typeof p?.shirtNumber === 'number' ? p.shirtNumber : (typeof p?.player?.shirtNumber === 'number' ? p.player.shirtNumber : null),
+      pos: p?.position ?? p?.player?.position ?? null,
+      rating: typeof p?.statistics?.rating === 'number' ? p.statistics.rating : null,
+    }
+    if (p?.substitute) substitutes.push(player)
+    else startingXI.push(player)
+  }
+  return {
+    team_name: teamName,
+    formation: side?.formation ?? null,
+    coach: side?.coach?.name ?? null,
+    starting_xi: startingXI,
+    substitutes,
+  }
+}
+
+export async function getSofaScoreLineups(
+  matchId: number,
+  homeName?: string,
+  awayName?: string,
+): Promise<{ home: SofaScoreLineup | null; away: SofaScoreLineup | null }> {
+  const json = await safeFetch(`${BASE}/event/${matchId}/lineups`)
+  if (!json) return { home: null, away: null }
+  return {
+    home: processSofaSide(json.home, homeName ?? null),
+    away: processSofaSide(json.away, awayName ?? null),
+  }
+}
+
+export async function getSofaScoreLineupsForMatch(
+  homeTeam: string,
+  awayTeam: string,
+): Promise<{ home: SofaScoreLineup | null; away: SofaScoreLineup | null; matchId: number | null }> {
+  const id = await findSofaScoreMatchId(homeTeam, awayTeam)
+  if (id === null) return { home: null, away: null, matchId: null }
+  const lineups = await getSofaScoreLineups(id, homeTeam, awayTeam)
+  return { ...lineups, matchId: id }
+}

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getSofaScoreLiveStats, type SofaScoreStats } from '@/lib/sofascore'
+import {
+  getSofaScoreLineupsForMatch,
+  getSofaScoreLiveStats,
+  type SofaScoreStats,
+} from '@/lib/sofascore'
 
 const API_KEY = process.env.API_FOOTBALL_KEY!
 const BASE = 'https://v3.football.api-sports.io'
@@ -84,12 +88,50 @@ export async function GET(
       })),
     }
   }
-  const homeLineup = Array.isArray(lineupsRaw)
+  let homeLineup = Array.isArray(lineupsRaw)
     ? processLineup(lineupsRaw.find((l: any) => l?.team?.id === homeTeamId) ?? lineupsRaw[0])
     : null
-  const awayLineup = Array.isArray(lineupsRaw)
+  let awayLineup = Array.isArray(lineupsRaw)
     ? processLineup(lineupsRaw.find((l: any) => l?.team?.id === awayTeamId) ?? lineupsRaw[1])
     : null
+
+  // SofaScore lineup fallback — API-Football's lineup coverage is patchy
+  // for lower-tier leagues (Saudi Pro, J1, MLS, Liga MX, etc.). If we're
+  // missing a lineup AND the match is close to kickoff or already live,
+  // try SofaScore which covers ~all leagues.
+  const fxStatusForLineup = fixture.fixture?.status?.short
+  const isLiveOrKickingOff = fxStatusForLineup &&
+    !['NS', 'TBD', 'PST', 'CANC', 'ABD'].includes(fxStatusForLineup)
+  // For NS, only attempt if kickoff is within ~2 hours (lineups land ~1h before).
+  const kickoffMs = fixture.fixture?.date ? new Date(fixture.fixture.date).getTime() : null
+  const minsToKickoff = kickoffMs ? Math.round((kickoffMs - Date.now()) / 60_000) : null
+  const lineupsExpected =
+    isLiveOrKickingOff || (minsToKickoff != null && minsToKickoff < 120 && minsToKickoff > -240)
+  const homeName = fixture.teams?.home?.name
+  const awayName = fixture.teams?.away?.name
+  if ((!homeLineup || !awayLineup) && lineupsExpected && homeName && awayName) {
+    try {
+      const sofa = await getSofaScoreLineupsForMatch(homeName, awayName)
+      const toCommonShape = (l: any, teamId: number | null, teamName: string | null) => l ? ({
+        team_id: teamId,
+        team_name: teamName,
+        team_logo: null,
+        formation: l.formation,
+        coach: l.coach,
+        starting_xi: l.starting_xi.map((p: any) => ({
+          id: p.id, name: p.name, number: p.number, pos: p.pos, grid: null,
+        })),
+        substitutes: l.substitutes.map((p: any) => ({
+          id: p.id, name: p.name, number: p.number, pos: p.pos,
+        })),
+      }) : null
+      if (!homeLineup && sofa.home) homeLineup = toCommonShape(sofa.home, homeTeamId, homeName)
+      if (!awayLineup && sofa.away) awayLineup = toCommonShape(sofa.away, awayTeamId, awayName)
+    } catch (e) {
+      // Best-effort — don't fail the route if SofaScore is down.
+      console.warn('[fixture-detail] SofaScore lineup fallback failed:', e)
+    }
+  }
 
   // Process events — goals, cards, subs, VAR
   const events = Array.isArray(eventsRaw)
@@ -205,8 +247,7 @@ export async function GET(
   // the match is in a state where stats should exist (live or finished).
   const fxStatus = fixture.fixture?.status?.short
   const isPlayedOrLive = fxStatus && !['NS', 'TBD', 'PST', 'CANC', 'ABD', 'AWD', 'WO'].includes(fxStatus)
-  const homeName = fixture.teams?.home?.name
-  const awayName = fixture.teams?.away?.name
+  // homeName / awayName already declared above for the lineup fallback
   const needsFallback =
     isPlayedOrLive &&
     homeName &&
