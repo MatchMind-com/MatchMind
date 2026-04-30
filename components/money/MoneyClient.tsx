@@ -138,6 +138,16 @@ export default function MoneyClient({
 
   useEffect(() => {
     void reloadSnapshots()
+    // Poll so the headline / "current bankroll" picks up auto-settle
+    // writes from /api/bet-slips/my-live (which can flip a pending bet
+    // into win/loss in the background and shift the bankroll).
+    const poll = setInterval(() => void reloadSnapshots(), 90_000)
+    const onFocus = () => void reloadSnapshots()
+    window.addEventListener('focus', onFocus)
+    return () => {
+      clearInterval(poll)
+      window.removeEventListener('focus', onFocus)
+    }
   }, [reloadSnapshots])
 
   // ── Active goal count — fetched once for the header summary ──

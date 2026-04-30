@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Currency } from './MoneyClient'
 
 /**
@@ -85,6 +85,46 @@ export default function BankrollTab({
   const [depositing, setDepositing] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // ── Live exposure (in-play stake / available / potential) ──────────
+  // Fetches /api/bankroll directly so the same in-play breakdown that
+  // BankrollHero shows on the Home page is mirrored here. Polling on a
+  // 90s cadence picks up auto-settle writes from /api/bet-slips/my-live
+  // without the user having to refresh.
+  const [exposure, setExposure] = useState<{
+    in_play_stake: number
+    in_play_potential: number
+    available: number
+    counts: { pending: number; won: number; lost: number }
+  } | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await fetch('/api/bankroll', { cache: 'no-store' })
+        if (!res.ok) return
+        const json = await res.json()
+        if (cancelled) return
+        setExposure({
+          in_play_stake: Number(json.in_play_stake ?? 0),
+          in_play_potential: Number(json.in_play_potential ?? 0),
+          available: Number(json.available ?? 0),
+          counts: json.counts ?? { pending: 0, won: 0, lost: 0 },
+        })
+      } catch {
+        // best-effort — leave exposure null
+      }
+    }
+    void load()
+    const onFocus = () => void load()
+    window.addEventListener('focus', onFocus)
+    const poll = setInterval(() => void load(), 90_000)
+    return () => {
+      cancelled = true
+      window.removeEventListener('focus', onFocus)
+      clearInterval(poll)
+    }
+  }, [])
 
   // ── Derived P&L deltas ──────────────────────────────────────────────
   const sevenDay = useMemo(() => deltaSince(snapshots, 7, currentBankroll), [snapshots, currentBankroll])
@@ -203,6 +243,39 @@ export default function BankrollTab({
             <DeltaLine label="30d" value={thirtyDay} currency={currency} />
             <DeltaLine label="all-time" value={allTime} currency={currency} />
           </div>
+
+          {/* Live exposure — same 3-cell strip as BankrollHero on the Home
+              page. Only shown when the user actually has pending bets so
+              the card stays clean for users who haven't started yet. */}
+          {exposure && exposure.in_play_stake > 0 && (
+            <div className="mt-5 grid grid-cols-3 gap-3 p-3 rounded-xl bg-bg-base/50 border border-border-subtle">
+              <div>
+                <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">In play</p>
+                <p className="font-stat text-loss text-base font-bold tabular-nums leading-tight">
+                  {currency}{exposure.in_play_stake.toFixed(2)}
+                </p>
+                <p className="text-fg-muted text-[10px] mt-0.5">
+                  {exposure.counts.pending} bet{exposure.counts.pending === 1 ? '' : 's'}
+                </p>
+              </div>
+              <div>
+                <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">Available</p>
+                <p className="font-stat text-fg text-base font-bold tabular-nums leading-tight">
+                  {currency}{exposure.available.toFixed(2)}
+                </p>
+                <p className="text-fg-muted text-[10px] mt-0.5">free to stake</p>
+              </div>
+              <div>
+                <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">If all win</p>
+                <p className="font-stat text-success text-base font-bold tabular-nums leading-tight">
+                  {currency}{(exposure.available + exposure.in_play_potential).toFixed(2)}
+                </p>
+                <p className="text-fg-muted text-[10px] mt-0.5">
+                  +{currency}{(exposure.in_play_potential - exposure.in_play_stake).toFixed(2)}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* TRAJECTORY CHART */}
