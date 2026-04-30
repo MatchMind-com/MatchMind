@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import type { Currency } from './MoneyClient'
 import BetCalendar, { type CalendarBet } from './BetCalendar'
+import BetSlipScanner from './BetSlipScanner'
 
 /**
  * HistoryTab — editable history of every bet the user has logged.
@@ -74,6 +75,42 @@ function computePL(result: BetRow['result'], odds: number, stake: number): numbe
   return 0
 }
 
+interface AccaLeg {
+  match_name: string
+  selection: string
+  odds: number
+  league?: string | null
+  match_date?: string | null
+  bet_type?: string | null
+  result?: 'win' | 'loss' | 'void' | 'pending'
+}
+
+/** Parse the JSON acca-legs payload that BetSlipScanner stuffs into `notes`. */
+function parseAccaLegs(notes: string | null | undefined): AccaLeg[] | null {
+  if (!notes) return null
+  // The payload may be the entire notes string, or a multi-line note where
+  // the user prepended free text ahead of the JSON object.
+  const lines = notes.split('\n')
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) continue
+    try {
+      const obj = JSON.parse(trimmed)
+      if (obj?.kind === 'acca_legs_v1' && Array.isArray(obj.legs) && obj.legs.length > 0) {
+        return obj.legs as AccaLeg[]
+      }
+    } catch {
+      // ignore — keep scanning
+    }
+  }
+  return null
+}
+
+function isAccaBet(bet: { bet_type: string | null; notes: string | null }): boolean {
+  if (!bet.bet_type) return false
+  return /^accumulator/i.test(bet.bet_type) && parseAccaLegs(bet.notes) !== null
+}
+
 export default function HistoryTab({ currency, initialLeague, initialBetType }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -84,7 +121,9 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showScanModal, setShowScanModal] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
 
   // Filters — when arriving from Stats with cross-link params, widen the
@@ -559,6 +598,15 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
 
           <button
             type="button"
+            onClick={() => setShowScanModal(true)}
+            className="px-4 py-2 bg-bg-base hover:bg-bg-elevated border border-brand/40 hover:border-brand text-brand text-xs font-bold uppercase tracking-wider rounded-lg transition-colors inline-flex items-center gap-1.5"
+            title="Photograph a betting-shop slip and add it to your tracked history"
+          >
+            <span aria-hidden>📷</span> Scan slip
+          </button>
+
+          <button
+            type="button"
             onClick={() => setShowAddModal(true)}
             className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors"
           >
@@ -618,19 +666,28 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
           <div className="p-10 text-center">
             <p className="text-fg font-bold text-base mb-2">No bets yet</p>
             <p className="text-fg-muted text-sm mb-4">
-              Add your first manual bet, or log one from the{' '}
+              Snap a photo of your shop slip, add a manual bet, or log one from the{' '}
               <a href="/dashboard/picks" className="text-brand hover:underline">
                 Picks
               </a>{' '}
               page.
             </p>
-            <button
-              type="button"
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors"
-            >
-              + Add manual bet
-            </button>
+            <div className="inline-flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowScanModal(true)}
+                className="px-4 py-2 bg-bg-base hover:bg-bg-elevated border border-brand/40 hover:border-brand text-brand text-xs font-bold uppercase tracking-wider rounded-lg transition-colors inline-flex items-center gap-1.5"
+              >
+                <span aria-hidden>📷</span> Scan slip
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(true)}
+                className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors"
+              >
+                + Add manual bet
+              </button>
+            </div>
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-10 text-center text-fg-muted text-sm">
@@ -680,6 +737,9 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
                   const isSelected = selected.has(r.id)
                   const isEditing = editingId === r.id
                   const isBusy = busyId === r.id
+                  const accaLegs = isAccaBet(r) ? parseAccaLegs(r.notes) : null
+                  const isAcca = accaLegs !== null
+                  const isExpanded = expandedId === r.id
 
                   return (
                     <Fragment key={r.id}>
@@ -707,7 +767,28 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
                             : '—'}
                         </Td>
                         <Td className="text-fg font-semibold whitespace-nowrap">
-                          {r.match_name}
+                          {isAcca ? (
+                            <button
+                              type="button"
+                              onClick={() => setExpandedId(isExpanded ? null : r.id)}
+                              className="inline-flex items-center gap-1.5 hover:text-brand transition-colors text-left"
+                              title={isExpanded ? 'Hide legs' : 'Show legs'}
+                            >
+                              <span
+                                className={`text-fg-muted text-[10px] leading-none transition-transform inline-block ${
+                                  isExpanded ? 'rotate-90' : ''
+                                }`}
+                              >
+                                ▶
+                              </span>
+                              <span>{r.match_name}</span>
+                              <span className="font-stat text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border border-brand/40 bg-brand/10 text-brand">
+                                {accaLegs!.length} legs
+                              </span>
+                            </button>
+                          ) : (
+                            r.match_name
+                          )}
                         </Td>
                         <Td className="text-fg-secondary text-xs whitespace-nowrap">
                           {r.league ?? '—'}
@@ -782,6 +863,13 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
                           </div>
                         </Td>
                       </tr>
+                      {isAcca && isExpanded && accaLegs && (
+                        <tr className="border-t border-border-subtle bg-bg-base/40">
+                          <td colSpan={10} className="px-3 lg:px-4 py-3">
+                            <AccaLegsBreakdown legs={accaLegs} />
+                          </td>
+                        </tr>
+                      )}
                       {isEditing && (
                         <tr className={`border-t border-border-subtle bg-bg-elevated/60`}>
                           <td colSpan={10} className="p-4">
@@ -829,6 +917,17 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
           onClose={() => setShowAddModal(false)}
           onSaved={async () => {
             setShowAddModal(false)
+            await reload()
+          }}
+        />
+      )}
+
+      {/* SCAN-SLIP MODAL */}
+      {showScanModal && (
+        <BetSlipScanner
+          onClose={() => setShowScanModal(false)}
+          onSaved={async () => {
+            setShowScanModal(false)
             await reload()
           }}
         />
@@ -1296,6 +1395,63 @@ function Td({
   className?: string
 }) {
   return <td className={`px-3 lg:px-4 py-3 ${className}`}>{children}</td>
+}
+
+function AccaLegsBreakdown({ legs }: { legs: AccaLeg[] }) {
+  return (
+    <div>
+      <p className="eyebrow mb-2">Accumulator legs</p>
+      <div className="overflow-x-auto -mx-1">
+        <table className="w-full text-[12px]">
+          <thead>
+            <tr className="text-fg-muted text-[10px] font-bold uppercase tracking-wider">
+              <th className="px-2 py-1.5 text-left w-6">#</th>
+              <th className="px-2 py-1.5 text-left">Match</th>
+              <th className="px-2 py-1.5 text-left">League</th>
+              <th className="px-2 py-1.5 text-left">Selection</th>
+              <th className="px-2 py-1.5 text-right">Odds</th>
+              <th className="px-2 py-1.5 text-right">Date</th>
+              <th className="px-2 py-1.5 text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {legs.map((leg, i) => {
+              const r = leg.result ?? 'pending'
+              const tint = r === 'win' ? 'text-success' : r === 'loss' ? 'text-loss' : 'text-fg-muted'
+              return (
+                <tr key={i} className="border-t border-border-subtle/60">
+                  <td className="px-2 py-1.5 font-stat text-fg-muted">{i + 1}</td>
+                  <td className="px-2 py-1.5 text-fg font-semibold">{leg.match_name}</td>
+                  <td className="px-2 py-1.5 text-fg-secondary">{leg.league || '—'}</td>
+                  <td className="px-2 py-1.5 text-fg">
+                    <span className="block text-[10px] text-fg-muted">{leg.bet_type ?? ''}</span>
+                    <span>{leg.selection}</span>
+                  </td>
+                  <td className="px-2 py-1.5 font-stat text-fg text-right">
+                    {leg.odds ? leg.odds.toFixed(2) : '—'}
+                  </td>
+                  <td className="px-2 py-1.5 font-stat text-fg-secondary text-right whitespace-nowrap">
+                    {leg.match_date
+                      ? new Date(leg.match_date).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                        })
+                      : '—'}
+                  </td>
+                  <td className={`px-2 py-1.5 text-right text-[10px] font-bold uppercase tracking-wider ${tint}`}>
+                    {r === 'pending' ? 'Pending' : r === 'win' ? 'Won' : r === 'loss' ? 'Lost' : 'Void'}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-fg-muted text-[10px] mt-2">
+        Per-leg results follow the overall accumulator. Mark the whole acca won or lost from the actions column to settle the slip.
+      </p>
+    </div>
+  )
 }
 
 function ResultPill({ result }: { result: BetRow['result'] }) {
