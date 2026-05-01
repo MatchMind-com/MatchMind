@@ -16,32 +16,41 @@
  *   }
  *
  * Required env vars (set in Vercel):
- *   INSTAGRAM_ACCESS_TOKEN  long-lived token from Meta Graph API
- *                           (Settings → Instagram → Access Tokens)
- *   INSTAGRAM_USER_ID       numeric IG Business Account ID
+ *   INSTAGRAM_ACCESS_TOKEN  long-lived token (60d) from IG Business Login
+ *   INSTAGRAM_USER_ID       app-scoped IG user id (from /me, NOT the legacy
+ *                           IG Business Account id)
  *
- * To obtain those:
+ * To obtain those (via the new Instagram Business Login flow — Apr 2026+):
  *   1. Convert IG account → Business or Creator
- *   2. Connect the IG account to a Facebook Page
- *   3. Create a Meta App at https://developers.facebook.com (type: Business)
- *   4. Add Instagram Graph API product to the app
- *   5. Use Graph API Explorer to generate a Page Access Token with the
- *      following scopes: instagram_basic, instagram_content_publish,
- *      pages_show_list, pages_read_engagement
- *   6. Exchange short-lived → long-lived token (60 days). Store in env.
- *   7. Get IG_USER_ID via:
- *      GET /me/accounts?access_token=...    → Page id
- *      GET /{page-id}?fields=instagram_business_account&access_token=...
+ *   2. developers.facebook.com → Create App (type: Business) → add Instagram
+ *      product → use case "Access the Instagram API with Instagram Login"
+ *   3. App → Roles → Instagram Testers → invite @your-handle, accept invite
+ *      from the IG mobile app (Settings → Apps and websites → Tester
+ *      invitations)
+ *   4. App → Use Cases → API Setup → Add Account → run OAuth flow → Generate
+ *      access token. Confirm the user ID via:
+ *      GET https://graph.instagram.com/v23.0/me?fields=id,username&access_token=...
+ *      The `id` field is what goes into INSTAGRAM_USER_ID.
+ *   5. Exchange short-lived (1h) → long-lived (60d):
+ *      GET https://graph.instagram.com/access_token
+ *        ?grant_type=ig_exchange_token
+ *        &client_secret={instagram-app-secret}
+ *        &access_token={short-lived}
+ *      Refresh with /refresh_access_token before day 60.
  *
- * Posting is a 2-step Graph API flow:
- *   1. POST /v18.0/{ig-user-id}/media   — creates a media container
- *   2. POST /v18.0/{ig-user-id}/media_publish — publishes that container
+ * Posting is a 2-step API flow on graph.instagram.com:
+ *   1. POST /{ig-user-id}/media          — creates a media container
+ *   2. POST /{ig-user-id}/media_publish  — publishes that container
  */
 
 import { NextResponse } from 'next/server'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
-const GRAPH_BASE = 'https://graph.facebook.com/v18.0'
+// New Instagram Business Login API (replaces the legacy Facebook Login flow).
+// Endpoints live on graph.instagram.com — NOT graph.facebook.com.
+// Token + IG_USER_ID come from the IG dev portal token generator after the
+// tester role is granted to @match.mindai. See docs/social-automation.md.
+const GRAPH_BASE = 'https://graph.instagram.com/v23.0'
 
 interface Pick {
   id?: number
