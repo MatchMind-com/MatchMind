@@ -116,6 +116,10 @@ export default function MoneyClient({
   const [snapshots, setSnapshots] = useState<Snapshot[]>([])
   const [snapshotsLoaded, setSnapshotsLoaded] = useState(false)
   const [currentBankroll, setCurrentBankroll] = useState(initialBankroll)
+  // Wallet (banked, free to stake) = current_bankroll − stakes locked in
+  // pending bets. Used as the headline figure so it actually decreases when
+  // the user places a bet, matching standard betting-app behaviour.
+  const [availableBankroll, setAvailableBankroll] = useState(initialBankroll)
 
   const reloadSnapshots = useCallback(async () => {
     try {
@@ -125,9 +129,12 @@ export default function MoneyClient({
         snapshots: Snapshot[]
         starting_bankroll: number
         current_bankroll: number
+        available: number
       }
       setSnapshots(data.snapshots ?? [])
-      setCurrentBankroll(Number(data.current_bankroll ?? initialBankroll))
+      const total = Number(data.current_bankroll ?? initialBankroll)
+      setCurrentBankroll(total)
+      setAvailableBankroll(Number(data.available ?? total))
     } catch {
       // Silent — fall back to SSR-bootstrapped values.
     } finally {
@@ -175,7 +182,7 @@ export default function MoneyClient({
   return (
     <main className="max-w-5xl mx-auto px-5 lg:px-8 py-6 lg:py-10 space-y-6 lg:space-y-8">
       <MoneyHeader
-        currentBankroll={currentBankroll}
+        currentBankroll={availableBankroll}
         currency={currency}
         growthPct={growthPct}
         activeGoalCount={activeGoalCount}

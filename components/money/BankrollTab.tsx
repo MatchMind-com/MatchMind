@@ -226,57 +226,68 @@ export default function BankrollTab({
     <section className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
       {/* ───── Left column — headline + chart ───── */}
       <div className="lg:col-span-3 space-y-4 lg:space-y-6">
-        {/* HEADLINE NUMBER */}
-        <div className="bg-bg-surface border border-border-subtle rounded-2xl p-5 lg:p-7">
-          <p className="eyebrow mb-3">CURRENT BANKROLL</p>
-          <p className="font-stat text-fg text-5xl md:text-6xl leading-none tracking-tight">
-            {currency}
-            {currentBankroll.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </p>
+        {/* HEADLINE NUMBER — wallet (free to stake). When the user places a
+            bet their wallet should drop by the stake — that matches every
+            betting app's mental model. Total balance (banked + at-risk) is
+            shown in the breakdown row below. P&L deltas remain based on
+            total `currentBankroll` so settled gains still register. */}
+        {(() => {
+          const hasPending = exposure != null && exposure.in_play_stake > 0
+          const headlineValue = hasPending ? exposure!.available : currentBankroll
+          return (
+            <div className="bg-bg-surface border border-border-subtle rounded-2xl p-5 lg:p-7">
+              <p className="eyebrow mb-3">{hasPending ? 'WALLET (FREE TO STAKE)' : 'CURRENT BANKROLL'}</p>
+              <p className="font-stat text-fg text-5xl md:text-6xl leading-none tracking-tight">
+                {currency}
+                {headlineValue.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </p>
 
-          {/* P&L deltas */}
-          <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <DeltaLine label="7d" value={sevenDay} currency={currency} />
-            <DeltaLine label="30d" value={thirtyDay} currency={currency} />
-            <DeltaLine label="all-time" value={allTime} currency={currency} />
-          </div>
+              {/* P&L deltas — based on total currentBankroll (settled
+                  progression) so a pending bet doesn't look like a loss. */}
+              <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                <DeltaLine label="7d" value={sevenDay} currency={currency} />
+                <DeltaLine label="30d" value={thirtyDay} currency={currency} />
+                <DeltaLine label="all-time" value={allTime} currency={currency} />
+              </div>
 
-          {/* Live exposure — same 3-cell strip as BankrollHero on the Home
-              page. Only shown when the user actually has pending bets so
-              the card stays clean for users who haven't started yet. */}
-          {exposure && exposure.in_play_stake > 0 && (
-            <div className="mt-5 grid grid-cols-3 gap-3 p-3 rounded-xl bg-bg-base/50 border border-border-subtle">
-              <div>
-                <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">In play</p>
-                <p className="font-stat text-loss text-base font-bold tabular-nums leading-tight">
-                  {currency}{exposure.in_play_stake.toFixed(2)}
-                </p>
-                <p className="text-fg-muted text-[10px] mt-0.5">
-                  {exposure.counts.pending} bet{exposure.counts.pending === 1 ? '' : 's'}
-                </p>
-              </div>
-              <div>
-                <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">Available</p>
-                <p className="font-stat text-fg text-base font-bold tabular-nums leading-tight">
-                  {currency}{exposure.available.toFixed(2)}
-                </p>
-                <p className="text-fg-muted text-[10px] mt-0.5">free to stake</p>
-              </div>
-              <div>
-                <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">If all win</p>
-                <p className="font-stat text-success text-base font-bold tabular-nums leading-tight">
-                  {currency}{(exposure.available + exposure.in_play_potential).toFixed(2)}
-                </p>
-                <p className="text-fg-muted text-[10px] mt-0.5">
-                  +{currency}{(exposure.in_play_potential - exposure.in_play_stake).toFixed(2)}
-                </p>
-              </div>
+              {/* Live exposure breakdown — only shown when there are
+                  pending bets. Headline above is wallet; this row reveals
+                  the locked stake + total + max payout. */}
+              {hasPending && (
+                <div className="mt-5 grid grid-cols-3 gap-3 p-3 rounded-xl bg-bg-base/50 border border-border-subtle">
+                  <div>
+                    <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">In play</p>
+                    <p className="font-stat text-loss text-base font-bold tabular-nums leading-tight">
+                      {currency}{exposure!.in_play_stake.toFixed(2)}
+                    </p>
+                    <p className="text-fg-muted text-[10px] mt-0.5">
+                      {exposure!.counts.pending} bet{exposure!.counts.pending === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">Total</p>
+                    <p className="font-stat text-fg text-base font-bold tabular-nums leading-tight">
+                      {currency}{currentBankroll.toFixed(2)}
+                    </p>
+                    <p className="text-fg-muted text-[10px] mt-0.5">wallet + locked</p>
+                  </div>
+                  <div>
+                    <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">If all win</p>
+                    <p className="font-stat text-success text-base font-bold tabular-nums leading-tight">
+                      {currency}{(exposure!.available + exposure!.in_play_potential).toFixed(2)}
+                    </p>
+                    <p className="text-fg-muted text-[10px] mt-0.5">
+                      +{currency}{(exposure!.in_play_potential - exposure!.in_play_stake).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          )
+        })()}
 
         {/* TRAJECTORY CHART */}
         <div className="bg-bg-surface border border-border-subtle rounded-2xl p-5">

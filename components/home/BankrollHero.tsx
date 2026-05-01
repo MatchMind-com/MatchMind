@@ -188,7 +188,8 @@ export default function BankrollHero() {
 
   const { snapshots, starting_bankroll, current_bankroll, in_play_stake, in_play_potential, available, counts } = data
 
-  // 7-day P&L
+  // 7-day P&L — based on `current_bankroll` (total = banked + at risk) so
+  // settled wins still register even when stakes are locked in pending bets.
   const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000
   const recentSnaps = snapshots
     .map(s => ({ at: new Date(s.recorded_at).getTime(), v: Number(s.balance) }))
@@ -200,6 +201,13 @@ export default function BankrollHero() {
   const weekPnL = current_bankroll - startOfWeekBalance
   const series = buildLast7DaysSeries(snapshots, starting_bankroll, current_bankroll)
   const positive = weekPnL >= 0
+
+  // Headline = wallet (banked, free to stake). When the user places a bet
+  // their wallet should DROP by the stake — that matches every betting app's
+  // mental model and what users intuitively expect ("I bet £10, my wallet
+  // has £10 less"). Total balance (banked + at-risk) is shown subtly on the
+  // breakdown row below.
+  const hasPending = in_play_stake > 0
 
   return (
     <div className="card group hover:border-border-strong transition-colors duration-200">
@@ -213,12 +221,12 @@ export default function BankrollHero() {
         </Link>
       </div>
 
-      {/* Massive bankroll number */}
+      {/* Massive bankroll number — wallet (free to stake) */}
       <p className="font-stat text-fg text-5xl md:text-6xl font-bold leading-none tracking-tight">
-        {fmtMoney(current_bankroll)}
+        {fmtMoney(available)}
       </p>
 
-      {/* Week P&L */}
+      {/* Week P&L (settled gain — based on total, not wallet) */}
       <div className="mt-3 flex items-baseline gap-2">
         <span
           className={`font-stat text-sm font-semibold ${
@@ -231,10 +239,11 @@ export default function BankrollHero() {
         <span className="text-fg-muted text-xs">this week</span>
       </div>
 
-      {/* In-play exposure — only shown if user has pending bets. Lets the
-          user see at a glance: "out of my £100, £25 is locked in pending
-          bets and £75 is free to stake." Tracks live as bets auto-settle. */}
-      {in_play_stake > 0 && (
+      {/* In-play exposure — only shown if user has pending bets. The
+          headline above is "wallet" (free to stake); this row gives the
+          breakdown so the user can see where the money went. Tracks live
+          as bets auto-settle. */}
+      {hasPending && (
         <div className="mt-4 grid grid-cols-3 gap-3 p-3 rounded-xl bg-bg-base/50 border border-border-subtle">
           <div>
             <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">In play</p>
@@ -244,11 +253,11 @@ export default function BankrollHero() {
             <p className="text-fg-muted text-[10px] mt-0.5">{counts.pending} bet{counts.pending === 1 ? '' : 's'}</p>
           </div>
           <div>
-            <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">Available</p>
+            <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">Total</p>
             <p className="font-stat text-fg text-base font-bold tabular-nums leading-tight">
-              {fmtMoney(available)}
+              {fmtMoney(current_bankroll)}
             </p>
-            <p className="text-fg-muted text-[10px] mt-0.5">free to stake</p>
+            <p className="text-fg-muted text-[10px] mt-0.5">wallet + locked</p>
           </div>
           <div>
             <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">If all win</p>

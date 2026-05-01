@@ -12,7 +12,10 @@
  */
 
 interface Props {
-  /** Current bankroll (latest snapshot or starting fallback). */
+  /** Wallet (banked, free to stake) — current_bankroll minus locked stakes
+   *  in pending bets. Drops when the user places a bet so the headline
+   *  matches their mental model. The all-time growth % below is computed
+   *  in the parent against the true total bankroll, not this. */
   currentBankroll: number
   /** Currency symbol — currently always £, kept as a prop so we can swap later. */
   currency?: string
