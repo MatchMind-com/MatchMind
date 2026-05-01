@@ -44,6 +44,7 @@
  */
 
 import { NextResponse } from 'next/server'
+import { getInstagramToken } from '@/lib/instagram-token'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 // New Instagram Business Login API (replaces the legacy Facebook Login flow).
@@ -196,13 +197,16 @@ export async function POST(req: Request) {
     })
   }
 
-  const token = process.env.INSTAGRAM_ACCESS_TOKEN
+  // Token comes from Supabase app_secrets (rotated by the refresh cron),
+  // with a fallback to the env var for first-run before the cron has fired.
+  const tokenInfo = await getInstagramToken()
+  const token = tokenInfo.token
   const igUserId = process.env.INSTAGRAM_USER_ID
   if (!token || !igUserId) {
     return NextResponse.json(
       {
         error:
-          'Instagram not configured. Set INSTAGRAM_ACCESS_TOKEN + INSTAGRAM_USER_ID in Vercel. See route file for setup steps.',
+          'Instagram not configured. Set INSTAGRAM_ACCESS_TOKEN + INSTAGRAM_USER_ID in Vercel (or seed app_secrets via /api/admin/refresh-instagram-token). See route file for setup steps.',
       },
       { status: 500 },
     )

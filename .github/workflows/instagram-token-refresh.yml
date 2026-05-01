@@ -1,0 +1,56 @@
+name: Instagram token refresh
+
+# Refreshes the IG long-lived access token before it expires.
+#
+# IG long-lived tokens last 60 days from issue. Each call to
+# /refresh_access_token resets the clock to 60 days from refresh time, so
+# refreshing twice per month (1st + 15th, ~14 days apart) gives a 45+ day
+# safety buffer in case GitHub Actions misses a fire.
+#
+# The endpoint reads the current token from Supabase (or env fallback),
+# refreshes it via IG API, and writes the new token back to
+# `app_secrets`. The post-instagram endpoint reads from there on every
+# request, so no Vercel redeploy is needed — token rotation is fully
+# autonomous.
+#
+# Failure mode: if both fires miss for >60 days (e.g. GHA outage + you
+# don't notice), the token expires beyond the refresh window and you have
+# to re-run the @match.mindai OAuth flow on the Meta dev portal manually.
+
+on:
+  schedule:
+    - cron: '0 6 1,15 * *'
+  workflow_dispatch:
+
+concurrency:
+  group: instagram-token-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Hit /api/admin/refresh-instagram-token
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET secret not set on this repo"
+            exit 1
+          fi
+          set -e
+          response=$(curl -sS -X POST "https://www.matchmindcom.com/api/admin/refresh-instagram-token" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            --max-time 30 \
+            -w "\nHTTP_STATUS:%{http_code}")
+          status=$(echo "$response" | grep -o 'HTTP_STATUS:[0-9]*' | cut -d':' -f2)
+          body=$(echo "$response" | sed '/HTTP_STATUS:/d')
+          echo "Status: $status"
+          echo "Body: $body"
+          if [ "$status" -ge 400 ]; then
+            echo "::error::Token refresh returned $status"
+            exit 1
+          fi

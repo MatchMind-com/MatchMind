@@ -1,0 +1,52 @@
+name: Instagram daily acca
+
+# Posts tonight's AI value acca to @match.mindai once per day.
+#
+# Schedule: 15:30 UTC daily.
+#   - Apr–Oct (BST): 16:30 UK time → ~3 hrs before evening kickoffs (19:30
+#     UK is the typical Premier League / European prime slot)
+#   - Nov–Mar (GMT): 15:30 UK time → still well before evening matches
+# Either way, posts before 5pm UK as requested, with enough lead time for
+# people to act on the picks before kickoff.
+#
+# windowHours=18 (the endpoint default) catches every fixture from now
+# through ~10am next day, so the auto-acca always has something to post
+# even on lighter weekday slates.
+
+on:
+  schedule:
+    - cron: '30 15 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: instagram-daily-acca
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Hit /api/admin/post-instagram
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET secret not set on this repo"
+            exit 1
+          fi
+          set -e
+          response=$(curl -sS -X POST "https://www.matchmindcom.com/api/admin/post-instagram" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            --max-time 90 \
+            -w "\nHTTP_STATUS:%{http_code}")
+          status=$(echo "$response" | grep -o 'HTTP_STATUS:[0-9]*' | cut -d':' -f2)
+          body=$(echo "$response" | sed '/HTTP_STATUS:/d')
+          echo "Status: $status"
+          echo "Body: $body"
+          if [ "$status" -ge 400 ]; then
+            echo "::error::IG post returned $status"
+            exit 1
+          fi
