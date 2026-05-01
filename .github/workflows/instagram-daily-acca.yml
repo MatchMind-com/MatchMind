@@ -1,21 +1,21 @@
 name: Instagram daily acca
 
-# Posts tonight's AI value acca to @match.mindai once per day.
+# Posts today's AI value acca to @match.mindai once per day.
 #
-# Schedule: 15:30 UTC daily.
-#   - Apr–Oct (BST): 16:30 UK time → ~3 hrs before evening kickoffs (19:30
-#     UK is the typical Premier League / European prime slot)
-#   - Nov–Mar (GMT): 15:30 UK time → still well before evening matches
-# Either way, posts before 5pm UK as requested, with enough lead time for
-# people to act on the picks before kickoff.
+# Schedule: 10:00 UTC daily.
+#   - Apr–Oct (BST): 11:00 UK time → ~1.5 hrs before the earliest Premier
+#     League slot (12:30 lunchtime kickoff Saturdays); ~3 hrs before Sunday
+#     14:00 kickoffs; well before midweek evening fixtures.
+#   - Nov–Mar (GMT): 10:00 UK time → 2.5 hrs of buffer before lunchtime PL.
+# Posting this early lets the acca include EVERY game from lunchtime to late
+# evening, not just the prime-time evening slate.
 #
 # windowHours=18 (the endpoint default) catches every fixture from now
-# through ~10am next day, so the auto-acca always has something to post
-# even on lighter weekday slates.
+# through ~5am next day, so a 10:00 UTC post pulls in the entire day.
 
 on:
   schedule:
-    - cron: '30 15 * * *'
+    - cron: '0 10 * * *'
   workflow_dispatch:
 
 concurrency:

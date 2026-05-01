@@ -120,7 +120,7 @@ async function buildAutoCaption(legCount: number, windowHours: number): Promise<
   // IG captions can be up to 2200 chars — we have headroom for hashtags.
   const lines = legs.map((l, i) => `${i + 1}. ${l.pick.home_team} v ${l.pick.away_team} — ${l.sum.label} @ ${l.sum.odds.toFixed(2)}`)
   const caption =
-    `🔥 Tonight's ${legs.length}-fold AI value acca\n\n` +
+    `🔥 Today's ${legs.length}-fold AI value acca\n\n` +
     lines.join('\n') +
     `\n\n💰 Combined @ ${combinedOdds.toFixed(2)}\n£${stake} → £${payout.toFixed(2)}\n\n` +
     `No advice — just data.\n` +
