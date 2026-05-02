@@ -1,0 +1,58 @@
+name: Twitter daily acca
+
+# Posts today's AI value acca tweet to @Match_Mind_AI once per day.
+#
+# Schedule: 09:55 UTC daily.
+#   - Apr–Oct (BST): 10:55 UK time → ~1.5 hrs before the earliest
+#     Premier League slot (12:30 lunchtime kickoff Saturdays);
+#     ~3 hrs before Sunday 14:00 kickoffs.
+#   - Nov–Mar (GMT): 09:55 UK time → 2.5 hrs of buffer before
+#     lunchtime PL.
+#
+# Cron is :55 (not :00) deliberately — GitHub Actions delays or
+# silently skips scheduled runs that fire at the top of an hour
+# during high-load periods. Off-the-hour minutes are far more
+# reliable. We use :55 for Twitter and :07 for IG so the two posts
+# stagger and don't land in the same GitHub queue.
+#
+# windowHours=18 catches every fixture from now through ~4am next
+# day — the same window the IG card uses, so the two posts mirror
+# each other.
+
+on:
+  schedule:
+    - cron: '55 9 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: twitter-daily-acca
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Hit /api/admin/post-tonight-acca
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET secret not set on this repo"
+            exit 1
+          fi
+          set -e
+          response=$(curl -sS -X POST "https://www.matchmindcom.com/api/admin/post-tonight-acca" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            --max-time 90 \
+            -w "\nHTTP_STATUS:%{http_code}")
+          status=$(echo "$response" | grep -o 'HTTP_STATUS:[0-9]*' | cut -d':' -f2)
+          body=$(echo "$response" | sed '/HTTP_STATUS:/d')
+          echo "Status: $status"
+          echo "Body: $body"
+          if [ "$status" -ge 400 ]; then
+            echo "::error::Twitter acca post returned $status"
+            exit 1
+          fi

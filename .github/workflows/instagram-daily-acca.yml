@@ -2,20 +2,27 @@ name: Instagram daily acca
 
 # Posts today's AI value acca to @match.mindai once per day.
 #
-# Schedule: 10:00 UTC daily.
-#   - Apr–Oct (BST): 11:00 UK time → ~1.5 hrs before the earliest Premier
+# Schedule: 10:07 UTC daily.
+#   - Apr–Oct (BST): 11:07 UK time → ~1.5 hrs before the earliest Premier
 #     League slot (12:30 lunchtime kickoff Saturdays); ~3 hrs before Sunday
 #     14:00 kickoffs; well before midweek evening fixtures.
-#   - Nov–Mar (GMT): 10:00 UK time → 2.5 hrs of buffer before lunchtime PL.
+#   - Nov–Mar (GMT): 10:07 UK time → 2.5 hrs of buffer before lunchtime PL.
 # Posting this early lets the acca include EVERY game from lunchtime to late
 # evening, not just the prime-time evening slate.
 #
+# Why :07 not :00? GitHub Actions delays or silently skips scheduled runs
+# that fire at the top of an hour during high-load periods (top-of-hour is
+# the most-used cron slot on the entire platform). 2026-05-02 the :00 slot
+# missed the first scheduled fire entirely. Off-the-hour minutes are far
+# more reliable. Twitter fires at :55 of the previous hour for the same
+# reason — staggering also avoids both posts landing in the same queue.
+#
 # windowHours=18 (the endpoint default) catches every fixture from now
-# through ~5am next day, so a 10:00 UTC post pulls in the entire day.
+# through ~5am next day, so a 10:07 UTC post pulls in the entire day.
 
 on:
   schedule:
-    - cron: '0 10 * * *'
+    - cron: '7 10 * * *'
   workflow_dispatch:
 
 concurrency:
