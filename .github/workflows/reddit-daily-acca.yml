@@ -1,0 +1,61 @@
+name: Reddit daily acca
+
+# Posts today's AI value acca to a configured subreddit once per day.
+#
+# Schedule: 09:45 UTC daily.
+#   - Apr–Oct (BST): 10:45 UK time → before any kickoffs land
+#   - Nov–Mar (GMT): 09:45 UK time → before lunchtime PL
+#
+# Cron is :45 (off-the-hour) — GitHub Actions delays scheduled runs that
+# fire at the top of an hour. Three social posts staggered so they don't
+# land in the same GitHub queue:
+#   09:45  Reddit
+#   09:55  Twitter
+#   10:07  Instagram
+#
+# Required Vercel env (set before this workflow can post):
+#   REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET   from /prefs/apps script app
+#   REDDIT_USERNAME, REDDIT_PASSWORD          your Reddit account
+#   REDDIT_SUBREDDIT                          target sub (no leading r/)
+#   REDDIT_USER_AGENT                         polite UA per Reddit's rules
+#
+# Until those env vars are set the endpoint will 500 with a clear error
+# message — the cron will fail loudly, not silently.
+
+on:
+  schedule:
+    - cron: '45 9 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: reddit-daily-acca
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Hit /api/admin/post-reddit-acca
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET secret not set on this repo"
+            exit 1
+          fi
+          set -e
+          response=$(curl -sS -X POST "https://www.matchmindcom.com/api/admin/post-reddit-acca" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            --max-time 90 \
+            -w "\nHTTP_STATUS:%{http_code}")
+          status=$(echo "$response" | grep -o 'HTTP_STATUS:[0-9]*' | cut -d':' -f2)
+          body=$(echo "$response" | sed '/HTTP_STATUS:/d')
+          echo "Status: $status"
+          echo "Body: $body"
+          if [ "$status" -ge 400 ]; then
+            echo "::error::Reddit acca post returned $status"
+            exit 1
+          fi
