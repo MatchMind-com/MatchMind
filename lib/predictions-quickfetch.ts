@@ -20,6 +20,7 @@
  */
 import OpenAI from 'openai'
 import { leaguesByTier, type TrackedLeague } from './leagues'
+import { getUnderstatFixtureStats, isUnderstatLeague, type UnderstatTeamStats } from './understat-scraper'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const API_KEY = process.env.API_FOOTBALL_KEY!
@@ -203,7 +204,29 @@ export async function quickFetchPredictions(
 
   if (futureFixtures.length === 0) return []
 
-  // Build a compact prompt — odds-only context, no form/H2H/stats.
+  // Enrich top-5 European league fixtures with Understat xG data.
+  // For each fixture in PL/La Liga/Bundesliga/Serie A/Ligue 1, fetch both
+  // teams' season-aggregate xG + last-5-game xG. League data is cached for
+  // 24h per warm container so this is ~free after the first call per league.
+  // Fixtures in other leagues (Eredivisie, MLS, etc) just skip enrichment
+  // and fall back to odds-only — no failure mode for the caller.
+  const xgEnrichments: Array<{ home: UnderstatTeamStats | null; away: UnderstatTeamStats | null } | null> =
+    await Promise.all(
+      futureFixtures.map(async (f: any) => {
+        if (!isUnderstatLeague(f._leagueName)) return null
+        try {
+          return await getUnderstatFixtureStats(
+            f.teams?.home?.name ?? '',
+            f.teams?.away?.name ?? '',
+            f._leagueName,
+          )
+        } catch {
+          return null
+        }
+      }),
+    )
+
+  // Build a compact prompt — odds + xG context (xG only for top 5 leagues).
   const impliedProb = (odds: number | null | undefined) => odds && odds > 1 ? Math.round(100 / odds) : null
   const fixtureList = futureFixtures.map((f: any, i: number) => {
     const home = f.teams?.home?.name
@@ -215,7 +238,22 @@ export async function quickFetchPredictions(
     const oddsStr = o?.home
       ? ` | odds: H ${o.home} (${impliedProb(o.home)}%) / D ${o.draw} (${impliedProb(o.draw)}%) / A ${o.away} (${impliedProb(o.away)}%)`
       : ''
-    return `${i + 1}. ${home} vs ${away} | ${f._leagueName} | ${date}${oddsStr}`
+    // xG block: real expected-goals data when available. Format chosen for
+    // GPT readability — per-game numbers + last-5-form + a regression flag
+    // (over/under-performance) so the model can spot mean-reversion plays.
+    const xg = xgEnrichments[i]
+    let xgStr = ''
+    if (xg?.home && xg.away) {
+      const h = xg.home
+      const a = xg.away
+      const regHomeAtk = h.attack_overperformance > 4 ? ' [HOT]' : h.attack_overperformance < -4 ? ' [COLD]' : ''
+      const regAwayAtk = a.attack_overperformance > 4 ? ' [HOT]' : a.attack_overperformance < -4 ? ' [COLD]' : ''
+      xgStr =
+        ` | xG: ${h.team} ${h.xG_per_game}-${h.xGA_per_game}${regHomeAtk}` +
+        ` (last5 ${h.last5_xG}-${h.last5_xGA}) vs ${a.team} ${a.xG_per_game}-${a.xGA_per_game}${regAwayAtk}` +
+        ` (last5 ${a.last5_xG}-${a.last5_xGA})`
+    }
+    return `${i + 1}. ${home} vs ${away} | ${f._leagueName} | ${date}${oddsStr}${xgStr}`
   }).join('\n')
 
   let gptMap: Record<number, any> = {}
@@ -227,10 +265,20 @@ export async function quickFetchPredictions(
       response_format: { type: 'json_object' },
       messages: [{
         role: 'system',
-        content: `You are a calibrated football betting analyst. Output probability estimates close to the implied market probabilities (derived from the odds). The market is usually within 2-5 percentage points of true probability. Your home_win_pct + draw_pct + away_win_pct must sum to 100-108. Stay within ±8 points of the implied probabilities unless you have a specific concrete reason. Return valid JSON only.`,
+        content: `You are a calibrated football betting analyst. Output probability estimates close to the implied market probabilities (derived from the odds). The market is usually within 2-5 percentage points of true probability. Your home_win_pct + draw_pct + away_win_pct must sum to 100-108. Stay within ±8 points of the implied probabilities unless you have a specific concrete reason.
+
+When xG (expected goals) data is provided, use it as your primary signal for finding edges:
+- xG per game: a team averaging 2.0 xG/game vs an opponent allowing 1.5 xGA/game suggests ~1.7 expected goals scored
+- [HOT] tag means the team is scoring more than xG predicts → expect regression DOWN
+- [COLD] tag means the team is scoring less than xG predicts → expect regression UP
+- last5 xG numbers reflect recent form (more relevant than season-long for in-form/out-of-form sides)
+- xG-based ratings are what professional models use; markets often LAG xG signals by 2-3 games
+- When xG strongly contradicts implied odds (>5 percentage point gap), that's your value bet
+
+Return valid JSON only.`,
       }, {
         role: 'user',
-        content: `Generate calibrated predictions for these matches. Implied probabilities derived from bookmaker odds are shown.
+        content: `Generate calibrated predictions for these matches. Implied probabilities derived from bookmaker odds are shown. xG data is shown for top-5 European league matches — use it as your strongest signal when present.
 
 Matches:
 ${fixtureList}
