@@ -90,7 +90,7 @@ function isInWindow(iso: string | undefined, hours: number): boolean {
   return t > now - 3 * 3_600_000 && t < now + hours * 3_600_000
 }
 
-async function buildAutoCaption(legCount: number, windowHours: number): Promise<{ caption: string; legsUsed: number; combinedOdds: number } | null> {
+async function buildAutoCaption(legCount: number, windowHours: number): Promise<{ caption: string; legsUsed: number; combinedOdds: number; windowUsed: number } | null> {
   let predictions: Pick[] = []
   try {
     const r = await fetch(`${APP_URL}/api/predictions`, { cache: 'no-store' })
@@ -99,19 +99,43 @@ async function buildAutoCaption(legCount: number, windowHours: number): Promise<
   } catch {
     return null
   }
-  const ranked = predictions
-    .filter((p) => isInWindow(p.date, windowHours))
-    .map((p) => ({ pick: p, sum: legSummary(p) }))
-    .filter((x): x is { pick: Pick; sum: NonNullable<ReturnType<typeof legSummary>> } => x.sum !== null)
-    .sort((a, b) => (b.sum.ev ?? 0) - (a.sum.ev ?? 0))
-  const seen = new Set<number>()
-  const legs: typeof ranked = []
-  for (const r of ranked) {
-    const id = r.pick.id ?? -1
-    if (id !== -1 && seen.has(id)) continue
-    if (id !== -1) seen.add(id)
-    legs.push(r)
-    if (legs.length >= legCount) break
+
+  // Build acca legs for a given window — same dedupe/EV-sort logic as before.
+  function pickLegsForWindow(hours: number) {
+    const ranked = predictions
+      .filter((p) => isInWindow(p.date, hours))
+      .map((p) => ({ pick: p, sum: legSummary(p) }))
+      .filter((x): x is { pick: Pick; sum: NonNullable<ReturnType<typeof legSummary>> } => x.sum !== null)
+      .sort((a, b) => (b.sum.ev ?? 0) - (a.sum.ev ?? 0))
+    const seen = new Set<number>()
+    const out: typeof ranked = []
+    for (const r of ranked) {
+      const id = r.pick.id ?? -1
+      if (id !== -1 && seen.has(id)) continue
+      if (id !== -1) seen.add(id)
+      out.push(r)
+      if (out.length >= legCount) break
+    }
+    return out
+  }
+
+  // Auto-expand the window when the slate is thin (mid-week, off-season).
+  // Without this the IG cron silently 404s on Tuesday-style days when
+  // there aren't 2+ fixtures in the next 18h. Tries the user's window
+  // first, then bumps to 36h then 72h before giving up.
+  const windowAttempts = [windowHours, 36, 72]
+    .filter((h) => h >= windowHours)
+    .reduce<number[]>((acc, h) => (acc.includes(h) ? acc : [...acc, h]), [])
+    .sort((a, b) => a - b)
+  let legs: ReturnType<typeof pickLegsForWindow> = []
+  let windowUsed = windowAttempts[0]
+  for (const h of windowAttempts) {
+    const candidate = pickLegsForWindow(h)
+    if (candidate.length >= 2) {
+      legs = candidate
+      windowUsed = h
+      break
+    }
   }
   if (legs.length < 2) return null
   const combinedOdds = legs.reduce((acc, l) => acc * l.sum.odds, 1)
@@ -126,7 +150,7 @@ async function buildAutoCaption(legCount: number, windowHours: number): Promise<
     `No advice — just data.\n` +
     `Live picks at matchmindcom.com\n\n` +
     `#footballbetting #footballtips #valuebets #matchmind #ai #aibetting #acca #footballacca`
-  return { caption, legsUsed: legs.length, combinedOdds }
+  return { caption, legsUsed: legs.length, combinedOdds, windowUsed }
 }
 
 // ── Graph API helpers ────────────────────────────────────────────────

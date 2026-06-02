@@ -209,36 +209,52 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'No predictions returned by /api/predictions' }, { status: 503 })
   }
 
-  // Filter to tonight + sort by EV (descending)
-  const tonight = all.filter((p) => isTonightISO(p.date, windowHours))
-  if (tonight.length === 0) {
-    return NextResponse.json({
-      error: `No predictions kicking off in the next ${windowHours}h. Try { windowHours: 36 }.`,
-      hint: 'Predictions cache may not yet contain tonight\'s fixtures. Bumping windowHours captures next-day games.',
-    }, { status: 404 })
+  // Build the usable-picks set for a given window. Returns the EV-ranked,
+  // deduped picks ready to slice into an acca.
+  function buildUniquePicks(hours: number) {
+    const inWindow = all.filter((p) => isTonightISO(p.date, hours))
+    const ranked = inWindow
+      .map((p) => ({ pick: p, sum: legSummary(p) }))
+      .filter((x): x is { pick: Pick; sum: NonNullable<ReturnType<typeof legSummary>> } => x.sum !== null)
+      .sort((a, b) => (b.sum.ev ?? 0) - (a.sum.ev ?? 0))
+    const seen = new Set<number>()
+    const out: typeof ranked = []
+    for (const r of ranked) {
+      const id = r.pick.id ?? -1
+      if (id !== -1 && seen.has(id)) continue
+      if (id !== -1) seen.add(id)
+      out.push(r)
+      if (out.length >= legCount) break
+    }
+    return out
   }
-  const ranked = tonight
-    .map((p) => ({ pick: p, sum: legSummary(p) }))
-    .filter((x): x is { pick: Pick; sum: NonNullable<ReturnType<typeof legSummary>> } => x.sum !== null)
-    .sort((a, b) => (b.sum.ev ?? 0) - (a.sum.ev ?? 0))
 
-  if (ranked.length < 2) {
-    return NextResponse.json({ error: `Only ${ranked.length} usable picks for tonight, need ≥2` }, { status: 404 })
-  }
-
-  // De-duplicate by fixture id so we don't end up with two legs on the
-  // same match (different markets) which a real bookie would reject.
-  const seen = new Set<number>()
-  const unique: typeof ranked = []
-  for (const r of ranked) {
-    const id = r.pick.id ?? -1
-    if (id !== -1 && seen.has(id)) continue
-    if (id !== -1) seen.add(id)
-    unique.push(r)
-    if (unique.length >= legCount) break
+  // Auto-expand the window if the requested hours yield too few picks.
+  // Mid-week slates can be thin (e.g. Tuesday with no PL fixtures); the
+  // cron used to silently 404 instead of just looking further ahead.
+  // Try the user-provided window first, then 36h, then 72h before giving
+  // up. The widest a body-passed value can ever expand to is 72h (matches
+  // the existing input clamp).
+  const windowAttempts = [windowHours, 36, 72]
+    .filter((h) => h >= windowHours)
+    .reduce<number[]>((acc, h) => (acc.includes(h) ? acc : [...acc, h]), [])
+    .sort((a, b) => a - b)
+  let unique: ReturnType<typeof buildUniquePicks> = []
+  let windowUsed = windowAttempts[0]
+  for (const h of windowAttempts) {
+    const candidate = buildUniquePicks(h)
+    if (candidate.length >= 2) {
+      unique = candidate
+      windowUsed = h
+      break
+    }
   }
   if (unique.length < 2) {
-    return NextResponse.json({ error: `After dedupe only ${unique.length} unique fixtures available` }, { status: 404 })
+    return NextResponse.json({
+      error: `Only ${unique.length} usable picks even with 72h window — true thin slate.`,
+      hint: 'Predictions cache may be stale. Trigger /api/cron/refresh-predictions-tier1 first.',
+      window_attempts: windowAttempts,
+    }, { status: 404 })
   }
 
   const tweetText = buildAccaTweet(unique)
