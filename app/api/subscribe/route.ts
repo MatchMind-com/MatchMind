@@ -12,19 +12,34 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json()
+    const { email, source } = await req.json()
 
     if (!email || !email.includes('@')) {
       return NextResponse.json({ error: 'Valid email required' }, { status: 400 })
     }
 
     const normalised = email.trim().toLowerCase()
+    // Source tag for attribution — admin dashboard segments signups by
+    // source ('world-cup', 'home-page', etc). Falls back to 'home-page'
+    // when callers don't pass one (keeps existing behaviour intact).
+    const sourceTag =
+      typeof source === 'string' && source.trim().length > 0
+        ? source.trim().slice(0, 40)
+        : 'home-page'
 
-    // Upsert — reactivate if previously unsubscribed
+    // Upsert — reactivate if previously unsubscribed, also stamp the
+    // source on every insert/update (last-write-wins is fine; the user
+    // typically subscribes once).
     const { error } = await supabaseAdmin
       .from('email_subscribers')
       .upsert(
-        { email: normalised, is_active: true, unsubscribed_at: null, subscribed_at: new Date().toISOString() },
+        {
+          email: normalised,
+          is_active: true,
+          unsubscribed_at: null,
+          subscribed_at: new Date().toISOString(),
+          source: sourceTag,
+        },
         { onConflict: 'email' }
       )
 
