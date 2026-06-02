@@ -163,17 +163,22 @@ export async function GET(request: Request) {
           // Fall through to "return whatever we have" path below.
         }
 
-        // Quickfetch returned nothing OR threw. Return whatever picks DO
-        // exist in cache (even already-kicked-off ones) rather than empty.
-        const allPicksUnfiltered: any[][] = leagueRows.map(r => Array.isArray(r.payload) ? (r.payload as any[]) : [])
-        const fallbackMerged = roundRobinPick(allPicksUnfiltered, 60)
-        fallbackMerged.sort((a: any, b: any) => (b?.value_score ?? -999) - (a?.value_score ?? -999))
-
+        // Quickfetch returned nothing OR threw.
+        //
+        // BEFORE (2026-06-02): this fallback returned the per-league cache
+        // UNFILTERED — including already-played matches. Result: the site
+        // served 47 dead matches as "today's picks" for 20 days because the
+        // tier cron writes stopped landing. Tweets/IG/TikTok scripts all
+        // referenced past fixtures as if they were upcoming. Catastrophic.
+        //
+        // AFTER: return only what's actually future. If 0 future picks
+        // exist, return an empty array with an explicit error meta so the
+        // UI can show "no upcoming picks right now" instead of dead matches.
         const meta = {
           leagues_count: leagueRows.length,
           league_names: leagueRows.map(r => r.league_name),
-          fixture_count: fallbackMerged.length,
-          total_available: allPicksUnfiltered.reduce((s, a) => s + a.length, 0),
+          fixture_count: merged.length,
+          total_available: perLeagueArrays.reduce((s, a) => s + a.length, 0),
           oldest_refresh: leagueRows.reduce<string | null>((acc, r) => (!acc || r.generated_at < acc) ? r.generated_at : acc, null),
           newest_refresh: leagueRows.reduce<string | null>((acc, r) => (!acc || r.generated_at > acc) ? r.generated_at : acc, null),
           cache_generated_at: leagueRows.reduce<string | null>((acc, r) => (!acc || r.generated_at > acc) ? r.generated_at : acc, null),
@@ -182,9 +187,11 @@ export async function GET(request: Request) {
           source: 'predictions_by_league',
           fallback_used: true,
           fallback_reason: fallbackReason,
-          warning: 'Picks may be stale — data feed temporarily unavailable',
+          warning: merged.length === 0
+            ? 'No upcoming picks right now. Predictions cache needs refresh.'
+            : `Only ${merged.length} upcoming picks — data feed may be stale.`,
         }
-        return NextResponse.json({ success: true, predictions: fallbackMerged, meta })
+        return NextResponse.json({ success: true, predictions: merged, meta })
       }
 
       const oldest = leagueRows.reduce<string | null>((acc, r) => {
@@ -269,22 +276,30 @@ export async function GET(request: Request) {
       console.error('[predictions] last-resort quickfetch failed:', qfErr)
     }
 
-    // Truly nothing — but instead of 503, return whatever stale legacy
-    // payload exists (if any) so the page never feels broken.
+    // Last-resort legacy fallback — but ONLY return future picks.
+    // Previous version returned everything in the legacy cache including
+    // past matches, which is exactly how we served 47 dead matches as
+    // "today's picks" for 20 days. Filter to future first; if zero, return
+    // an explicit empty state so the UI can show "no picks right now".
     if (!error && data) {
       const payload = data.payload as any
+      const legacyPicks: any[] = Array.isArray(payload?.predictions) ? payload.predictions : []
+      const futureLegacy = legacyPicks.filter(p => isFuturePick(p, nowMs))
       return NextResponse.json({
         ...payload,
+        predictions: futureLegacy,
         meta: {
           ...(payload.meta ?? {}),
           cache_generated_at: data.generated_at,
-          fixture_count: data.fixture_count,
+          fixture_count: futureLegacy.length,
           leagues_count: data.leagues_count,
           served_from_cache: true,
           source: 'predictions_cache_legacy',
           fallback_used: true,
           fallback_reason: 'all_picks_expired',
-          warning: 'Picks may be stale — data feed temporarily unavailable',
+          warning: futureLegacy.length === 0
+            ? 'No upcoming picks. Cache needs refresh.'
+            : 'Picks may be stale — data feed temporarily unavailable',
         },
       })
     }

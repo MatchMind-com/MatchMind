@@ -49,28 +49,30 @@ After 5-6 videos, viewers recognize the brand on sight — the brand identity do
 
 ### SCRIPT 1 — "Bookies are pricing this completely wrong"
 
-**Format**: Screen recording + voiceover. Live-data dependent (re-record per matchday).
+**Format**: Screen recording + voiceover. **Live-data dependent — re-pick the match the morning you record.** Don't bake a specific match into the recipe; open matchmindcom.com/predictions, take the top +EV pick at that moment, build the video around it.
 
 **Visuals**:
 - 0:00-0:02 — Brand intro sting → cut to text overlay "BOOKIES PRICED THIS WRONG" on black
 - 0:02-0:10 — Screen recording: scroll through matchmindcom.com/predictions, slow pan, zoom into the top +EV pick card
 - 0:10-0:25 — Cut between: live odds screenshot, your AI's probability badge, three text-overlay stats (xG, recent form, ref tendency)
-- 0:25-0:35 — Highlight the EV % in big orange numbers, "23% EDGE"
+- 0:25-0:35 — Highlight the EV % in big orange numbers, "X% EDGE"
 - 0:35-0:40 — Outro card
 
-**Voiceover (~35s, paste into ElevenLabs)**:
-> "Tonight's biggest mispricing. Champions League. PSG vs Arsenal. The bookies have Over two-point-five goals at two-oh-five. They think it'll be tight. The model disagrees. Three signals are flashing — PSG's home xG over the last five matches, Arsenal's away defensive form since the international break, and a referee who averages three-point-one goals per game in big European nights. Combined edge: twenty-three percent. The match is on the site now. Free."
+**Voiceover template (~35s, paste into ElevenLabs and fill in the brackets)**:
+> "Tonight's biggest mispricing. [LEAGUE NAME]. [HOME TEAM] versus [AWAY TEAM]. The bookies have [MARKET, e.g. Over two-point-five goals] at [ODDS]. They think it'll be [TIGHT / LOPSIDED — adapt]. The model disagrees. Three signals are flashing — [HOME TEAM]'s recent xG, [AWAY TEAM]'s [DEFENSIVE / OFFENSIVE] form, and [a third concrete data point]. Combined edge: [X] percent. The match is on the site now. Free."
 
 **Text overlays** (sync to voiceover):
-- "PSG vs ARSENAL" (orange)
-- "OVER 2.5 @ 2.05"
-- "PSG xG ↑ Arsenal xGA ↑ Ref 3.1g/match"
-- "+23% EDGE" (big, orange, hold 2s)
+- "[HOME TEAM] vs [AWAY TEAM]" (orange)
+- "[MARKET] @ [ODDS]"
+- "Three data points stacked vertically"
+- "+X% EDGE" (big, orange, hold 2s)
 - "Free in bio →"
 
-**Caption**: "PSG vs Arsenal — the bookies are wrong. AI says O2.5 @ 2.05, +23% edge. Full reasoning + every CL pick on the site (bio). #championsleague #footballbetting #valuebets #aibetting #psg #arsenal"
+**Caption template**: "[HOME] vs [AWAY] — the bookies are wrong. AI says [MARKET] @ [ODDS], +[X]% edge. Full reasoning in bio. #[LEAGUE_HASHTAG] #footballbetting #valuebets #aibetting"
 
 **Music**: Tense piano build or low cinematic drone (search CapCut: "thriller" / "tension")
+
+> **NEVER hardcode a specific match into the script**. By the time you record, the live cache will show different picks. The format is what matters, not the example match.
 
 ---
 
@@ -116,32 +118,38 @@ After 5-6 videos, viewers recognize the brand on sight — the brand identity do
 **Voiceover template** (~32s — swap data when recording):
 > "Three picks. Three edges. Live odds, recorded before kickoff. One: [TEAM A] vs [TEAM B], [MARKET] at [ODDS], edge [X]%. Two: [...]. Three: [...]. Every one is logged publicly so you can fade me if I'm wrong tomorrow. Full reasoning on each in bio."
 
-**Live data right now (Jun 2 — swap when you record)**:
-- PSG v Arsenal · Over 2.5 @ 2.05 · +23% EV (UCL)
-- Hull City v Middlesbrough · BTTS @ 1.95 · +17% EV (Championship)
-- ST Mirren v Partick · Over 2.5 @ 2.00 · +20% EV (Scottish Prem)
+**Do NOT hardcode picks into the script.** When you record, open
+matchmindcom.com/predictions yourself, take the top 3 LIVE picks at that
+moment (sort by EV desc), and speak those team names. The cache was 20
+days stale at the time these scripts were drafted — anything I picked
+as an example would be wrong by the time you record. Always pull from
+the live page on recording day.
 
 **Caption**: "Today's top 3 +EV picks — full reasoning in bio. All tracked. #footballbetting #valuebets #championsleague"
 
 ---
 
-### SCRIPT 4 — "I built a £10 → £127 acca with AI. Here are the legs."
+### SCRIPT 4 — "I built a £10 → £X acca with AI. Here are the legs."
 
 **Format**: Reveal-style. Screen recording + voiceover + cash-register sound effects.
 
+**On recording day**: open your own /predictions page, take 4-6 of the top-EV LIVE picks across different leagues, multiply the odds together. That gives you the real combined-odds and payout for the script — fill those in before recording.
+
 **Visuals**:
 - 0:00-0:02 — Intro
-- 0:02-0:04 — Bold text: "£10 → £127. SIX LEGS."
-- 0:04-0:30 — Each leg reveals one at a time. Team logos (pulled from API-Football URLs), market + odds in orange. Pause 3s per leg with a "cha-ching" sound.
-- 0:30-0:38 — Math: "10 × 12.7 = £127" big orange number
+- 0:02-0:04 — Bold text: "£10 → £[PAYOUT]. [N] LEGS."
+- 0:04-0:30 — Each leg reveals one at a time. Team logos, market + odds in orange. Pause 3s per leg with a "cha-ching" sound.
+- 0:30-0:38 — Math: "10 × [combined odds] = £[payout]" big orange number
 - 0:38-0:40 — Outro
 
-**Voiceover** (~35s):
-> "I asked the model: six picks tonight, highest EV, different leagues. Here's what it returned. Leg one: [TEAM] [MARKET] at [ODDS]. Leg two: [...] Combined odds twelve point seven. Ten pounds wins one hundred and twenty seven. This isn't a tip. It's a math output. The site posts an acca every single day, win or lose. Public track record. Link in bio for tonight's."
+**Voiceover template** (~35s — fill brackets the day you record):
+> "I asked the model: [N] picks tonight, highest EV, different leagues. Here's what it returned. Leg one: [TEAM] [MARKET] at [ODDS]. Leg two: [...] Combined odds [X]. Ten pounds wins [Y]. This isn't a tip. It's a math output. The site posts an acca every single day, win or lose. Public track record. Link in bio for tonight's."
 
-**Caption**: "AI built me this 12.7/1 acca — full breakdown in bio (free). Posted before kickoff, results tomorrow. #footballacca #aibetting #valuebets"
+**Caption template**: "AI built me this [X]/1 acca — full breakdown in bio (free). Posted before kickoff, results tomorrow. #footballacca #aibetting #valuebets"
 
 **Music**: Cash register sound on each leg reveal + low cinematic background
+
+> **Do this fresh every time**. The picks change daily. Recording a template once and reusing the same legs would be embarrassingly wrong by next week.
 
 ---
 
@@ -171,21 +179,25 @@ After 5-6 videos, viewers recognize the brand on sight — the brand identity do
 
 ---
 
-### SCRIPT 6 — "Fading the Premier League this week. Here's what we're betting instead."
+### SCRIPT 6 — "Where the AI is betting this week (and which league to fade)"
 
 **Format**: Screen recording + map graphic + voiceover.
 
+**On recording day**: open /predictions, group by league, find the leagues with the most +EV picks. Compare with the Premier League (or whichever big league has the FEWEST +EV picks that week). Use that contrast as your hook.
+
 **Visuals**:
 - 0:00-0:02 — Intro
-- 0:02-0:05 — PL logo with red X over it
-- 0:05-0:10 — Map graphic zooming from England → up to Scotland → across to Austria → south to Portugal
-- 0:10-0:35 — Pull up each pick as a screen-recorded card from the site
+- 0:02-0:05 — Big-league logo with red X over it (whichever has zero/few +EV)
+- 0:05-0:10 — Map graphic zooming across the leagues that DO have edges that week
+- 0:10-0:35 — Pull up each LIVE pick as a screen-recorded card from the site
 - 0:35-0:40 — Outro
 
-**Voiceover** (~33s):
-> "Premier League markets are too efficient this week. Everyone's modeling them, the bookies sharpen lines fast. The AI flagged zero positive-EV picks in the PL today. Where IS the edge? Scottish Premiership: ST Mirren v Partick, Over two-point-five, plus twenty percent. Austrian Bundesliga: Rapid Vienna v Ried, Over two-point-five, plus seventeen percent. Hull City v Middlesbrough in the Championship: Both Teams To Score, plus seventeen percent. The mid-tier leagues are where the model wins. Less liquidity, less sharp money, bigger edges."
+**Voiceover template** (~33s — fill brackets from live data on recording day):
+> "[BIG LEAGUE] markets are too efficient this week. Everyone's modeling them, the bookies sharpen lines fast. The AI flagged [zero / very few] positive-EV picks in [BIG LEAGUE] today. Where IS the edge? [LEAGUE A]: [TEAM v TEAM], [MARKET], plus [X] percent. [LEAGUE B]: [TEAM v TEAM], [MARKET], plus [Y] percent. The mid-tier leagues are where the model wins. Less liquidity, less sharp money, bigger edges."
 
-**Caption**: "Fading the PL. Backing Scottish Premiership + Austrian Bundesliga instead. AI says that's where the edge is. (Bio.) #scottishfootball #bundesliga #footballbetting #valuebets"
+**Caption template**: "Fading [BIG LEAGUE]. Backing [LEAGUE A] + [LEAGUE B] instead. AI says that's where the edge is. (Bio.) #footballbetting #valuebets"
+
+> **Pull fresh data every time you record this**. The "leagues with edge" changes weekly. Examples I'd give right now would be wrong by the time you record.
 
 ---
 
@@ -284,4 +296,9 @@ After Jun 11 — keep posting daily. The momentum from launch + WC traffic shoul
 
 ---
 
-## See `tiktok-sample-video-psg-arsenal.md` for one fully-produced example
+## See `tiktok-sample-video-template.md` for one fully-produced example
+
+(The earlier `tiktok-sample-video-psg-arsenal.md` was deleted on 2026-06-02
+because PSG vs Arsenal had already been played by the time it was drafted —
+a downstream effect of the predictions cache being 20 days stale. The
+template doc never bakes in a specific match.)
