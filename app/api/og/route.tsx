@@ -1,29 +1,21 @@
 /**
- * GET /api/og
+ * GET /api/og — site-wide Open Graph share card.
  *
- * Site-wide Open Graph image — renders the default 1200×630 brand card
- * used as the share preview for every MatchMind link (when no
- * page-specific OG image is set).
+ * Renders the default 1200×630 brand card used as the share preview
+ * for every MatchMind link (when no page-specific OG image is set).
+ * Without this, shared links rendered with blank previews on
+ * Twitter / IG DMs / WhatsApp / Slack.
  *
- * Before this existed: shared links rendered with no preview card,
- * looking unbranded and skip-worthy on Twitter, IG DMs, WhatsApp,
- * Slack, etc.
+ * Live data: pulls today's value-bet count from /api/predictions.
  *
- * Live data: pulls today's value-bet count from /api/predictions so the
- * card always shows "N value bets live today" — a freshness signal.
+ * Edge runtime, 30-min CDN cache.
  *
- * Edge runtime — sub-second generation, cached on Vercel CDN.
- *
- * IMPORTANT — Satori constraints (the renderer behind ImageResponse):
- *   - Every parent must use display: 'flex' (or 'none')
- *   - Multi-child parents need an explicit flexDirection
- *   - Text content must live inside its own element (no mixed text+spans
- *     at a single level)
- *   - position: 'absolute' children need their parent to be 'relative'
- *   - Use only system fonts unless we ship a custom font file
+ * Mirrors the structure of the proven-working /api/og/acca route —
+ * same flex/span patterns, same string padding, etc.
  */
 
 import { ImageResponse } from 'next/og'
+import { NextRequest } from 'next/server'
 
 export const runtime = 'edge'
 
@@ -40,13 +32,8 @@ async function getValueBetCount(): Promise<number> {
   }
 }
 
-export async function GET() {
-  let valueBetCount = 0
-  try {
-    valueBetCount = await getValueBetCount()
-  } catch {
-    // Fall through with 0 — card still renders
-  }
+export async function GET(_req: NextRequest) {
+  const valueBetCount = await getValueBetCount()
 
   return new ImageResponse(
     (
@@ -56,87 +43,84 @@ export async function GET() {
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          background: '#0B0B14',
-          padding: '80px',
-          fontFamily: 'system-ui, sans-serif',
+          backgroundColor: '#0F1115',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          padding: '60px',
+          color: '#F5F1E8',
         }}
       >
-        {/* Top brand row */}
-        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+        {/* Brand row */}
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 40 }}>
           <div
             style={{
-              width: 72,
-              height: 72,
-              background: '#F97316',
-              borderRadius: 18,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'white',
-              fontSize: 44,
+              width: 80,
+              height: 80,
+              backgroundColor: '#F97316',
+              borderRadius: 18,
+              marginRight: 24,
+              fontSize: 48,
               fontWeight: 900,
-              marginRight: 20,
+              color: 'white',
             }}
           >
-            M
+            <span>M</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ color: 'white', fontSize: 38, fontWeight: 800 }}>MatchMind</div>
-            <div style={{ color: '#94A3B8', fontSize: 18, fontWeight: 500, marginTop: 4 }}>
+            <span style={{ fontSize: 48, fontWeight: 800, color: '#F5F1E8', lineHeight: 1 }}>
+              MatchMind
+            </span>
+            <span style={{ fontSize: 20, color: '#F97316', fontWeight: 700, letterSpacing: 4, marginTop: 6 }}>
               FOOTBALL INTELLIGENCE
-            </div>
+            </span>
           </div>
         </div>
 
-        {/* Headline — two simple lines, no nested spans */}
-        <div style={{ display: 'flex', flexDirection: 'column', marginTop: 70 }}>
-          <div style={{ color: 'white', fontSize: 84, fontWeight: 900, lineHeight: 1.05 }}>
+        {/* Headline */}
+        <div style={{ display: 'flex', flexDirection: 'column', marginTop: 40, marginBottom: 50 }}>
+          <span style={{ fontSize: 84, fontWeight: 900, color: '#F5F1E8', lineHeight: 1.05 }}>
             See the edge
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'baseline' }}>
-            <div style={{ color: 'white', fontSize: 84, fontWeight: 900, lineHeight: 1.05 }}>
-              before&nbsp;
-            </div>
-            <div style={{ color: '#F97316', fontSize: 84, fontWeight: 900, lineHeight: 1.05 }}>
-              kickoff
-            </div>
-            <div style={{ color: 'white', fontSize: 84, fontWeight: 900, lineHeight: 1.05 }}>
-              .
-            </div>
-          </div>
+          </span>
+          <span style={{ fontSize: 84, fontWeight: 900, color: '#F97316', lineHeight: 1.05 }}>
+            before kickoff.
+          </span>
         </div>
 
-        {/* Sub-stats row */}
-        <div style={{ display: 'flex', flexDirection: 'row', marginTop: 60 }}>
+        {/* Stats row */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', flex: 1 }}>
           <div style={{ display: 'flex', flexDirection: 'column', marginRight: 60 }}>
-            <div style={{ color: '#F97316', fontSize: 72, fontWeight: 900, lineHeight: 1 }}>
+            <span style={{ fontSize: 80, fontWeight: 900, color: '#F97316', lineHeight: 1 }}>
               {valueBetCount}
-            </div>
-            <div style={{ color: '#94A3B8', fontSize: 18, fontWeight: 600, marginTop: 8 }}>
+            </span>
+            <span style={{ fontSize: 18, fontWeight: 700, color: '#9CA3AF', letterSpacing: 2, marginTop: 8 }}>
               VALUE BETS TODAY
-            </div>
+            </span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', marginRight: 60 }}>
-            <div style={{ color: 'white', fontSize: 72, fontWeight: 900, lineHeight: 1 }}>
+            <span style={{ fontSize: 80, fontWeight: 900, color: '#F5F1E8', lineHeight: 1 }}>
               25
-            </div>
-            <div style={{ color: '#94A3B8', fontSize: 18, fontWeight: 600, marginTop: 8 }}>
+            </span>
+            <span style={{ fontSize: 18, fontWeight: 700, color: '#9CA3AF', letterSpacing: 2, marginTop: 8 }}>
               LEAGUES
-            </div>
+            </span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ color: 'white', fontSize: 72, fontWeight: 900, lineHeight: 1 }}>
+            <span style={{ fontSize: 80, fontWeight: 900, color: '#F5F1E8', lineHeight: 1 }}>
               43%
-            </div>
-            <div style={{ color: '#94A3B8', fontSize: 18, fontWeight: 600, marginTop: 8 }}>
+            </span>
+            <span style={{ fontSize: 18, fontWeight: 700, color: '#9CA3AF', letterSpacing: 2, marginTop: 8 }}>
               VALUE-BET WIN RATE
-            </div>
+            </span>
           </div>
         </div>
 
-        {/* Footer URL — pinned to bottom via margin-top: auto */}
-        <div style={{ display: 'flex', marginTop: 'auto' }}>
-          <div style={{ color: '#94A3B8', fontSize: 22, fontWeight: 600 }}>matchmindcom.com</div>
+        {/* Footer */}
+        <div style={{ display: 'flex', marginTop: 30 }}>
+          <span style={{ fontSize: 22, color: '#9CA3AF', fontWeight: 600 }}>
+            matchmindcom.com
+          </span>
         </div>
       </div>
     ),
