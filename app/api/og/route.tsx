@@ -79,45 +79,48 @@ export async function GET(_req: NextRequest) {
         </div>
 
         {/* Headline */}
-        <div style={{ display: 'flex', flexDirection: 'column', marginTop: 40, marginBottom: 50 }}>
-          <span style={{ fontSize: 84, fontWeight: 900, color: '#F5F1E8', lineHeight: 1.05 }}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontSize: 76, fontWeight: 900, color: '#F5F1E8', lineHeight: 1.1 }}>
             See the edge
           </span>
-          <span style={{ fontSize: 84, fontWeight: 900, color: '#F97316', lineHeight: 1.05 }}>
+          <span style={{ fontSize: 76, fontWeight: 900, color: '#F97316', lineHeight: 1.1 }}>
             before kickoff.
           </span>
         </div>
 
+        {/* Spacer pushes stats + footer to bottom */}
+        <div style={{ display: 'flex', flex: 1 }} />
+
         {/* Stats row */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', flex: 1 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', marginRight: 60 }}>
-            <span style={{ fontSize: 80, fontWeight: 900, color: '#F97316', lineHeight: 1 }}>
+        <div style={{ display: 'flex', flexDirection: 'row', marginBottom: 30 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', marginRight: 70 }}>
+            <span style={{ fontSize: 72, fontWeight: 900, color: '#F97316', lineHeight: 1 }}>
               {valueBetCount}
             </span>
-            <span style={{ fontSize: 18, fontWeight: 700, color: '#9CA3AF', letterSpacing: 2, marginTop: 8 }}>
+            <span style={{ fontSize: 16, fontWeight: 700, color: '#9CA3AF', letterSpacing: 2, marginTop: 8 }}>
               VALUE BETS TODAY
             </span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', marginRight: 60 }}>
-            <span style={{ fontSize: 80, fontWeight: 900, color: '#F5F1E8', lineHeight: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', marginRight: 70 }}>
+            <span style={{ fontSize: 72, fontWeight: 900, color: '#F5F1E8', lineHeight: 1 }}>
               25
             </span>
-            <span style={{ fontSize: 18, fontWeight: 700, color: '#9CA3AF', letterSpacing: 2, marginTop: 8 }}>
+            <span style={{ fontSize: 16, fontWeight: 700, color: '#9CA3AF', letterSpacing: 2, marginTop: 8 }}>
               LEAGUES
             </span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 80, fontWeight: 900, color: '#F5F1E8', lineHeight: 1 }}>
+            <span style={{ fontSize: 72, fontWeight: 900, color: '#F5F1E8', lineHeight: 1 }}>
               43%
             </span>
-            <span style={{ fontSize: 18, fontWeight: 700, color: '#9CA3AF', letterSpacing: 2, marginTop: 8 }}>
+            <span style={{ fontSize: 16, fontWeight: 700, color: '#9CA3AF', letterSpacing: 2, marginTop: 8 }}>
               VALUE-BET WIN RATE
             </span>
           </div>
         </div>
 
         {/* Footer */}
-        <div style={{ display: 'flex', marginTop: 30 }}>
+        <div style={{ display: 'flex' }}>
           <span style={{ fontSize: 22, color: '#9CA3AF', fontWeight: 600 }}>
             matchmindcom.com
           </span>
