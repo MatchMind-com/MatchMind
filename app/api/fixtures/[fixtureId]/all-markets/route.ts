@@ -14,14 +14,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
 
-// 30s function budget (was 10s — Vercel Pro tier supports up to 300s).
-// User reported every market showing "AI evaluator unavailable — markets
-// shown with neutral grading" because API-Football fixture+odds+form
-// pulls were eating most of the 10s window, leaving the GPT eval with
-// <2s budget → it got skipped or aborted. With 30s the AI step almost
-// always completes (GPT-4o-mini typically returns 30 verdicts in 2-4s).
-export const maxDuration = 30
-const TOTAL_BUDGET_MS = 28000 // leave 2s of buffer for response serialisation
+// 60s function budget — Vercel Pro supports up to 300s.
+// API-Football can be slow on international/lower-tier fixtures (10-20s per
+// call); with a 7s per-call abort in apiFetch the worst case is now ~20s
+// for the two parallel fetches, leaving ≥35s for GPT-4o-mini.
+export const maxDuration = 60
+const TOTAL_BUDGET_MS = 55000 // leave 5s of buffer for response serialisation
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const API_KEY = process.env.API_FOOTBALL_KEY!
@@ -86,16 +84,21 @@ const cache = new Map<string, { at: number; payload: AllMarketsResponse }>()
 // ---- API-Football helper -------------------------------------------------
 
 async function apiFetch(path: string): Promise<any> {
+  const aborter = new AbortController()
+  const tid = setTimeout(() => aborter.abort(), 7_000) // 7s hard cap per call
   try {
     const res = await fetch(`${BASE}${path}`, {
       headers: { 'x-apisports-key': API_KEY },
       next: { revalidate: 600 },
+      signal: aborter.signal,
     })
     if (!res.ok) return null
     const json = await res.json()
     return json.response || null
   } catch {
     return null
+  } finally {
+    clearTimeout(tid)
   }
 }
 
@@ -689,7 +692,7 @@ export async function GET(
     let evaluated = markets
     let aiEvaluated = false
     const gptBudget = remaining() - 1500 // reserve 1.5s for serialisation
-    if (markets.length && gptBudget > 2000) {
+    if (markets.length && gptBudget >= 2000) {
       try {
         const verdicts = await evaluateWithGpt(
           { home: homeName, away: awayName, league: leagueName, kickoff },
