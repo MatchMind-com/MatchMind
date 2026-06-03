@@ -22,7 +22,12 @@ import OpenAI from 'openai'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { allLeagues, leaguesByTier, getSeasonForLeague, findLeague, type TrackedLeague } from '@/lib/leagues'
 
-export const maxDuration = 60
+// 300s = max for Vercel Pro tier. With 22-market evaluation per fixture
+// (9 GPT-predicted probs + 13 derived) × up to 90 fixtures per tier 3
+// run, plus form/H2H/stats fetches, the full pipeline can take 80-120s.
+// 60s was timing out (504 FUNCTION_INVOCATION_TIMEOUT) and not writing
+// anything to cache. 300s leaves comfortable headroom.
+export const maxDuration = 300
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const API_KEY = process.env.API_FOOTBALL_KEY!
