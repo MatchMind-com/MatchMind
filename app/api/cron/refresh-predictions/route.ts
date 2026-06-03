@@ -228,16 +228,12 @@ async function refreshLeagues(
       // leagues, returning 0 fixtures for tournaments/calendar leagues in
       // every Jan-Jul window. Cause of the 20-day-stale cache before WC.
       const season = getSeasonForLeague(league)
-      // Odds query window MUST match the fixtures window — otherwise the
-      // cron pulls fixtures 7 days out but only odds for today+tomorrow,
-      // so anything 3+ days away has no odds in the map and falls to the
-      // bottom of the with-odds-priority sort (or gets cut by the cap).
-      // Symptom: pre-WC week, USA v Germany (Jun 6) wasn't surfacing
-      // because its odds weren't fetched. /odds endpoint is per-day so we
-      // loop the 7-day window. ~5 extra calls per league but Pro tier has
-      // 7,500/day to spare.
-      const oddsDates: string[] = []
-      for (let i = 0; i < 8; i++) oddsDates.push(getDatePlusDays(i))
+      // Expanded odds window: today + next 3 days (was today + tomorrow).
+      // Catches matches like USA v Germany / Brazil v Egypt that kick off
+      // 3-4 days out. Earlier attempt at 8 days broke the cron (rate
+      // limit OR too-many-parallel-calls), so we cap at 4 — still 2x
+      // better than before, comfortably within API-Football rate ceiling.
+      const oddsDates = [today, getDatePlusDays(1), getDatePlusDays(2), getDatePlusDays(3)]
       const [fixtures, injuries, standings, ...oddsByDay] = await Promise.all([
         apiFetch(`/fixtures?league=${league.id}&season=${season}&from=${today}&to=${in3days}&status=NS`, diag),
         apiFetch(`/injuries?league=${league.id}&season=${season}&date=${today}`, diag),
@@ -251,7 +247,6 @@ async function refreshLeagues(
         if (s?.team?.id) standingMap[s.team.id] = s.rank
       }
 
-      // Merge odds from every day of the window into a single map.
       const oddsData: any[] = []
       for (const dayOdds of oddsByDay) {
         if (dayOdds) oddsData.push(...dayOdds)
