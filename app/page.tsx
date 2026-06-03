@@ -207,9 +207,38 @@ export default async function LandingPage() {
               </a>
             </div>
 
-            <p className="font-mono" style={{ fontSize: '11px', color: '#3A3A48', marginTop: '20px' }}>
-              {stats.users > 0 ? `${stats.users.toLocaleString()} members · ` : ''}every pick logged before kick-off · every result public
-            </p>
+            {/* Hard-number proof line, above-the-fold on mobile. Pulls real
+                numbers from /api/track-record so it stays honest as the
+                sample size grows. Falls back to soft signal only if API
+                fails completely. */}
+            {track?.total && track.total > 0 ? (
+              <Link
+                href="/track-record"
+                className="font-mono"
+                style={{
+                  display: 'inline-flex', flexWrap: 'wrap', gap: '12px', alignItems: 'baseline',
+                  fontSize: '11px', color: '#9E9B8E', marginTop: '20px',
+                  textDecoration: 'none', borderTop: '1px solid #1A1A22',
+                  paddingTop: '16px',
+                }}
+              >
+                <span><strong style={{ color: '#EDE9DF', fontWeight: 900 }}>{track.total}</strong> picks tracked</span>
+                <span style={{ color: '#2A2A35' }}>·</span>
+                <span><strong style={{ color: '#00C853', fontWeight: 900 }}>{track.valueBets?.winRate ?? track.winRate}%</strong> value-bet win rate</span>
+                <span style={{ color: '#2A2A35' }}>·</span>
+                <span style={{
+                  color: (track.roi ?? 0) >= 0 ? '#00C853' : '#FF3355',
+                  fontWeight: 900,
+                }}>
+                  {(track.roi ?? 0) > 0 ? '+' : ''}{(track.roi ?? 0).toFixed(1)}% ROI
+                </span>
+                <span style={{ color: '#F97316' }}>see record →</span>
+              </Link>
+            ) : (
+              <p className="font-mono" style={{ fontSize: '11px', color: '#3A3A48', marginTop: '20px' }}>
+                {stats.users > 0 ? `${stats.users.toLocaleString()} members · ` : ''}every pick logged before kick-off · every result public
+              </p>
+            )}
           </div>
 
           {/* Scoreboard: 2×2 grid of key stats — visible on mobile too now
