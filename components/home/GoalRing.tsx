@@ -114,10 +114,10 @@ export default function GoalRing({ onProgressChange }: { onProgressChange?: (pct
   if (loading && !goal) {
     return (
       <div className="card animate-pulse flex flex-col items-center">
-        <div className="self-start h-3 w-24 bg-bg-elevated rounded mb-4" />
-        <div className="w-[140px] h-[140px] rounded-full bg-bg-elevated" />
-        <div className="h-4 w-32 bg-bg-elevated rounded mt-4" />
-        <div className="h-3 w-20 bg-bg-elevated rounded mt-2" />
+        <div className="self-start h-3 w-24 bg-bg-elevated mb-4" />
+        <div className="w-[140px] h-[140px] bg-bg-elevated" />
+        <div className="h-4 w-32 bg-bg-elevated mt-4" />
+        <div className="h-3 w-20 bg-bg-elevated mt-2" />
       </div>
     )
   }
@@ -165,7 +165,7 @@ export default function GoalRing({ onProgressChange }: { onProgressChange?: (pct
       <div className="w-full flex items-center justify-between mb-2">
         <p className="eyebrow">Active Goal</p>
         <span
-          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border ${
             onTrack
               ? 'bg-success/10 text-success border-success/30'
               : 'bg-loss/10 text-loss border-loss/30'

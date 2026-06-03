@@ -124,13 +124,13 @@ export default function TrackRecordCard() {
 
       {/* Headline numbers row */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="rounded-lg bg-bg-base/50 border border-border-subtle p-2.5">
+        <div className="bg-bg-base/50 border border-border-subtle p-2.5">
           <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">ROI</p>
           <p className={`font-stat text-base font-bold tabular-nums leading-tight ${profitPositive ? 'text-success' : 'text-loss'}`}>
             {profitPositive ? '+' : ''}{s.roi}%
           </p>
         </div>
-        <div className="rounded-lg bg-bg-base/50 border border-border-subtle p-2.5">
+        <div className="bg-bg-base/50 border border-border-subtle p-2.5">
           <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">Avg odds</p>
           <p className="font-stat text-fg text-base font-bold tabular-nums leading-tight">
             {s.avgOdds.toFixed(2)}
@@ -151,7 +151,7 @@ export default function TrackRecordCard() {
               return (
                 <li key={String(r.id)} className="flex items-center gap-2 py-1 text-[11px]">
                   <span
-                    className={`shrink-0 w-1.5 h-1.5 rounded-full ${
+                    className={`shrink-0 w-1.5 h-1.5 ${
                       isWin ? 'bg-success' : isLoss ? 'bg-loss' : 'bg-fg-muted/40'
                     }`}
                     aria-hidden

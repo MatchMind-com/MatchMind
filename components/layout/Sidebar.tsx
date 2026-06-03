@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 
 /* ─── Nav icons — thin, editorial line set ─── */
 function IconHome() {
@@ -69,8 +68,6 @@ function IconClose() {
   )
 }
 
-/* ─── Nav structure — 5 primary items, editorial single list ───
-   Old routes still resolve via direct URL; they're just demoted from the nav. */
 const NAV: Array<{
   href: string
   label: string
@@ -80,8 +77,6 @@ const NAV: Array<{
 }> = [
   { href: '/dashboard', label: 'Home', icon: <IconHome />, exact: true },
   {
-    // Phase 3: new editorial Picks page (Today / Tomorrow / Weekend / Live / Accumulators).
-    // Old /dashboard/predictions and /dashboard/live still resolve so any external links keep working.
     href: '/dashboard/picks',
     label: 'Picks',
     icon: <IconPicks />,
@@ -89,7 +84,6 @@ const NAV: Array<{
   },
   { href: '/dashboard/coach', label: 'Coach', icon: <IconCoach /> },
   {
-    // Phase 5 will build /dashboard/money; until then, send users to bankroll.
     href: '/dashboard/money',
     label: 'Money',
     icon: <IconMoney />,
@@ -116,16 +110,16 @@ function NavItem({
       onClick={onClick}
       className={`
         group relative flex items-center gap-3.5 pl-5 pr-4 py-2.5 text-[14px]
-        transition-all duration-200 active:scale-[0.99]
+        transition-all duration-200
         ${active
           ? 'text-fg font-semibold'
           : 'text-fg-muted hover:text-fg-secondary font-medium'
         }
       `}
     >
-      {/* Editorial active marker — left-edge orange bar (no fill background) */}
+      {/* Active marker — left-edge orange bar */}
       <span
-        className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full
+        className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px]
           transition-[height,background-color] duration-200 ease-out
           ${active ? 'h-7 bg-brand mm-bar-grow' : 'h-0 bg-transparent group-hover:h-3 group-hover:bg-fg-muted/40'}
         `}
@@ -156,19 +150,14 @@ export default function Sidebar({ email }: { email: string }) {
   const sidebarContent = (
     <aside className="w-60 bg-bg-base border-r border-border-subtle h-full flex flex-col">
 
-      {/* Logo — refined, editorial */}
+      {/* Wordmark */}
       <div className="px-5 pt-6 pb-5">
-        <Link href="/dashboard" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg bg-brand/10 border border-brand/25 flex items-center justify-center flex-shrink-0">
-            <Image src="/logo-icon.png" alt="MatchMind" width={18} height={18} className="object-contain" />
-          </div>
-          <div className="leading-none">
-            <div className="text-fg font-black text-[17px] tracking-tightest">
-              Match<span className="text-brand">Mind</span>
-            </div>
-            <div className="text-fg-muted text-[9px] uppercase tracking-[0.18em] mt-1 font-semibold">
-              Football Intelligence
-            </div>
+        <Link href="/dashboard" className="block">
+          <span className="font-black text-[17px] tracking-[-0.04em] text-fg">
+            MATCH<span className="text-brand">MIND</span>
+          </span>
+          <div className="text-fg-muted text-[9px] uppercase tracking-[0.18em] mt-1 font-bold">
+            Football Intelligence
           </div>
         </Link>
       </div>
@@ -176,7 +165,7 @@ export default function Sidebar({ email }: { email: string }) {
       {/* Section divider */}
       <div className="mx-5 h-px bg-border-subtle" />
 
-      {/* Nav — single clean list, no section labels */}
+      {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-5">
         <div className="space-y-0.5">
           {NAV.map((item) => (
@@ -190,10 +179,11 @@ export default function Sidebar({ email }: { email: string }) {
         </div>
       </nav>
 
-      {/* User footer — its own visual treatment */}
+      {/* User footer */}
       <div className="border-t border-border-subtle p-4">
-        <div className="flex items-center gap-3 px-2 py-2 rounded-lg">
-          <div className="w-9 h-9 rounded-full bg-brand/15 border border-brand/30 flex items-center justify-center flex-shrink-0">
+        <div className="flex items-center gap-3 px-2 py-2">
+          {/* Square avatar — initial letter */}
+          <div className="w-9 h-9 bg-brand/15 border border-brand/30 flex items-center justify-center flex-shrink-0">
             <span className="text-brand text-[13px] font-black uppercase">{username.charAt(0)}</span>
           </div>
           <div className="min-w-0 flex-1">
@@ -203,9 +193,9 @@ export default function Sidebar({ email }: { email: string }) {
         </div>
         <button
           onClick={signOut}
-          className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[12px] font-semibold
+          className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 text-[12px] font-semibold
                      text-fg-muted hover:text-fg hover:bg-bg-surface border border-transparent hover:border-border-subtle
-                     transition-all duration-150 active:scale-[0.98]"
+                     transition-all duration-150"
         >
           <IconSignOut />
           Sign out
@@ -218,18 +208,14 @@ export default function Sidebar({ email }: { email: string }) {
     <>
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-bg-base/95 backdrop-blur-xl border-b border-border-subtle flex items-center justify-between px-4 h-14">
-        <Link href="/dashboard" className="flex items-center gap-2.5 active:scale-[0.98] transition-transform duration-150">
-          <div className="w-7 h-7 rounded-lg bg-brand/10 border border-brand/25 flex items-center justify-center">
-            <Image src="/logo-icon.png" alt="MatchMind" width={16} height={16} className="object-contain" />
-          </div>
-          <div className="text-fg font-black text-[15px] tracking-tightest">
-            Match<span className="text-brand">Mind</span>
-          </div>
+        <Link href="/dashboard">
+          <span className="font-black text-[15px] tracking-[-0.04em] text-fg">
+            MATCH<span className="text-brand">MIND</span>
+          </span>
         </Link>
-        {/* 44px tap target — meets iOS HIG */}
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="text-fg-secondary hover:text-fg w-11 h-11 -mr-2 flex items-center justify-center transition-all duration-150 active:scale-[0.92] active:bg-bg-elevated/50 rounded-lg"
+          className="text-fg-secondary hover:text-fg w-11 h-11 -mr-2 flex items-center justify-center transition-all duration-150"
           aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
         >
           {mobileOpen ? <IconClose /> : <IconMenu />}

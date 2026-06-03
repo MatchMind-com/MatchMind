@@ -86,7 +86,7 @@ function PickCard({ pred, onOpenDetail }: { pred: Prediction; onOpenDetail?: (id
   }
 
   return (
-    <article className="snap-start shrink-0 w-[280px] md:w-auto md:flex-1 min-w-0 card hover:border-border-strong transition-all duration-200 flex flex-col">
+    <article className="snap-start shrink-0 w-[280px] md:w-auto md:flex-1 min-w-0 card hover:border-border-strong transition-colors duration-200 flex flex-col">
       {/* League + kickoff */}
       <div className="flex items-center justify-between mb-3 min-h-[16px]">
         <span className="text-fg-muted text-[11px] font-medium truncate">{pred.league}</span>
@@ -105,7 +105,7 @@ function PickCard({ pred, onOpenDetail }: { pred: Prediction; onOpenDetail?: (id
             unoptimized
           />
         ) : (
-          <div className="w-5 h-5 bg-bg-elevated rounded-full shrink-0" />
+          <div className="w-5 h-5 bg-bg-elevated shrink-0" />
         )}
         <span className="text-fg text-sm font-semibold truncate">{pred.home_team}</span>
         <span className="text-fg-muted text-xs px-1">vs</span>
@@ -119,20 +119,20 @@ function PickCard({ pred, onOpenDetail }: { pred: Prediction; onOpenDetail?: (id
             unoptimized
           />
         ) : (
-          <div className="w-5 h-5 bg-bg-elevated rounded-full shrink-0" />
+          <div className="w-5 h-5 bg-bg-elevated shrink-0" />
         )}
         <span className="text-fg text-sm font-semibold truncate">{pred.away_team}</span>
       </div>
 
       {/* Pick label + odds + EV */}
-      <div className="bg-bg-base/40 border border-border-subtle rounded-lg px-3 py-3 mb-3">
+      <div className="bg-bg-base/40 border border-border-subtle px-3 py-3 mb-3">
         <p className="text-fg text-base font-bold leading-tight mb-2">{label}</p>
         <div className="flex items-baseline justify-between gap-3">
           <span className="font-stat text-2xl font-bold text-brand leading-none">
             {odds != null ? odds.toFixed(2) : '—'}
           </span>
           {ev != null && (
-            <span className="font-stat text-xs font-bold text-value bg-value/10 border border-value/30 px-2 py-0.5 rounded-full">
+            <span className="font-stat text-xs font-bold text-value bg-value/10 border border-value/30 px-2 py-0.5">
               {ev > 0 ? '+' : ''}{ev}% EV
             </span>
           )}
@@ -151,7 +151,7 @@ function PickCard({ pred, onOpenDetail }: { pred: Prediction; onOpenDetail?: (id
         <button
           onClick={addToBets}
           disabled={adding || added}
-          className={`flex-1 text-xs font-semibold py-2 px-3 rounded-lg border transition-all duration-200 ${
+          className={`flex-1 text-xs font-semibold py-2 px-3 border transition-all duration-200 ${
             added
               ? 'bg-success/10 text-success border-success/30 cursor-default'
               : error
@@ -164,10 +164,10 @@ function PickCard({ pred, onOpenDetail }: { pred: Prediction; onOpenDetail?: (id
         {onOpenDetail && pred.id && (
           <button
             onClick={() => onOpenDetail(pred.id, pred.home_team, pred.away_team)}
-            className="px-2.5 py-2 rounded-lg border border-border-subtle hover:border-brand text-fg-muted hover:text-brand text-xs font-bold uppercase tracking-wider transition-colors"
+            className="px-2.5 py-2 border border-border-subtle hover:border-brand text-fg-muted hover:text-brand text-xs font-bold uppercase tracking-wider transition-colors"
             title="Open full match detail — lineups, stats, events"
           >
-            📊
+            Stats
           </button>
         )}
       </div>
@@ -178,11 +178,11 @@ function PickCard({ pred, onOpenDetail }: { pred: Prediction; onOpenDetail?: (id
 function PickSkeleton() {
   return (
     <div className="snap-start shrink-0 w-[280px] md:w-auto md:flex-1 card animate-pulse">
-      <div className="h-3 w-20 bg-bg-elevated rounded mb-4" />
-      <div className="h-4 w-full bg-bg-elevated rounded mb-4" />
-      <div className="h-16 w-full bg-bg-elevated rounded mb-3" />
-      <div className="h-3 w-3/4 bg-bg-elevated rounded mb-2" />
-      <div className="h-8 w-full bg-bg-elevated rounded mt-3" />
+      <div className="h-3 w-20 bg-bg-elevated mb-4" />
+      <div className="h-4 w-full bg-bg-elevated mb-4" />
+      <div className="h-16 w-full bg-bg-elevated mb-3" />
+      <div className="h-3 w-3/4 bg-bg-elevated mb-2" />
+      <div className="h-8 w-full bg-bg-elevated mt-3" />
     </div>
   )
 }

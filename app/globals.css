@@ -93,27 +93,27 @@ h1, h2, h3, h4 {
 @layer components {
   /* Card — elevated surface */
   .card {
-    @apply bg-bg-surface border border-border-subtle rounded-[12px] p-5;
+    @apply bg-bg-surface border border-border-subtle p-5;
   }
 
   /* Primary CTA — warm orange, the brand */
   .btn-primary {
-    @apply bg-brand hover:bg-brand-hover text-bg-base font-bold py-2.5 px-5 rounded-lg
+    @apply bg-brand hover:bg-brand-hover text-bg-base font-bold py-2.5 px-5
            transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply bg-bg-elevated hover:bg-border-subtle text-fg font-semibold py-2.5 px-5 rounded-lg
+    @apply bg-bg-elevated hover:bg-border-subtle text-fg font-semibold py-2.5 px-5
            border border-border-subtle hover:border-border-strong
            transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed;
   }
 
   .btn-danger {
-    @apply bg-loss hover:opacity-90 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200;
+    @apply bg-loss hover:opacity-90 text-white font-semibold py-2 px-4 transition-all duration-200;
   }
 
   .input-field {
-    @apply w-full bg-bg-base border border-border-subtle rounded-lg px-4 py-2.5
+    @apply w-full bg-bg-base border border-border-subtle px-4 py-2.5
            text-fg placeholder-fg-muted focus:outline-none focus:border-brand
            transition-colors duration-200;
   }

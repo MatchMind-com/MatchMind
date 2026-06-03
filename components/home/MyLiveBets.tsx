@@ -96,15 +96,15 @@ const POLL_INTERVAL_MS = 60_000
 
 const STATE_STYLE: Record<
   LegState,
-  { bg: string; text: string; border: string; emoji: string }
+  { bg: string; text: string; border: string; label: string }
 > = {
-  cashing: { bg: 'bg-success/15', text: 'text-success', border: 'border-success/40', emoji: '🟢' },
-  losing: { bg: 'bg-loss/15', text: 'text-loss', border: 'border-loss/40', emoji: '🔴' },
-  won: { bg: 'bg-success/20', text: 'text-success', border: 'border-success/50', emoji: '✅' },
-  lost: { bg: 'bg-loss/20', text: 'text-loss', border: 'border-loss/50', emoji: '❌' },
-  pending: { bg: 'bg-bg-elevated', text: 'text-fg-muted', border: 'border-border-subtle', emoji: '⏳' },
-  tbd: { bg: 'bg-value/10', text: 'text-value', border: 'border-value/40', emoji: '⏱' },
-  void: { bg: 'bg-bg-elevated', text: 'text-fg-muted', border: 'border-border-subtle', emoji: '⊘' },
+  cashing: { bg: 'bg-success/15', text: 'text-success', border: 'border-success/40', label: 'Cashing' },
+  losing: { bg: 'bg-loss/15', text: 'text-loss', border: 'border-loss/40', label: 'Behind' },
+  won: { bg: 'bg-success/20', text: 'text-success', border: 'border-success/50', label: 'Won' },
+  lost: { bg: 'bg-loss/20', text: 'text-loss', border: 'border-loss/50', label: 'Lost' },
+  pending: { bg: 'bg-bg-elevated', text: 'text-fg-muted', border: 'border-border-subtle', label: 'Pending' },
+  tbd: { bg: 'bg-value/10', text: 'text-value', border: 'border-value/40', label: 'TBD' },
+  void: { bg: 'bg-bg-elevated', text: 'text-fg-muted', border: 'border-border-subtle', label: 'Void' },
 }
 
 export default function MyLiveBets() {
@@ -165,15 +165,15 @@ export default function MyLiveBets() {
   const summary = data?.summary
 
   return (
-    <section className="bg-bg-surface border border-border-subtle rounded-2xl p-5 lg:p-6">
+    <section className="bg-bg-surface border border-border-subtle p-5 lg:p-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
           <p className="eyebrow flex items-center gap-2">
             My live bets
             {summary && summary.in_play_now > 0 && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-loss/15 border border-loss/40 text-loss text-[9px] font-bold uppercase tracking-wider">
-                <span className="h-1.5 w-1.5 rounded-full bg-loss animate-pulse" />
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-loss/15 border border-loss/40 text-loss text-[9px] font-bold uppercase tracking-wider">
+                <span className="h-1.5 w-1.5 bg-loss animate-pulse" />
                 {summary.in_play_now} live
               </span>
             )}
@@ -194,7 +194,7 @@ export default function MyLiveBets() {
         <button
           type="button"
           onClick={() => setShowScanner(true)}
-          className="shrink-0 px-3 lg:px-4 py-2 bg-brand hover:bg-brand-hover text-white text-[11px] lg:text-xs font-bold uppercase tracking-wider rounded-lg transition-colors inline-flex items-center gap-1.5"
+          className="shrink-0 px-3 lg:px-4 py-2 bg-brand hover:bg-brand-hover text-white text-[11px] lg:text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-1.5"
           title="Add a new bet — scan a shop slip or enter manually"
         >
           <span aria-hidden>+</span> New bet
@@ -204,14 +204,14 @@ export default function MyLiveBets() {
       {/* Loading */}
       {loading && !data && (
         <div className="space-y-2">
-          <div className="h-20 bg-bg-elevated rounded-xl animate-pulse" />
-          <div className="h-20 bg-bg-elevated rounded-xl animate-pulse" />
+          <div className="h-20 bg-bg-elevated animate-pulse" />
+          <div className="h-20 bg-bg-elevated animate-pulse" />
         </div>
       )}
 
       {/* Error */}
       {error && !loading && (
-        <div className="bg-loss/10 border border-loss/30 text-loss text-[12px] rounded-lg p-3">
+        <div className="bg-loss/10 border border-loss/30 text-loss text-[12px] p-3">
           Live update failed — {error}.{' '}
           <button
             type="button"
@@ -225,7 +225,7 @@ export default function MyLiveBets() {
 
       {/* Empty state */}
       {!loading && !error && bets.length === 0 && (
-        <div className="bg-bg-base/40 border border-border-subtle border-dashed rounded-xl p-6 text-center">
+        <div className="bg-bg-base/40 border border-border-subtle border-dashed p-6 text-center">
           <p className="text-fg font-semibold mb-1">No live bets right now</p>
           <p className="text-fg-muted text-[12px] mb-4">
             Scan a betting-shop slip or add a bet manually to start tracking.
@@ -234,13 +234,13 @@ export default function MyLiveBets() {
             <button
               type="button"
               onClick={() => setShowScanner(true)}
-              className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors inline-flex items-center gap-1.5"
+              className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-1.5"
             >
-              <span aria-hidden>📷</span> Scan slip
+              Scan slip
             </button>
             <a
               href="/dashboard/money"
-              className="px-4 py-2 bg-bg-base border border-border-subtle hover:border-border-strong text-fg-secondary hover:text-fg text-xs font-bold uppercase tracking-wider rounded-lg transition-colors"
+              className="px-4 py-2 bg-bg-base border border-border-subtle hover:border-border-strong text-fg-secondary hover:text-fg text-xs font-bold uppercase tracking-wider transition-colors"
             >
               Manage bets
             </a>
@@ -346,7 +346,7 @@ function SingleBetCard({
       tabIndex={canOpen ? 0 : undefined}
       onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open() } } : undefined}
       title={canOpen ? 'Click for full match detail' : undefined}
-      className={`bg-bg-base/60 border rounded-xl p-3.5 transition-all ${
+      className={`bg-bg-base/60 border p-3.5 transition-all ${
         live.state === 'cashing' || live.state === 'won' ? 'border-success/30 hover:border-success/50'
         : live.state === 'losing' || live.state === 'lost' ? 'border-loss/30 hover:border-loss/50'
         : 'border-border-subtle hover:border-border-strong'
@@ -371,14 +371,14 @@ function SingleBetCard({
           </p>
         </div>
         <span
-          className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${style.bg} ${style.text} ${style.border}`}
+          className={`shrink-0 inline-flex items-center px-2 py-0.5 border text-[10px] font-bold uppercase tracking-wider ${style.bg} ${style.text} ${style.border}`}
           title={live.context ?? live.label}
         >
-          <span aria-hidden>{style.emoji}</span> {live.label}
+          {live.label}
         </span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] sm:items-center gap-2 sm:gap-3 py-2 px-2.5 rounded-lg bg-bg-elevated/40">
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] sm:items-center gap-2 sm:gap-3 py-2 px-2.5 bg-bg-elevated/40">
         <div className="min-w-0">
           <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">Pick</p>
           <p className="text-fg text-[12px] font-semibold leading-tight">
@@ -395,7 +395,7 @@ function SingleBetCard({
         <div className="text-left sm:text-right">
           <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">Status</p>
           <span className="flex items-center gap-1 sm:justify-end">
-            <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-loss animate-pulse' : 'bg-fg-muted/40'}`} />
+            <span className={`h-1.5 w-1.5 ${isLive ? 'bg-loss animate-pulse' : 'bg-fg-muted/40'}`} />
             <span className={`font-stat font-bold uppercase tracking-wider text-[10px] ${isLive ? 'text-loss' : isFinished ? 'text-fg-secondary' : 'text-fg-muted'}`}>
               {isLive ? `LIVE ${live.minute ? live.minute + "'" : ''}` : isFinished ? 'FT' : status === 'NS' ? 'KICKOFF SOON' : status}
             </span>
@@ -442,7 +442,7 @@ function AccaBetCard({
     legs[0]
 
   return (
-    <div className={`bg-bg-base/60 border rounded-xl transition-colors ${
+    <div className={`bg-bg-base/60 border transition-colors ${
       overall === 'cashing' || overall === 'won' ? 'border-success/30'
       : overall === 'losing' || overall === 'lost' ? 'border-loss/30'
       : 'border-border-subtle'
@@ -450,7 +450,7 @@ function AccaBetCard({
       <button
         type="button"
         onClick={onToggle}
-        className="w-full text-left p-3.5 hover:bg-bg-elevated/30 rounded-xl transition-colors"
+        className="w-full text-left p-3.5 hover:bg-bg-elevated/30 transition-colors"
         aria-expanded={expanded}
       >
         <div className="flex items-start justify-between gap-3 mb-2">
@@ -471,7 +471,7 @@ function AccaBetCard({
             </p>
           </div>
           <span
-            className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${style.bg} ${style.text} ${style.border}`}
+            className={`shrink-0 inline-flex items-center px-2 py-0.5 border text-[10px] font-bold uppercase tracking-wider ${style.bg} ${style.text} ${style.border}`}
           >
             {counts.lost > 0 ? `${counts.lost}/${counts.total} lost`
               : counts.won === counts.total ? `✓ ${counts.total}/${counts.total} won`
@@ -481,7 +481,7 @@ function AccaBetCard({
 
         {/* Featured leg one-liner */}
         {featured && (
-          <div className="flex items-center justify-between gap-2 py-2 px-2.5 rounded-lg bg-bg-elevated/40 mt-2">
+          <div className="flex items-center justify-between gap-2 py-2 px-2.5 bg-bg-elevated/40 mt-2">
             <span className="text-fg-muted text-[10px] font-bold uppercase tracking-wider shrink-0">
               {expanded ? 'Hide legs' : 'Latest'}:
             </span>
@@ -536,7 +536,7 @@ function LegMiniRow({ index, leg, onOpen }: { index: number; leg: LiveLeg; onOpe
       role={canOpen ? 'button' : undefined}
       tabIndex={canOpen ? 0 : undefined}
       onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onOpen!() } } : undefined}
-      className={`flex items-center gap-2 py-1.5 px-2 rounded-lg bg-bg-elevated/30 text-[11px] ${canOpen ? 'cursor-pointer hover:bg-bg-elevated/60 transition-colors' : ''}`}
+      className={`flex items-center gap-2 py-1.5 px-2 bg-bg-elevated/30 text-[11px] ${canOpen ? 'cursor-pointer hover:bg-bg-elevated/60 transition-colors' : ''}`}
       title={canOpen ? 'Open match detail' : undefined}
     >
       <span className="font-stat text-[10px] text-fg-muted w-5 shrink-0">{index}</span>
@@ -553,8 +553,8 @@ function LegMiniRow({ index, leg, onOpen }: { index: number; leg: LiveLeg; onOpe
       <span className="font-stat text-fg text-[11px] font-bold tabular-nums shrink-0 w-10 text-right">
         {score ?? '—'}
       </span>
-      <span className={`shrink-0 px-1.5 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-wider ${style.bg} ${style.text} ${style.border}`}>
-        {style.emoji}
+      <span className={`shrink-0 px-1.5 py-0.5 border text-[9px] font-bold uppercase tracking-wider ${style.bg} ${style.text} ${style.border}`}>
+        {style.label}
       </span>
     </div>
   )

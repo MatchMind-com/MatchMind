@@ -165,12 +165,12 @@ export default function BankrollHero() {
     return (
       <div className="card animate-pulse">
         <div className="flex items-start justify-between mb-4">
-          <div className="h-3 w-20 bg-bg-elevated rounded" />
-          <div className="h-3 w-12 bg-bg-elevated rounded" />
+          <div className="h-3 w-20 bg-bg-elevated" />
+          <div className="h-3 w-12 bg-bg-elevated" />
         </div>
-        <div className="h-12 w-40 bg-bg-elevated rounded mb-3" />
-        <div className="h-4 w-28 bg-bg-elevated rounded mb-4" />
-        <div className="h-[40px] w-full bg-bg-elevated rounded" />
+        <div className="h-12 w-40 bg-bg-elevated mb-3" />
+        <div className="h-4 w-28 bg-bg-elevated mb-4" />
+        <div className="h-[40px] w-full bg-bg-elevated" />
       </div>
     )
   }
@@ -210,7 +210,7 @@ export default function BankrollHero() {
   const hasPending = in_play_stake > 0
 
   return (
-    <div className="card group hover:border-border-strong transition-colors duration-200">
+    <div className="card hover:border-border-strong transition-colors duration-200">
       <div className="flex items-start justify-between mb-3">
         <p className="eyebrow">Bankroll</p>
         <Link
@@ -244,7 +244,7 @@ export default function BankrollHero() {
           breakdown so the user can see where the money went. Tracks live
           as bets auto-settle. */}
       {hasPending && (
-        <div className="mt-4 grid grid-cols-3 gap-3 p-3 rounded-xl bg-bg-base/50 border border-border-subtle">
+        <div className="mt-4 grid grid-cols-3 gap-3 p-3 bg-bg-base/50 border border-border-subtle">
           <div>
             <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">In play</p>
             <p className="font-stat text-loss text-base font-bold tabular-nums leading-tight">
