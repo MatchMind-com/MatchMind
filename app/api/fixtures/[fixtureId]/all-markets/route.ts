@@ -154,6 +154,13 @@ function impliedFromOdds(odds: number): number {
   return Math.round((1 / odds) * 100)
 }
 
+/** Rule-based fallback verdict when GPT is unavailable — purely from implied prob. */
+function fallbackVerdict(impliedProb: number): Verdict {
+  if (impliedProb > 60) return 'lean'
+  if (impliedProb < 35) return 'avoid'
+  return 'skip'
+}
+
 // ---- Market extraction ---------------------------------------------------
 //
 // Each helper returns `Market | null` (null = bookmaker didn't offer it).
@@ -707,10 +714,11 @@ export async function GET(
         }
       } catch (err: any) {
         console.warn('[all-markets] GPT eval failed:', err?.name, err?.message)
-        // Mark every selection as skip with a label-aware reason; EV = 0
+        // Rule-based fallback: derive verdict from implied probability so the
+        // UI shows meaningful colors even when GPT is unavailable.
         for (const m of evaluated) {
           for (const s of m.selections) {
-            s.aiVerdict = 'skip'
+            s.aiVerdict = fallbackVerdict(s.impliedProb)
             s.aiReason = ''
             s.aiProb = s.impliedProb
             s.ev = 0
@@ -723,11 +731,11 @@ export async function GET(
         }
       }
     } else if (markets.length && gptBudget <= 2000) {
-      // Not enough budget left for AI — return markets with neutral verdicts
-      // immediately so the user at least sees the bookmaker lines.
+      // Not enough budget left for AI — rule-based fallback verdicts from
+      // implied probability so the UI shows meaningful colors.
       for (const m of evaluated) {
         for (const s of m.selections) {
-          s.aiVerdict = 'skip'
+          s.aiVerdict = fallbackVerdict(s.impliedProb)
           s.aiReason = ''
           s.aiProb = s.impliedProb
           s.ev = 0
