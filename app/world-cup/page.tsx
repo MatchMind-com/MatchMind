@@ -62,6 +62,35 @@ async function fetchFixtures(): Promise<Fixture[]> {
   }
 }
 
+/**
+ * Pre-WC friendlies fixture — same shape as a group-stage Fixture but
+ * comes from league=10 (Friendlies Intl) instead of league=1 (WC).
+ * Filtered to fixtures involving at least one WC team for relevance.
+ */
+async function fetchFriendlies(): Promise<Fixture[]> {
+  try {
+    // Calendar year season for tournaments/intl friendlies — same fix as
+    // the cron's per-league season logic. Hardcoded since this page only
+    // runs in calendar 2026 (will need an update if WC moves to 2027 etc).
+    const res = await fetch(`${API_BASE}/fixtures?league=10&season=2026`, {
+      headers: { 'x-apisports-key': API_KEY },
+      next: { revalidate: 3600 },
+    })
+    if (!res.ok) return []
+    const json = await res.json()
+    return (json.response ?? []).map((f: any) => ({
+      id: f.fixture?.id,
+      date: f.fixture?.date,
+      venue: { city: f.fixture?.venue?.city ?? null, name: f.fixture?.venue?.name ?? null },
+      round: f.league?.round ?? 'Friendly',
+      home: { id: f.teams?.home?.id, name: f.teams?.home?.name, logo: f.teams?.home?.logo },
+      away: { id: f.teams?.away?.id, name: f.teams?.away?.name, logo: f.teams?.away?.logo },
+    }))
+  } catch {
+    return []
+  }
+}
+
 async function fetchGroupAssignments(): Promise<Map<string, Array<{ id: number; name: string; logo: string }>>> {
   try {
     const res = await fetch(`${API_BASE}/standings?league=1&season=2026`, {
@@ -90,6 +119,36 @@ async function fetchGroupAssignments(): Promise<Map<string, Array<{ id: number; 
   } catch {
     return new Map()
   }
+}
+
+/**
+ * Filter the full friendlies list down to fixtures involving at least one
+ * WC-qualified team, kicking off between now and WC kickoff. These are the
+ * "pre-tournament tune-ups" — what every WC nation is playing this week.
+ *
+ * Includes fixtures where EITHER team is a WC team (so France v Ivory
+ * Coast surfaces — France is the WC team) and excludes already-played.
+ */
+function filterRelevantFriendlies(
+  friendlies: Fixture[],
+  groupAssignments: Map<string, Array<{ id: number; name: string; logo: string }>>,
+  wcKickoffISO: string,
+): Fixture[] {
+  const wcTeamIds = new Set<number>()
+  for (const teams of groupAssignments.values()) {
+    for (const t of teams) wcTeamIds.add(t.id)
+  }
+  const nowMs = Date.now()
+  const wcKickoffMs = new Date(wcKickoffISO).getTime()
+  return friendlies
+    .filter((f) => {
+      const t = new Date(f.date).getTime()
+      if (!Number.isFinite(t)) return false
+      if (t < nowMs) return false             // already kicked off
+      if (t > wcKickoffMs) return false       // after WC starts — irrelevant
+      return wcTeamIds.has(f.home.id) || wcTeamIds.has(f.away.id)
+    })
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 }
 
 function organizeIntoGroups(
@@ -163,11 +222,13 @@ export const metadata = {
 // ── Page ───────────────────────────────────────────────────────────────
 
 export default async function WorldCupPage() {
-  const [fixtures, groupAssignments] = await Promise.all([
+  const [fixtures, groupAssignments, friendlies] = await Promise.all([
     fetchFixtures(),
     fetchGroupAssignments(),
+    fetchFriendlies(),
   ])
   const groups = organizeIntoGroups(fixtures, groupAssignments)
+  const tuneUps = filterRelevantFriendlies(friendlies, groupAssignments, WORLD_CUP_KICKOFF)
   const days = daysUntil(WORLD_CUP_KICKOFF)
   const totalMatches = fixtures.length + 32 // 72 group + 32 knockout
 
@@ -219,6 +280,44 @@ export default async function WorldCupPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Pre-tournament tune-ups ── */}
+      {/* Shown right after the hero because these matches kick off TODAY
+          and tomorrow — most urgent content on the page. Stable for the
+          next 9 days through to WC kickoff, then this section becomes
+          empty (no WC-team friendlies after the tournament starts). */}
+      {tuneUps.length > 0 && (
+        <section className="border-t border-border-subtle bg-bg-surface">
+          <div className="max-w-5xl mx-auto px-5 lg:px-8 py-16 lg:py-20">
+            <div className="flex items-baseline justify-between flex-wrap gap-4 mb-3">
+              <p className="eyebrow">Pre-tournament tune-ups</p>
+              <span className="text-fg-muted text-xs font-medium">
+                {tuneUps.length} match{tuneUps.length === 1 ? '' : 'es'} · refreshed hourly
+              </span>
+            </div>
+            <h2 className="font-display text-3xl md:text-4xl font-black mb-3 max-w-2xl">
+              Every WC team is playing this week.
+            </h2>
+            <p className="text-fg-secondary text-base mb-12 max-w-2xl">
+              International friendlies before kickoff are where the real squad shape leaks —
+              new caps, recovering injuries, set-piece routines. All times UK local.
+            </p>
+
+            <ul className="grid md:grid-cols-2 gap-3">
+              {tuneUps.slice(0, 12).map((f) => (
+                <FriendlyRow key={f.id} fixture={f} />
+              ))}
+            </ul>
+
+            {tuneUps.length > 12 && (
+              <p className="text-fg-muted text-xs mt-6">
+                + {tuneUps.length - 12} more WC-team friendlies in the next 9 days.
+                Full daily breakdown lands in your inbox once you sign up above.
+              </p>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ── What you'll get ── */}
       <section className="border-t border-border-subtle bg-bg-surface">
@@ -300,6 +399,50 @@ function Feature({ eyebrow, title, body }: { eyebrow: string; title: string; bod
       <h3 className="font-display text-xl font-black mb-3">{title}</h3>
       <p className="text-fg-secondary text-sm leading-relaxed">{body}</p>
     </div>
+  )
+}
+
+function FriendlyRow({ fixture }: { fixture: Fixture }) {
+  return (
+    <li className="card flex items-center gap-3 py-3.5 hover:border-border-strong transition-colors">
+      {/* Date column */}
+      <div className="flex flex-col items-center justify-center w-14 shrink-0 border-r border-border-subtle pr-3">
+        <span className="text-fg-muted text-[10px] font-bold uppercase tracking-widest">
+          {new Date(fixture.date).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'Europe/London' })}
+        </span>
+        <span className="font-stat text-fg text-lg font-bold leading-none">
+          {new Date(fixture.date).toLocaleDateString('en-GB', { day: 'numeric', timeZone: 'Europe/London' })}
+        </span>
+        <span className="text-fg-muted text-[10px] mt-0.5">
+          {new Date(fixture.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' })}
+        </span>
+      </div>
+
+      {/* Teams */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 text-sm">
+          {fixture.home.logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={fixture.home.logo} alt="" className="w-4 h-4 object-contain shrink-0" loading="lazy" />
+          ) : null}
+          <span className="text-fg font-semibold truncate">{fixture.home.name}</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm mt-1">
+          {fixture.away.logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={fixture.away.logo} alt="" className="w-4 h-4 object-contain shrink-0" loading="lazy" />
+          ) : null}
+          <span className="text-fg font-semibold truncate">{fixture.away.name}</span>
+        </div>
+      </div>
+
+      {/* Venue */}
+      {fixture.venue.city && (
+        <div className="text-fg-muted text-[10px] text-right hidden sm:block shrink-0">
+          {fixture.venue.city}
+        </div>
+      )}
+    </li>
   )
 }
 
