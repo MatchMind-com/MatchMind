@@ -195,9 +195,9 @@ export default async function LandingPage() {
         </div>
 
         {/* Main layout: headline left, scoreboard right */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '64px', alignItems: 'end', paddingBottom: '48px', borderBottom: '2px solid #1A1A22' }}>
+        <div className="home-hero-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '64px', alignItems: 'end', paddingBottom: '48px', borderBottom: '2px solid #1A1A22' }}>
           <div>
-            <h1 style={{
+            <h1 className="home-hero-headline" style={{
               fontSize: 'clamp(4rem, 10vw, 9rem)',
               fontWeight: 900,
               lineHeight: 0.92,
@@ -236,8 +236,10 @@ export default async function LandingPage() {
             </p>
           </div>
 
-          {/* Scoreboard: 2×2 grid of key stats */}
-          <div className="hidden md:grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0', border: '1px solid #1A1A22' }}>
+          {/* Scoreboard: 2×2 grid of key stats — visible on mobile too now
+              (added home-hero-scoreboard so the responsive CSS displays it
+              on small screens; was hidden via `hidden md:grid` before). */}
+          <div className="home-hero-scoreboard hidden md:grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0', border: '1px solid #1A1A22' }}>
             {[
               { val: stats.value_bets_today, lbl: 'Value bets\ntoday', color: '#F97316' },
               { val: `${track?.valueBets?.winRate ?? 39}%`, lbl: 'Value-bet\nwin rate', color: '#00C853' },
@@ -305,7 +307,7 @@ export default async function LandingPage() {
               borderLeft: '3px solid #F97316',
               transition: 'background 0.1s',
             }}
-              className="hover:bg-white/[0.02]"
+              className="home-picks-row hover:bg-white/[0.02]"
             >
               <div>
                 <p style={{ fontWeight: 700, fontSize: '14px', color: '#EDE9DF', margin: 0 }}>
@@ -345,7 +347,7 @@ export default async function LandingPage() {
             <span>Performance stats</span>
           </div>
           {/* Data row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)' }}>
+          <div className="home-stats-strip" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)' }}>
             {[
               { val: stats.value_bets_today, lbl: 'Value bets today', color: '#F97316' },
               { val: stats.leagues_covered, lbl: 'Leagues', color: '#EDE9DF' },
@@ -383,7 +385,7 @@ export default async function LandingPage() {
           <span style={{ height: '1px', flex: 1, background: '#1A1A22' }} />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderTop: '2px solid #EDE9DF' }}>
+        <div className="home-how-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderTop: '2px solid #EDE9DF' }}>
           {[
             {
               n: '01',
@@ -423,7 +425,7 @@ export default async function LandingPage() {
       {/* ── TRACK RECORD ── */}
       <section style={{ borderTop: '1px solid #1A1A22', borderBottom: '1px solid #1A1A22', background: '#0E0E12' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '80px 24px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '80px', alignItems: 'center' }}>
+          <div className="home-trackrecord-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '80px', alignItems: 'center' }}>
             <div>
               <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#6B6860', marginBottom: '20px' }}>
                 Transparency over hype
@@ -475,6 +477,17 @@ export default async function LandingPage() {
                     </p>
                   </div>
                 )}
+                {/* Critical context — without this a 39% win rate looks bad
+                    to non-bettors who don't understand value-bet math. */}
+                <p style={{
+                  fontSize: '11px', lineHeight: 1.5, color: '#6B6860',
+                  marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #1A1A22',
+                  textAlign: 'left',
+                }}>
+                  <strong style={{ color: '#EDE9DF' }}>Why win rate looks low:</strong>{' '}
+                  we target <span style={{ color: '#F97316' }}>+EV</span> at odds 1.80–4.00, not favourites.
+                  Break-even is ~30–55%. Anything above is profit.
+                </p>
               </div>
             </div>
           </div>
@@ -493,7 +506,7 @@ export default async function LandingPage() {
           </span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0', border: '1px solid #1A1A22' }}>
+        <div className="home-pricing-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0', border: '1px solid #1A1A22' }}>
           {/* Free */}
           <div style={{ padding: '40px', borderRight: '1px solid #1A1A22' }}>
             <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6B6860', marginBottom: '16px' }}>
@@ -615,7 +628,7 @@ export default async function LandingPage() {
           <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#F97316', marginBottom: '24px' }}>
             Get started
           </p>
-          <h2 style={{
+          <h2 className="home-cta-headline" style={{
             fontSize: 'clamp(3rem, 9vw, 8rem)',
             fontWeight: 900, lineHeight: 0.95,
             letterSpacing: '-0.05em', color: '#EDE9DF',

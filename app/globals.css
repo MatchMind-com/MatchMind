@@ -258,3 +258,83 @@ h1, h2, h3, h4 {
 .ticker-track:hover {
   animation-play-state: paused;
 }
+/* Respect reduced motion preference — pause the ticker for users who
+   set prefers-reduced-motion. WCAG compliance + nicer for accessibility. */
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track { animation: none; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Landing page (/) responsive overrides
+   ─────────────────────────────────────────────────────────────────────
+   The home page uses inline styles heavily. Inline styles win over CSS
+   unless we use !important. These targeted media queries make the grids
+   stack on mobile without rewriting every section to use Tailwind.
+   ───────────────────────────────────────────────────────────────────── */
+
+/* Hero grid: stack on mobile so the headline + scoreboard don't squeeze */
+@media (max-width: 768px) {
+  .home-hero-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+  /* Massive editorial type shrinks on mobile so it doesn't overflow */
+  .home-hero-headline {
+    font-size: clamp(3rem, 14vw, 5rem) !important;
+  }
+  /* Stats scoreboard: full width when stacked */
+  .home-hero-scoreboard {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+  }
+  /* Picks table: stack rows vertically (the 5-col grid was unreadable) */
+  .home-picks-row {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+  .home-picks-row > p {
+    text-align: left !important;
+  }
+  .home-picks-row .home-pick-stats {
+    display: flex;
+    gap: 16px;
+    margin-top: 6px;
+  }
+  /* Stats strip: 2 cols on mobile (was 5) */
+  .home-stats-strip {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .home-stats-strip > div:nth-child(odd) {
+    border-right: 1px solid #1A1A22;
+  }
+  .home-stats-strip > div:nth-child(even) {
+    border-right: none !important;
+  }
+  .home-stats-strip > div:nth-child(-n+3) {
+    border-bottom: 1px solid #1A1A22;
+  }
+  /* Track record: stack the 1fr|auto */
+  .home-trackrecord-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+  /* How it works: 1 column on mobile */
+  .home-how-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .home-how-grid > div {
+    border-right: none !important;
+  }
+  /* Pricing: stack Free / Pro */
+  .home-pricing-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .home-pricing-grid > div:first-child {
+    border-right: none !important;
+    border-bottom: 1px solid #1A1A22;
+  }
+  /* Final CTA headline: tame the massive type on phones */
+  .home-cta-headline {
+    font-size: clamp(2.5rem, 13vw, 4rem) !important;
+  }
+}
