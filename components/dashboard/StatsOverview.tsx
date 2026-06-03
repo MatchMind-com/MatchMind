@@ -33,7 +33,7 @@ function StatCard({ label, value, sub, color='default', icon }: { label:string;v
   const bg: Record<string,string> = { default:'bg-white/[0.06]', green:'bg-emerald-500/10', red:'bg-red-500/10', orange:'bg-orange-500/10', amber:'bg-amber-500/10' }
   const border: Record<string,string> = { default:'border-white/[0.07]', green:'border-white/[0.07]', red:'border-white/[0.07]', orange:'border-orange-500/20', amber:'border-white/[0.07]' }
   return (
-    <div className={`bg-[#161B26] border ${border[color] || 'border-white/[0.07]'} p-5 hover:border-white/[0.12] transition-all`}>
+    <div className={`bg-[#13131F] border ${border[color] || 'border-white/[0.07]'} p-5 hover:border-white/[0.12] transition-all`}>
       <div className="flex items-start justify-between mb-3">
         <span className="text-slate-500 text-[10px] font-semibold uppercase tracking-wider">{label}</span>
         <div className={`w-7 h-7 ${bg[color]} flex items-center justify-center ${c[color]}`}>{icon}</div>

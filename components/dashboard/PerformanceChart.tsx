@@ -142,7 +142,7 @@ export default function PerformanceChart({ bets }: { bets: BetSlip[] }) {
                 <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} unit="%" />
                 <Tooltip content={<Tip />} />
                 <ReferenceLine y={0} stroke="#ffffff15" strokeDasharray="4 4" />
-                <Bar dataKey="roi" radius={[6, 6, 0, 0]}>
+                <Bar dataKey="roi">
                   {(view === 'roi_league' ? leagueData : typeData).map((e, i) => (
                     <Cell key={i} fill={e.roi >= 0 ? '#10B981' : '#EF4444'} opacity={0.85} />
                   ))}

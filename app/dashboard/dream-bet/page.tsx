@@ -143,7 +143,7 @@ export default function DreamBetPage() {
 
   if (loading) {
     return (
-      <div className="p-6 lg:p-8 min-h-screen bg-[#0A0F1E]">
+      <div className="p-6 lg:p-8 min-h-screen bg-[#09090C]">
         <div className="max-w-5xl mx-auto">
           <div className="h-32 bg-white/[0.03] border border-white/[0.06] animate-pulse" />
         </div>
@@ -154,7 +154,7 @@ export default function DreamBetPage() {
   const showForm = !goal || editing
 
   return (
-    <div className="p-6 lg:p-8 min-h-screen bg-[#0A0F1E]">
+    <div className="p-6 lg:p-8 min-h-screen bg-[#09090C]">
       <div className="max-w-5xl mx-auto space-y-6">
 
         {/* Header */}
@@ -176,7 +176,7 @@ export default function DreamBetPage() {
 
         {/* Goal Setup Form */}
         {showForm && (
-          <div className="bg-[#0E1628] border border-white/[0.08] p-6">
+          <div className="bg-[#0E0E12] border border-white/[0.08] p-6">
             <h2 className="text-white font-black text-lg mb-4">
               {goal ? 'Update your goal' : 'Define your dream bet'}
             </h2>
@@ -283,7 +283,7 @@ export default function DreamBetPage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <StatCard label="Current" value={fmtMoney(goal.current_bankroll)} accent="text-white" />
               <StatCard label="Target" value={fmtMoney(goal.target)} accent="text-orange-400" />
-              <StatCard label="Days left" value={String(plan.daysRemaining)} accent="text-blue-400" />
+              <StatCard label="Days left" value={String(plan.daysRemaining)} accent="text-orange-400" />
               <StatCard
                 label="Status"
                 value={plan.onTrack ? 'On track' : 'Behind pace'}
@@ -292,7 +292,7 @@ export default function DreamBetPage() {
             </div>
 
             {/* Progress bar */}
-            <div className="bg-[#0E1628] border border-white/[0.08] p-5">
+            <div className="bg-[#0E0E12] border border-white/[0.08] p-5">
               <div className="flex items-baseline justify-between mb-2">
                 <h3 className="text-white font-bold text-sm">Progress to target</h3>
                 <span className="text-white/60 text-xs font-bold">{plan.progressPct}%</span>
@@ -310,7 +310,7 @@ export default function DreamBetPage() {
             </div>
 
             {/* Today's plan */}
-            <div className="bg-[#0E1628] border border-orange-500/20 p-5">
+            <div className="bg-[#0E0E12] border border-orange-500/20 p-5">
               <div className="flex items-baseline justify-between mb-3">
                 <h3 className="text-white font-black text-base">Today&apos;s plan</h3>
                 <span className="text-orange-400 text-[10px] font-bold uppercase tracking-widest">
@@ -343,7 +343,7 @@ export default function DreamBetPage() {
             </div>
 
             {/* Trajectory chart */}
-            <div className="bg-[#0E1628] border border-white/[0.08] p-5">
+            <div className="bg-[#0E0E12] border border-white/[0.08] p-5">
               <h3 className="text-white font-bold text-sm mb-4">Bankroll trajectory</h3>
               <div className="flex items-end justify-between gap-1.5 h-40">
                 {trajectory.map((b, i) => {
@@ -353,13 +353,13 @@ export default function DreamBetPage() {
                     <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
                       <div className="w-full flex items-end gap-0.5 h-full">
                         <div
-                          className="flex-1 bg-orange-500/20 rounded-t-sm border-t border-orange-500/40"
+                          className="flex-1 bg-orange-500/20  border-t border-orange-500/40"
                           style={{ height: `${targetH}%` }}
                           title={`Target ${fmtMoney(b.targetVal)}`}
                         />
                         {b.actual != null && (
                           <div
-                            className="flex-1 bg-emerald-500/40 rounded-t-sm border-t border-emerald-400"
+                            className="flex-1 bg-emerald-500/40  border-t border-emerald-400"
                             style={{ height: `${actualH}%` }}
                             title={`Actual ${fmtMoney(b.actual)}`}
                           />
@@ -404,7 +404,7 @@ export default function DreamBetPage() {
 
 function StatCard({ label, value, accent }: { label: string; value: string; accent: string }) {
   return (
-    <div className="bg-[#0E1628] border border-white/[0.08] p-4">
+    <div className="bg-[#0E0E12] border border-white/[0.08] p-4">
       <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">{label}</p>
       <p className={`font-black text-lg ${accent}`}>{value}</p>
     </div>

@@ -59,7 +59,7 @@ export default async function DashboardTrackRecordPage() {
           <p className="text-slate-500 text-sm mt-1">Every prediction logged before kickoff. No cherry-picking.</p>
         </div>
         <a href="/track-record" target="_blank" rel="noopener noreferrer"
-          className="text-xs text-slate-500 hover:text-blue-400 flex items-center gap-1 transition-colors">
+          className="text-xs text-slate-500 hover:text-orange-400 flex items-center gap-1 transition-colors">
           Public page
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -194,7 +194,7 @@ export default async function DashboardTrackRecordPage() {
                   <p className="text-slate-500 text-xs mt-0.5">ROI</p>
                 </div>
                 <div>
-                  <p className="text-blue-400 text-2xl font-black">{stats.valueBets.total}</p>
+                  <p className="text-white text-2xl font-black">{stats.valueBets.total}</p>
                   <p className="text-slate-500 text-xs mt-0.5">Tips</p>
                 </div>
               </div>
@@ -220,7 +220,7 @@ export default async function DashboardTrackRecordPage() {
                         </div>
                       </div>
                       <div className="w-full h-1 bg-white/[0.05] overflow-hidden">
-                        <div className="h-full bg-blue-500" style={{ width: `${l.winRate}%` }} />
+                        <div className="h-full bg-orange-500" style={{ width: `${l.winRate}%` }} />
                       </div>
                     </div>
                   ))}
@@ -235,7 +235,7 @@ export default async function DashboardTrackRecordPage() {
                   {byBetType.slice(0, 6).map((t: any) => (
                     <div key={t.type} className="flex items-center justify-between">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="bg-blue-500/15 text-blue-300 text-xs px-2 py-0.5 border border-blue-500/20 font-semibold shrink-0">{t.type}</span>
+                        <span className="bg-orange-500/10 text-orange-400 text-xs px-2 py-0.5 border border-orange-500/20 font-semibold shrink-0">{t.type}</span>
                         <span className="text-slate-500 text-xs">{t.wins}W · {t.losses}L</span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -276,7 +276,7 @@ export default async function DashboardTrackRecordPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 mt-2 flex-wrap">
-                        <span className="bg-blue-500/15 text-blue-300 text-xs font-semibold px-2 py-0.5 border border-blue-500/20">{r.bet_type}</span>
+                        <span className="bg-orange-500/10 text-orange-400 text-xs font-semibold px-2 py-0.5 border border-orange-500/20">{r.bet_type}</span>
                         {r.odds && <span className="text-white text-xs font-bold">@ {r.odds}</span>}
                         {r.closing_odds && (
                           <span className="text-slate-500 text-xs">closed {r.closing_odds}</span>
@@ -322,7 +322,7 @@ export default async function DashboardTrackRecordPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      <span className="bg-blue-500/15 text-blue-300 text-xs font-semibold px-2 py-0.5 border border-blue-500/20">{r.bet_type}</span>
+                      <span className="bg-orange-500/10 text-orange-400 text-xs font-semibold px-2 py-0.5 border border-orange-500/20">{r.bet_type}</span>
                       {r.odds && <span className="text-white text-xs font-bold">@ {r.odds}</span>}
                       {r.closing_odds && <span className="text-slate-500 text-xs">closed {r.closing_odds}</span>}
                       {r.ev_percent && <span className="text-emerald-400 text-xs font-bold">+{r.ev_percent}% EV</span>}

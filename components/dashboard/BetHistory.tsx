@@ -32,7 +32,7 @@ function AutoDetectBadge({ bet }: { bet: BetSlip }) {
   if (bet.result !== 'pending') return null
   if (canAutoDetect(bet)) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5">
+      <span className="inline-flex items-center gap-1 text-xs text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z" strokeOpacity=".3"/>
           <path d="M12 6v6l4 2"/>
@@ -112,7 +112,7 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
     <div className="bg-[#13131F] border border-white/5 p-6">
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+          <div className="w-9 h-9 bg-orange-500/10 flex items-center justify-center text-orange-400">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           </div>
           <div>
@@ -125,7 +125,7 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
           <button
             onClick={refreshResults}
             disabled={refreshing}
-            className="flex items-center gap-1.5 text-xs bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 px-3 py-1.5 transition-all disabled:opacity-50"
+            className="flex items-center gap-1.5 text-xs bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 px-3 py-1.5 transition-all disabled:opacity-50"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={refreshing ? 'animate-spin' : ''}>
               <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
@@ -143,7 +143,7 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
 
       {/* Refresh status message */}
       {refreshMsg && (
-        <div className="mb-4 text-xs text-sky-400 bg-sky-500/10 border border-sky-500/20 px-3 py-2">
+        <div className="mb-4 text-xs text-orange-400 bg-orange-500/10 border border-orange-500/20 px-3 py-2">
           {refreshMsg}
         </div>
       )}
@@ -151,16 +151,16 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
       {/* Auto-detect info banner (show when there are pending bets with fixture_id) */}
       {bets.some(b => b.result === 'pending' && canAutoDetect(b)) && (
         <div className="mb-4 flex items-start gap-2 text-xs text-slate-400 bg-white/3 border border-white/5 px-3 py-2.5">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-sky-400 shrink-0 mt-0.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-orange-400 shrink-0 mt-0.5">
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
           </svg>
-          <span>Results are checked automatically each night. Click <strong className="text-sky-400">Refresh Results</strong> to check now for any matches that have finished.</span>
+          <span>Results are checked automatically each night. Click <strong className="text-orange-400">Refresh Results</strong> to check now for any matches that have finished.</span>
         </div>
       )}
 
       <div className="flex gap-1 mb-4 bg-[#0B0B14] p-1 w-fit">
         {(['all','pending','win','loss','void'] as const).map(f => (
-          <button key={f} onClick={() => setFilter(f)} className={`text-xs px-3 py-1.5 transition-all font-medium capitalize ${filter===f ? 'bg-violet-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
+          <button key={f} onClick={() => setFilter(f)} className={`text-xs px-3 py-1.5 transition-all font-medium capitalize ${filter===f ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'}`}>
             {f === 'win' ? 'Won' : f === 'loss' ? 'Lost' : f.charAt(0).toUpperCase()+f.slice(1)}
           </button>
         ))}
@@ -194,7 +194,7 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <span className="text-white font-medium text-sm">{bet.match_name}</span>
                       {bet.league && <span className="text-xs text-slate-500 bg-white/5 px-2 py-0.5">{bet.league}</span>}
-                      {isAcca && <span className="text-xs text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5">ACCA ×{accaLegs.length || '?'}</span>}
+                      {isAcca && <span className="text-xs text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5">ACCA ×{accaLegs.length || '?'}</span>}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
                       <span>{bet.bet_type}</span><span className="text-slate-700">•</span>
@@ -231,7 +231,7 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
 
                   <div className="flex items-center gap-2 shrink-0">
                     <span className={`text-xs font-medium px-2 py-1 border ${badge[bet.result]}`}>
-                      {bet.result==='pending'?'⏳ Pending':bet.result==='win'?'✓ Won':bet.result==='loss'?'✗ Lost':'○ Void'}
+                      {bet.result==='pending'?'Pending':bet.result==='win'?'Won':bet.result==='loss'?'Lost':'Void'}
                     </span>
                     {bet.result !== 'pending' && bet.result !== 'void' && (
                       <span className={`text-xs font-bold ${Number(bet.profit_loss)>=0 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -260,9 +260,9 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
                     <>
                       <span className="text-slate-700 text-xs">•</span>
                       <span className="text-slate-600 text-xs">Mark as:</span>
-                      <button onClick={() => setResult(bet,'win')} className="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 transition-all">✓ Won</button>
-                      <button onClick={() => setResult(bet,'loss')} className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-2.5 py-0.5 transition-all">✗ Lost</button>
-                      <button onClick={() => setResult(bet,'void')} className="text-xs bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 border border-slate-500/20 px-2.5 py-0.5 transition-all">○ Void</button>
+                      <button onClick={() => setResult(bet,'win')} className="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 transition-all">Won</button>
+                      <button onClick={() => setResult(bet,'loss')} className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-2.5 py-0.5 transition-all">Lost</button>
+                      <button onClick={() => setResult(bet,'void')} className="text-xs bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 border border-slate-500/20 px-2.5 py-0.5 transition-all">Void</button>
                     </>
                   )}
 
@@ -275,10 +275,10 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
                 {isOverrideOpen && (
                   <div className="mt-2 flex items-center gap-2 flex-wrap bg-white/3 px-3 py-2">
                     <span className="text-slate-500 text-xs">Manual override:</span>
-                    {bet.result !== 'win' && <button onClick={() => setResult(bet,'win')} className="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-3 py-1 transition-all">✓ Won</button>}
-                    {bet.result !== 'loss' && <button onClick={() => setResult(bet,'loss')} className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-3 py-1 transition-all">✗ Lost</button>}
-                    {bet.result !== 'pending' && <button onClick={() => setResult(bet,'pending')} className="text-xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 px-3 py-1 transition-all">⏳ Pending</button>}
-                    {bet.result !== 'void' && <button onClick={() => setResult(bet,'void')} className="text-xs bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 border border-slate-500/20 px-3 py-1 transition-all">○ Void</button>}
+                    {bet.result !== 'win' && <button onClick={() => setResult(bet,'win')} className="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-3 py-1 transition-all">Won</button>}
+                    {bet.result !== 'loss' && <button onClick={() => setResult(bet,'loss')} className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-3 py-1 transition-all">Lost</button>}
+                    {bet.result !== 'pending' && <button onClick={() => setResult(bet,'pending')} className="text-xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 px-3 py-1 transition-all">Pending</button>}
+                    {bet.result !== 'void' && <button onClick={() => setResult(bet,'void')} className="text-xs bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 border border-slate-500/20 px-3 py-1 transition-all">Void</button>}
                   </div>
                 )}
               </div>

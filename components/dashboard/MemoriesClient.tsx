@@ -88,7 +88,7 @@ export default function MemoriesClient() {
   }, [memories, activeQuery])
 
   return (
-    <div className="min-h-screen bg-[#0A0F1E] text-white px-4 lg:px-8 py-6 lg:py-10 pt-20 lg:pt-10">
+    <div className="min-h-screen bg-[#09090C] text-white px-4 lg:px-8 py-6 lg:py-10 pt-20 lg:pt-10">
       <div className="max-w-4xl mx-auto">
 
         {/* Header */}
@@ -105,8 +105,8 @@ export default function MemoriesClient() {
         {/* Stats card */}
         <div className="bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 p-5 mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-2xl">
-              🧠
+            <div className="w-12 h-12 bg-orange-500/15 border border-orange-500/30 flex items-center justify-center">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-orange-400"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.44-4.16z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.44-4.16z"/></svg>
             </div>
             <div>
               <div className="text-2xl font-black text-white">
@@ -159,13 +159,12 @@ export default function MemoriesClient() {
         {!loading && notReady && (
           <div className="bg-amber-500/5 border border-amber-500/20 p-6 text-amber-200/80 text-sm">
             <div className="font-bold text-amber-300 mb-1">Memory Lane needs a one-time setup.</div>
-            Run <code className="px-1.5 py-0.5 rounded bg-black/30 text-amber-200">supabase/memory-lane.sql</code> in your Supabase SQL editor to enable persistent memory.
+            Run <code className="px-1.5 py-0.5 bg-black/30 text-amber-200">supabase/memory-lane.sql</code> in your Supabase SQL editor to enable persistent memory.
           </div>
         )}
 
         {!loading && !notReady && memories.length === 0 && (
           <div className="bg-white/[0.03] border border-white/10 p-10 text-center">
-            <div className="text-4xl mb-2">💭</div>
             <div className="text-white/70 font-semibold mb-1">No memories yet</div>
             <div className="text-white/40 text-sm">
               Chat with your Coach — every exchange becomes a memory it can recall later.
@@ -222,7 +221,7 @@ function MemoryCard({
             <span
               className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 ${
                 isUser
-                  ? 'bg-blue-500/15 text-blue-300 border border-blue-500/25'
+                  ? 'bg-white/[0.06] text-[#6B6860] border border-white/[0.08]'
                   : 'bg-orange-500/15 text-orange-300 border border-orange-500/25'
               }`}
             >

@@ -12,11 +12,10 @@ export default function TrialBanner({ daysLeft }: { daysLeft: number }) {
     <div className={`w-full px-4 py-2.5 flex items-center justify-between gap-4 text-sm
       ${urgency
         ? 'bg-amber-500/15 border-b border-amber-500/30'
-        : 'bg-violet-600/15 border-b border-violet-500/25'
+        : 'bg-orange-500/10 border-b border-orange-500/20'
       }`}>
       <div className="flex items-center gap-2.5">
-        <span className="text-base">{urgency ? '⏰' : '🎁'}</span>
-        <p className={urgency ? 'text-amber-300' : 'text-violet-300'}>
+        <p className={urgency ? 'text-amber-300' : 'text-orange-300'}>
           <span className="font-bold">
             {urgency ? `Trial ends in ${daysLeft} day${daysLeft === 1 ? '' : 's'}!` : `${daysLeft} days left on your free Pro trial`}
           </span>
@@ -31,7 +30,7 @@ export default function TrialBanner({ daysLeft }: { daysLeft: number }) {
           className={`text-xs font-bold px-3 py-1.5 transition-colors
             ${urgency
               ? 'bg-amber-500 hover:bg-amber-400 text-black'
-              : 'bg-violet-600 hover:bg-violet-500 text-white'
+              : 'bg-orange-500 hover:bg-orange-400 text-white'
             }`}
         >
           Upgrade to keep Pro →

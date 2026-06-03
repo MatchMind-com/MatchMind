@@ -10,9 +10,9 @@ interface Props {
 }
 
 const MILESTONES = [
-  { count: 1, reward: '1 month Pro free', icon: '🎁' },
-  { count: 3, reward: '3 months Pro free', icon: '🚀' },
-  { count: 10, reward: 'Lifetime Pro access', icon: '👑' },
+  { count: 1, reward: '1 month Pro free', label: '1 ref' },
+  { count: 3, reward: '3 months Pro free', label: '3 refs' },
+  { count: 10, reward: 'Lifetime Pro access', label: '10 refs' },
 ]
 
 export default function ReferralClient({ referralCode, referralCount, subscriptionTier }: Props) {
@@ -40,7 +40,9 @@ export default function ReferralClient({ referralCode, referralCount, subscripti
     <div className="p-4 md:p-8 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
-        <div className="w-10 h-10 bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xl">🎁</div>
+        <div className="w-10 h-10 bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-400"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+        </div>
         <div>
           <h1 className="text-2xl font-bold text-white">Refer a Friend</h1>
           <p className="text-white/40 text-sm">Invite friends, earn Pro rewards together</p>
@@ -50,12 +52,12 @@ export default function ReferralClient({ referralCode, referralCount, subscripti
       {/* How it works */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         {[
-          { icon: '🔗', step: '1', title: 'Share your link', desc: 'Send your unique invite link to friends' },
-          { icon: '✅', step: '2', title: 'They sign up', desc: 'Friend creates a free MatchMind account' },
-          { icon: '🎁', step: '3', title: 'You both win', desc: 'You get Pro time, they get 7 days Pro free' },
+          { step: '1', title: 'Share your link', desc: 'Send your unique invite link to friends' },
+          { step: '2', title: 'They sign up', desc: 'Friend creates a free MatchMind account' },
+          { step: '3', title: 'You both win', desc: 'You get Pro time, they get 7 days Pro free' },
         ].map(s => (
           <div key={s.step} className="bg-white/[0.03] border border-white/8 p-4 text-center">
-            <p className="text-2xl mb-2">{s.icon}</p>
+            <p className="text-orange-400 font-black text-lg mb-1">{s.step}</p>
             <p className="text-white text-xs font-bold mb-1">{s.title}</p>
             <p className="text-white/30 text-[10px]">{s.desc}</p>
           </div>
@@ -70,7 +72,7 @@ export default function ReferralClient({ referralCode, referralCount, subscripti
             <p className="text-white/40 text-xs">{referralCount} friend{referralCount !== 1 ? 's' : ''} referred</p>
           </div>
           <div className="text-right">
-            <p className="text-amber-400 font-bold text-sm">{nextMilestone.icon} Next: {nextMilestone.reward}</p>
+            <p className="text-amber-400 font-bold text-sm">Next: {nextMilestone.reward}</p>
             <p className="text-white/30 text-xs">{nextMilestone.count - referralCount} more to go</p>
           </div>
         </div>
@@ -88,10 +90,9 @@ export default function ReferralClient({ referralCode, referralCount, subscripti
               key={m.count}
               className={`text-center p-3 border ${referralCount >= m.count ? 'bg-amber-500/10 border-amber-500/25' : 'bg-white/[0.02] border-white/5'}`}
             >
-              <p className="text-base mb-0.5">{m.icon}</p>
-              <p className={`text-xs font-bold ${referralCount >= m.count ? 'text-amber-400' : 'text-white/30'}`}>{m.count} referral{m.count > 1 ? 's' : ''}</p>
+              <p className={`text-xs font-black mb-0.5 ${referralCount >= m.count ? 'text-amber-400' : 'text-white/30'}`}>{m.label}</p>
               <p className={`text-[10px] ${referralCount >= m.count ? 'text-amber-300/70' : 'text-white/20'}`}>{m.reward}</p>
-              {referralCount >= m.count && <p className="text-emerald-400 text-[10px] mt-0.5 font-bold">✓ Earned</p>}
+              {referralCount >= m.count && <p className="text-emerald-400 text-[10px] mt-0.5 font-bold">Earned</p>}
             </div>
           ))}
         </div>
@@ -101,19 +102,19 @@ export default function ReferralClient({ referralCode, referralCount, subscripti
       <div className="bg-white/[0.03] border border-white/8 p-5 mb-4">
         <p className="text-white text-sm font-semibold mb-3">Your Referral Link</p>
         <div className="flex items-center gap-2 bg-[#0B0B14] border border-white/10 p-3 mb-3">
-          <p className="text-violet-300 text-sm font-mono flex-1 truncate">{referralUrl}</p>
+          <p className="text-orange-300 text-sm font-mono flex-1 truncate">{referralUrl}</p>
           <button
             onClick={copyLink}
-            className="shrink-0 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold px-3 py-1.5 transition-colors"
+            className="shrink-0 bg-orange-500 hover:bg-orange-400 text-white text-xs font-semibold px-3 py-1.5 transition-colors"
           >
-            {copied ? '✓ Copied!' : 'Copy'}
+            {copied ? 'Copied!' : 'Copy'}
           </button>
         </div>
         <button
           onClick={copyMessage}
           className="w-full bg-white/5 hover:bg-white/8 border border-white/10 text-white/60 hover:text-white text-sm py-2.5 transition-colors"
         >
-          {copiedMsg ? '✓ Message Copied!' : '📋 Copy Ready-to-Send Message'}
+          {copiedMsg ? 'Message Copied!' : 'Copy Ready-to-Send Message'}
         </button>
       </div>
 
@@ -129,18 +130,18 @@ export default function ReferralClient({ referralCode, referralCount, subscripti
           WhatsApp
         </a>
         <a
-          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Loving MatchMind for tracking my bets + getting AI value picks. Free to start 👇`)}&url=${encodeURIComponent(referralUrl)}`}
+          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Loving MatchMind for tracking my bets + getting AI value picks. Free to start`)}&url=${encodeURIComponent(referralUrl)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 bg-black/30 hover:bg-black/50 border border-white/15 text-white font-semibold text-sm py-3 transition-colors"
         >
           <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          𝕏 / Twitter
+          X / Twitter
         </a>
       </div>
 
       <p className="text-white/20 text-xs text-center mt-5">
-        Pro rewards are applied manually within 48 hours of each referred signup. Your referral code: <span className="font-mono text-violet-400">{referralCode}</span>
+        Pro rewards are applied manually within 48 hours of each referred signup. Your referral code: <span className="font-mono text-orange-400">{referralCode}</span>
       </p>
     </div>
   )

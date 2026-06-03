@@ -42,13 +42,13 @@ export default function LiveMatchesPage() {
   }, [])
 
   return (
-    <main className="min-h-screen bg-[#0A0F1E] text-white p-4 sm:p-8">
+    <main className="min-h-screen bg-[#09090C] text-white p-4 sm:p-8">
       <div className="max-w-5xl mx-auto">
         <div className="flex items-start justify-between mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">Live Matches</h1>
             <p className="text-sm text-white/50 mt-1">
-              In-play games right now. Tap <span className="text-blue-300 font-semibold">Watch with AI</span> to open the Co-Pilot.
+              In-play games right now. Tap <span className="text-orange-400 font-semibold">Watch with AI</span> to open the Co-Pilot.
             </p>
           </div>
           <div className="flex items-center gap-2 text-[11px] text-emerald-400 font-semibold uppercase tracking-widest">
@@ -123,7 +123,7 @@ export default function LiveMatchesPage() {
               <div className="mt-3 flex justify-end">
                 <button
                   onClick={() => setOpenFixture(m)}
-                  className="px-3 py-1.5 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-200 text-xs font-bold transition flex items-center gap-1.5"
+                  className="px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-300 text-xs font-bold transition flex items-center gap-1.5"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />

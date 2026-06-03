@@ -41,7 +41,7 @@ function ResultBadge({ result }: { result: string | null }) {
     loss: 'bg-red-500/15 text-red-400 border border-red-500/20',
     void: 'bg-white/10 text-white/40 border border-white/10',
   }
-  const labels: Record<string, string> = { win: '✅ Won', loss: '❌ Lost', void: '↩️ Void' }
+  const labels: Record<string, string> = { win: 'Won', loss: 'Lost', void: 'Void' }
   return <span className={`text-xs font-semibold px-2 py-0.5 ${styles[result]}`}>{labels[result]}</span>
 }
 
@@ -102,21 +102,21 @@ export default function TipsterProfilePage() {
       {/* Success banner */}
       {justSubscribed && (
         <div className="bg-emerald-500/15 border border-emerald-500/30 px-4 py-3 mb-6 flex items-center gap-2">
-          <span>🎉</span>
-          <p className="text-emerald-300 font-semibold text-sm">You're now subscribed to {tipster.display_name}! All tips are now unlocked.</p>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-emerald-400 shrink-0"><path d="M20 6L9 17l-5-5"/></svg>
+          <p className="text-emerald-300 font-semibold text-sm">You&apos;re now subscribed to {tipster.display_name}! All tips are now unlocked.</p>
         </div>
       )}
 
       {/* Profile header */}
-      <div className="bg-[#13162b] border border-white/8 p-6 mb-6">
+      <div className="bg-[#13131F] border border-white/8 p-6 mb-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-violet-500/20">
+            <div className="w-16 h-16 bg-orange-500 flex items-center justify-center text-white font-black text-2xl">
               {tipster.display_name[0].toUpperCase()}
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">{tipster.display_name}</h1>
-              {tipster.speciality && <p className="text-violet-300 text-sm">{tipster.speciality}</p>}
+              {tipster.speciality && <p className="text-orange-400 text-sm">{tipster.speciality}</p>}
               {tipster.bio && <p className="text-white/40 text-sm mt-1 max-w-lg">{tipster.bio}</p>}
             </div>
           </div>
@@ -126,13 +126,13 @@ export default function TipsterProfilePage() {
             <div className="flex flex-col items-end gap-2">
               {isSubscribed ? (
                 <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-4 py-2">
-                  <span className="text-emerald-400 text-sm font-semibold">✅ Subscribed</span>
+                  <span className="text-emerald-400 text-sm font-semibold">Subscribed</span>
                 </div>
               ) : (
                 <button
                   onClick={handleSubscribe}
                   disabled={subscribing}
-                  className="bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold px-6 py-3 text-sm transition-colors"
+                  className="bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white font-bold px-6 py-3 text-sm transition-colors"
                 >
                   {subscribing ? 'Loading…' : `Subscribe — £${tipster.monthly_price}/mo`}
                 </button>
@@ -142,7 +142,7 @@ export default function TipsterProfilePage() {
           )}
           {isTipster && (
             <Link href="/dashboard/my-tipster" className="bg-white/10 hover:bg-white/15 text-white font-semibold px-4 py-2 text-sm transition-colors">
-              ⚙️ Manage Tips
+              Manage Tips
             </Link>
           )}
         </div>
@@ -200,7 +200,7 @@ export default function TipsterProfilePage() {
               <div key={tip.id} className={`border p-4 ${
                 tip.result === 'win' ? 'bg-emerald-950/30 border-emerald-500/20' :
                 tip.result === 'loss' ? 'bg-red-950/20 border-red-500/15' :
-                'bg-[#13162b] border-white/8'
+                'bg-[#13131F] border-white/8'
               }`}>
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
@@ -214,7 +214,7 @@ export default function TipsterProfilePage() {
                 </div>
 
                 <div className="flex items-center gap-3 flex-wrap">
-                  <span className="bg-violet-600/20 text-violet-300 text-xs font-semibold px-2.5 py-1 border border-violet-500/20">
+                  <span className="bg-orange-500/10 text-orange-400 text-xs font-semibold px-2.5 py-1 border border-orange-500/20">
                     {tip.bet_type}
                   </span>
                   <span className="text-white font-bold text-sm">@ {tip.odds.toFixed(2)}</span>
@@ -236,11 +236,11 @@ export default function TipsterProfilePage() {
           {/* Locked premium tips */}
           {lockedTips > 0 && (
             <div className="relative">
-              <div className="bg-[#13162b] border border-white/8 p-6 filter blur-[2px]">
+              <div className="bg-[#13131F] border border-white/8 p-6 filter blur-[2px]">
                 <p className="text-white/20 text-sm">Premium tip locked...</p>
               </div>
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0B0B14]/80 border border-amber-500/30">
-                <p className="text-xl mb-1">🔒</p>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-400 mb-2"><rect x="3" y="11" width="18" height="11"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                 <p className="text-white font-bold text-sm mb-1">{lockedTips} premium tip{lockedTips > 1 ? 's' : ''} locked</p>
                 <p className="text-white/40 text-xs mb-3">Subscribe to unlock all picks</p>
                 <button

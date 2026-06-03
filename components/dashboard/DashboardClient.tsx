@@ -69,8 +69,8 @@ export default function DashboardClient({ userId, email }: { userId: string; ema
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent animate-spin"></div>
-          <span className="text-slate-500 text-sm">Loading your dashboard...</span>
+          <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent animate-spin"></div>
+          <span className="text-[#6B6860] text-sm">Loading your dashboard...</span>
         </div>
       </div>
     )
@@ -101,13 +101,13 @@ export default function DashboardClient({ userId, email }: { userId: string; ema
           <div
             className="flex items-center justify-between px-5 py-4 border cursor-pointer"
             style={{
-              background: 'linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(99,102,241,0.08) 100%)',
+              background: 'linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(249,115,22,0.08) 100%)',
               borderColor: 'rgba(239,68,68,0.25)',
             }}
             onClick={() => setShowPaywall(true)}
           >
             <div className="flex items-center gap-3">
-              <span className="text-xl">🔒</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-400 shrink-0"><rect x="3" y="11" width="18" height="11"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
               <div>
                 <p className="text-sm font-semibold text-white">
                   Free limit reached — {bets.length}/{FREE_BET_LIMIT} bets used
@@ -115,7 +115,7 @@ export default function DashboardClient({ userId, email }: { userId: string; ema
                 <p className="text-xs text-slate-500">Upgrade to Pro to log unlimited bets and unlock all AI insights</p>
               </div>
             </div>
-            <button className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold px-4 py-2 flex-shrink-0">
+            <button className="bg-orange-500 hover:bg-orange-400 text-white text-xs font-bold px-4 py-2 flex-shrink-0 transition-colors">
               Upgrade Now →
             </button>
           </div>

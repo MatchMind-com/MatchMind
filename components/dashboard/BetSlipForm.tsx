@@ -332,27 +332,27 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
     : pickerFixtures
 
   return (
-    <div className="relative bg-[#0E1628] border border-white/[0.07]">
+    <div className="relative bg-[#0E0E12] border border-white/[0.07]">
       {/* Paywall overlay */}
       {isAtPaywall && (
         <div className="absolute inset-0 z-10 overflow-hidden flex flex-col items-center justify-center cursor-pointer"
           style={{ background: 'rgba(6,9,20,0.9)', backdropFilter: 'blur(4px)' }}
           onClick={onShowPaywall}>
-          <div className="w-10 h-10 bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-3">
-            <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-10 h-10 bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-3">
+            <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
           <p className="text-white font-bold text-sm mb-1">Free limit reached</p>
           <p className="text-slate-400 text-xs mb-4 text-center max-w-[200px]">Upgrade to Pro to continue logging bets</p>
-          <button className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-5 py-2.5 transition-colors">Upgrade to Pro →</button>
+          <button className="bg-orange-500 hover:bg-orange-400 text-white text-sm font-bold px-5 py-2.5 transition-colors">Upgrade to Pro →</button>
         </div>
       )}
 
       {/* Header + mode toggle */}
       <div className="px-5 py-4 border-b border-white/[0.07] flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+          <div className="w-8 h-8 bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -366,7 +366,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
         <div className="flex items-center gap-1 bg-white/[0.04] border border-white/[0.08] p-1">
           {(['single', 'acca'] as const).map(m => (
             <button key={m} type="button" onClick={() => setMode(m)}
-              className={`text-xs font-bold px-3 py-1.5 transition-all ${mode === m ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-white'}`}>
+              className={`text-xs font-bold px-3 py-1.5 transition-all ${mode === m ? 'bg-orange-500 text-white' : 'text-slate-500 hover:text-white'}`}>
               {m === 'single' ? 'Single' : 'ACCA'}
             </button>
           ))}
@@ -379,7 +379,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
         {mode === 'single' && (
           <>
             {/* Photo upload zone */}
-            <div className={`relative border-2 border-dashed p-4 mb-5 text-center cursor-pointer transition-all ${dragOver ? 'border-blue-500/60 bg-blue-500/8' : 'border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.02]'}`}
+            <div className={`relative border-2 border-dashed p-4 mb-5 text-center cursor-pointer transition-all ${dragOver ? 'border-orange-500/60 bg-orange-500/8' : 'border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.02]'}`}
               onDragOver={e => { e.preventDefault(); setDragOver(true) }}
               onDragLeave={() => setDragOver(false)}
               onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handlePhotoUpload(f) }}
@@ -388,8 +388,8 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                 onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f) }} />
               {ocrLoading ? (
                 <div className="flex items-center justify-center gap-2 py-1">
-                  <div className="w-4 h-4 border-2 border-blue-400/40 border-t-blue-400 animate-spin" />
-                  <span className="text-blue-400 text-sm font-medium">Reading bet slip with AI…</span>
+                  <div className="w-4 h-4 border-2 border-orange-400/40 border-t-orange-400 animate-spin" />
+                  <span className="text-orange-400 text-sm font-medium">Reading bet slip with AI…</span>
                 </div>
               ) : uploadedImage ? (
                 <div className="flex items-center gap-3">
@@ -405,7 +405,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                   <svg className="w-6 h-6 text-slate-600 mx-auto mb-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <p className="text-slate-400 text-sm">Drop a bet slip photo or <span className="text-blue-400 font-semibold">click to upload</span></p>
+                  <p className="text-slate-400 text-sm">Drop a bet slip photo or <span className="text-orange-400 font-semibold">click to upload</span></p>
                   <p className="text-slate-600 text-xs mt-0.5">AI reads and auto-fills the form</p>
                 </div>
               )}
@@ -419,9 +419,9 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                 <div className="flex gap-2">
                   <input type="text" placeholder="e.g. Arsenal vs Chelsea" value={form.match_name}
                     onChange={e => { setForm(p => ({ ...p, match_name: e.target.value })); if (selectedFixture) setSelectedFixture(null) }}
-                    className="flex-1 bg-white/[0.03] border border-white/[0.07] px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-blue-500/40 transition-colors" />
+                    className="flex-1 bg-white/[0.03] border border-white/[0.07] px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-orange-500/40 transition-colors" />
                   <button type="button" onClick={openPicker}
-                    className={`flex items-center gap-1.5 px-3 py-2.5 border text-xs font-semibold transition-all whitespace-nowrap ${showPicker ? 'bg-blue-500/20 border-blue-500/40 text-blue-300' : 'bg-white/[0.04] border-white/[0.1] text-slate-400 hover:text-white hover:border-white/[0.2]'}`}>
+                    className={`flex items-center gap-1.5 px-3 py-2.5 border text-xs font-semibold transition-all whitespace-nowrap ${showPicker ? 'bg-orange-500/20 border-orange-500/40 text-orange-300' : 'bg-white/[0.04] border-white/[0.1] text-slate-400 hover:text-white hover:border-white/[0.2]'}`}>
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
@@ -429,15 +429,15 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                   </button>
                 </div>
                 {showPicker && (
-                  <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#0a1120] border border-white/[0.12] shadow-2xl overflow-hidden" style={{ maxHeight: '320px', display: 'flex', flexDirection: 'column' }}>
+                  <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#09090C] border border-white/[0.12] shadow-2xl overflow-hidden" style={{ maxHeight: '320px', display: 'flex', flexDirection: 'column' }}>
                     <div className="p-3 border-b border-white/[0.07] shrink-0">
                       <input autoFocus type="text" placeholder="Search team or league…" value={pickerSearch} onChange={e => setPickerSearch(e.target.value)}
-                        className="w-full bg-white/[0.04] border border-white/[0.08] pl-3 pr-3 py-2 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-blue-500/40" />
+                        className="w-full bg-white/[0.04] border border-white/[0.08] pl-3 pr-3 py-2 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-orange-500/40" />
                     </div>
                     <div className="overflow-y-auto flex-1">
                       {pickerLoading ? (
                         <div className="flex items-center justify-center gap-2 py-8">
-                          <div className="w-4 h-4 border-2 border-blue-400/40 border-t-blue-400 animate-spin" />
+                          <div className="w-4 h-4 border-2 border-orange-400/40 border-t-orange-400 animate-spin" />
                           <span className="text-slate-500 text-sm">Loading…</span>
                         </div>
                       ) : (
@@ -475,7 +475,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                 <div>
                   <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">League</label>
                   <select value={form.league} onChange={e => setForm(p => ({ ...p, league: e.target.value }))}
-                    className="w-full bg-white/[0.03] border border-white/[0.07] px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40">
+                    className="w-full bg-white/[0.03] border border-white/[0.07] px-3 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500/40">
                     <option value="">Any league</option>
                     {LEAGUES.map(l => <option key={l} value={l}>{l}</option>)}
                   </select>
@@ -483,7 +483,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                 <div>
                   <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Bookmaker</label>
                   <select value={form.bookmaker} onChange={e => setForm(p => ({ ...p, bookmaker: e.target.value }))}
-                    className="w-full bg-white/[0.03] border border-white/[0.07] px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40">
+                    className="w-full bg-white/[0.03] border border-white/[0.07] px-3 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500/40">
                     <option value="">Select bookie</option>
                     {BOOKMAKERS.map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
@@ -510,7 +510,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
 
                   {form.bookmaker && marketsLoading && (
                     <div className="flex items-center justify-center gap-2 border border-white/[0.07] px-4 py-5">
-                      <div className="w-3.5 h-3.5 border-2 border-blue-400/30 border-t-blue-400 animate-spin" />
+                      <div className="w-3.5 h-3.5 border-2 border-orange-400/30 border-t-orange-400 animate-spin" />
                       <span className="text-slate-500 text-xs">Loading {form.bookmaker} markets…</span>
                     </div>
                   )}
@@ -525,7 +525,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                     <>
                       {/* Search bar */}
                       <input type="text" placeholder="Search markets…" value={marketSearch} onChange={e => setMarketSearch(e.target.value)}
-                        className="w-full bg-white/[0.03] border border-white/[0.07] px-3 py-2 text-white text-xs placeholder-slate-600 focus:outline-none focus:border-blue-500/40 mb-2" />
+                        className="w-full bg-white/[0.03] border border-white/[0.07] px-3 py-2 text-white text-xs placeholder-slate-600 focus:outline-none focus:border-orange-500/40 mb-2" />
 
                       {/* Grouped market accordion */}
                       <div className="space-y-1.5 max-h-[400px] overflow-y-auto pr-0.5" style={{ scrollbarWidth: 'thin' }}>
@@ -555,14 +555,14 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                                       {market.selections.map(sel => (
                                         <button key={sel.label} type="button"
                                           onClick={() => applySelection(market.name, sel.label, sel.odds)}
-                                          className={`flex items-center justify-between px-3 py-2.5 text-xs font-semibold transition-all bg-[#0E1628] hover:bg-blue-500/10 ${
+                                          className={`flex items-center justify-between px-3 py-2.5 text-xs font-semibold transition-all bg-[#0E0E12] hover:bg-orange-500/10 ${
                                             selectedSelection?.label === sel.label && selectedSelection?.market === market.name
-                                              ? 'bg-blue-500/20 text-blue-200' : 'text-slate-300'
+                                              ? 'bg-orange-500/20 text-orange-200' : 'text-slate-300'
                                           }`}>
                                           <span className="truncate mr-2">{sel.label}</span>
                                           <span className={`font-black tabular-nums shrink-0 ${
                                             selectedSelection?.label === sel.label && selectedSelection?.market === market.name
-                                              ? 'text-blue-300' : 'text-white'
+                                              ? 'text-orange-300' : 'text-white'
                                           }`}>{sel.odds.toFixed(2)}</span>
                                         </button>
                                       ))}
@@ -579,12 +579,12 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
 
                   {/* Show selected */}
                   {selectedSelection && (
-                    <div className="mt-2 flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 py-2">
-                      <svg className="w-3.5 h-3.5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="mt-2 flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 px-3 py-2">
+                      <svg className="w-3.5 h-3.5 text-orange-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                       </svg>
-                      <span className="text-blue-200 text-xs font-semibold truncate">{selectedSelection.label}</span>
-                      <span className="text-blue-300 font-black text-sm ml-auto shrink-0">{selectedSelection.odds.toFixed(2)}</span>
+                      <span className="text-orange-200 text-xs font-semibold truncate">{selectedSelection.label}</span>
+                      <span className="text-orange-300 font-black text-sm ml-auto shrink-0">{selectedSelection.odds.toFixed(2)}</span>
                     </div>
                   )}
                 </div>
@@ -595,7 +595,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                     <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Your Selection *</label>
                     <input type="text" placeholder="e.g. Arsenal Win, Over 2.5, BTTS Yes" value={form.selection}
                       onChange={e => setForm(p => ({ ...p, selection: e.target.value }))}
-                      className="w-full bg-white/[0.03] border border-white/[0.07] px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-blue-500/40" />
+                      className="w-full bg-white/[0.03] border border-white/[0.07] px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-orange-500/40" />
                   </div>
                 </div>
               )}
@@ -606,13 +606,13 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                   <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Odds *</label>
                   <input type="number" step="0.01" min="1" placeholder="2.50" value={form.odds}
                     onChange={e => setForm(p => ({ ...p, odds: e.target.value }))}
-                    className={`w-full bg-white/[0.03] border px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none transition-colors ${selectedSelection ? 'border-blue-500/30' : 'border-white/[0.07] focus:border-blue-500/40'}`} />
+                    className={`w-full bg-white/[0.03] border px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none transition-colors ${selectedSelection ? 'border-orange-500/30' : 'border-white/[0.07] focus:border-orange-500/40'}`} />
                 </div>
                 <div>
                   <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Stake (£) *</label>
                   <input type="number" step="0.01" min="0" placeholder="10.00" value={form.stake}
                     onChange={e => setForm(p => ({ ...p, stake: e.target.value }))}
-                    className="w-full bg-white/[0.03] border border-white/[0.07] px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-blue-500/40" />
+                    className="w-full bg-white/[0.03] border border-white/[0.07] px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-orange-500/40" />
                 </div>
               </div>
 
@@ -621,12 +621,12 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                 <div>
                   <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Match Date</label>
                   <input type="date" value={form.match_date} onChange={e => setForm(p => ({ ...p, match_date: e.target.value }))}
-                    className="w-full bg-white/[0.03] border border-white/[0.07] px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40" />
+                    className="w-full bg-white/[0.03] border border-white/[0.07] px-3 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500/40" />
                 </div>
                 <div>
                   <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Notes</label>
                   <input type="text" placeholder="Optional…" value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
-                    className="w-full bg-white/[0.03] border border-white/[0.07] px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-blue-500/40" />
+                    className="w-full bg-white/[0.03] border border-white/[0.07] px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-orange-500/40" />
                 </div>
               </div>
 
@@ -649,7 +649,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                 </div>
               )}
               <button type="submit" disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold py-3 transition-colors text-sm">
+                className="w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white font-bold py-3 transition-colors text-sm">
                 {loading ? 'Saving…' : '+ Add Bet Slip'}
               </button>
             </form>
@@ -664,7 +664,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
             <div>
               <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Bookmaker</label>
               <select value={accaBookmaker} onChange={e => setAccaBookmaker(e.target.value)}
-                className="w-full bg-white/[0.03] border border-white/[0.07] px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40">
+                className="w-full bg-white/[0.03] border border-white/[0.07] px-3 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500/40">
                 <option value="">Select bookmaker (optional)</option>
                 {BOOKMAKERS.map(b => <option key={b} value={b}>{b}</option>)}
               </select>
@@ -714,14 +714,14 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                     Add a leg
                   </button>
                 ) : (
-                  <div className="border border-blue-500/20 bg-blue-500/5 p-3">
+                  <div className="border border-orange-500/20 bg-orange-500/5 p-3">
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-white text-xs font-bold">{accaFixture.home_team} vs {accaFixture.away_team}</p>
                       <button type="button" onClick={() => { setAccaFixture(null); setAccaMarkets([]) }} className="text-slate-600 hover:text-slate-400 text-xs">✕</button>
                     </div>
                     {accaMarketsLoading && (
                       <div className="flex items-center gap-2 py-2">
-                        <div className="w-3.5 h-3.5 border-2 border-blue-400/30 border-t-blue-400 animate-spin" />
+                        <div className="w-3.5 h-3.5 border-2 border-orange-400/30 border-t-orange-400 animate-spin" />
                         <span className="text-slate-500 text-xs">Loading markets…</span>
                       </div>
                     )}
@@ -742,7 +742,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                               <div className="grid grid-cols-2 gap-px bg-white/[0.04] overflow-hidden">
                                 {mList.flatMap(m => m.selections).map((sel, si) => (
                                   <button key={si} type="button" onClick={() => addAccaLeg(mList[0].name, sel.label, sel.odds)}
-                                    className="flex items-center justify-between px-3 py-2 bg-[#0E1628] hover:bg-blue-500/15 text-xs transition-colors">
+                                    className="flex items-center justify-between px-3 py-2 bg-[#0E0E12] hover:bg-orange-500/15 text-xs transition-colors">
                                     <span className="text-slate-300 truncate mr-2">{sel.label}</span>
                                     <span className="text-white font-black tabular-nums shrink-0">{sel.odds.toFixed(2)}</span>
                                   </button>
@@ -758,7 +758,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
 
                 {/* Fixture dropdown */}
                 {showAccaPicker && (
-                  <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#0a1120] border border-white/[0.12] shadow-2xl overflow-hidden" style={{ maxHeight: '280px', display: 'flex', flexDirection: 'column' }}>
+                  <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#09090C] border border-white/[0.12] shadow-2xl overflow-hidden" style={{ maxHeight: '280px', display: 'flex', flexDirection: 'column' }}>
                     <div className="p-3 border-b border-white/[0.07] shrink-0">
                       <input autoFocus type="text" placeholder="Search…" value={accaPickerSearch} onChange={e => setAccaPickerSearch(e.target.value)}
                         className="w-full bg-white/[0.04] border border-white/[0.08] pl-3 pr-3 py-2 text-white text-sm placeholder-slate-600 focus:outline-none" />
@@ -783,7 +783,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                                   </div>
                                   <p className="text-slate-600 text-[10px]">{f.league_flag} {f.league}</p>
                                 </div>
-                                {alreadyAdded && <span className="text-emerald-400 text-[10px] font-bold shrink-0">Added ✓</span>}
+                                {alreadyAdded && <span className="text-emerald-400 text-[10px] font-bold shrink-0">Added</span>}
                               </button>
                             )
                           })}
@@ -802,7 +802,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
                   <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide block mb-1.5">Stake (£) *</label>
                   <input type="number" step="0.01" min="0" placeholder="10.00" value={accaStake}
                     onChange={e => setAccaStake(e.target.value)}
-                    className="w-full bg-white/[0.03] border border-white/[0.07] px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-blue-500/40" />
+                    className="w-full bg-white/[0.03] border border-white/[0.07] px-3.5 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-orange-500/40" />
                 </div>
                 {accaStakeNum > 0 && (
                   <div className="bg-white/[0.03] border border-white/[0.07] overflow-hidden">
@@ -825,7 +825,7 @@ export default function BetSlipForm({ userId, onBetAdded, onBetAttempt, isAtPayw
             )}
 
             <button type="submit" disabled={loading || accaLegs.length < 2}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-bold py-3 transition-colors text-sm">
+              className="w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-40 text-white font-bold py-3 transition-colors text-sm">
               {loading ? 'Saving…' : accaLegs.length < 2 ? `Add ${2 - accaLegs.length} more leg${accaLegs.length === 1 ? '' : 's'}…` : `Save ${accaLegs.length}-Leg Accumulator`}
             </button>
           </form>

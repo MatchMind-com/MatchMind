@@ -19,7 +19,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className={`relative w-11 h-6 transition-colors ${checked ? 'bg-violet-600' : 'bg-white/10'}`}
+      className={`relative w-11 h-6 transition-colors ${checked ? 'bg-orange-500' : 'bg-white/10'}`}
     >
       <span className={`absolute top-1 left-1 w-4 h-4 bg-white shadow transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
     </button>
@@ -73,7 +73,11 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-8">
-        <div className="w-10 h-10 bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-xl">⚙️</div>
+        <div className="w-10 h-10 bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-orange-400">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </div>
         <div>
           <h1 className="text-2xl font-bold text-white">Settings</h1>
           <p className="text-white/40 text-sm">Notifications, responsible gambling & account preferences</p>
@@ -83,7 +87,8 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
       {/* Notifications */}
       <section className="bg-white/[0.03] border border-white/8 p-5 mb-5">
         <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
-          <span className="text-lg">🔔</span> Notifications
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#6B6860]"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          Notifications
         </h2>
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4">
@@ -92,7 +97,7 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
               <p className="text-white/40 text-xs mt-0.5">Get today's AI value bets emailed at 9 AM every day</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {saved === 'daily_alert_opt_in' && <span className="text-emerald-400 text-xs">Saved ✓</span>}
+              {saved === 'daily_alert_opt_in' && <span className="text-emerald-400 text-xs">Saved</span>}
               <Toggle checked={settings.daily_alert_opt_in} onChange={v => patch('daily_alert_opt_in', v)} />
             </div>
           </div>
@@ -103,7 +108,7 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
               <p className="text-white/40 text-xs mt-0.5">A summary of your betting week, every Monday at 8 AM</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {saved === 'weekly_report_opt_in' && <span className="text-emerald-400 text-xs">Saved ✓</span>}
+              {saved === 'weekly_report_opt_in' && <span className="text-emerald-400 text-xs">Saved</span>}
               <Toggle checked={settings.weekly_report_opt_in} onChange={v => patch('weekly_report_opt_in', v)} />
             </div>
           </div>
@@ -113,7 +118,8 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
       {/* Responsible Gambling */}
       <section className="bg-white/[0.03] border border-white/8 p-5 mb-5">
         <h2 className="text-white font-semibold mb-1 flex items-center gap-2">
-          <span className="text-lg">🛡️</span> Responsible Gambling
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#6B6860]"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Responsible Gambling
         </h2>
         <p className="text-white/30 text-xs mb-5">Tools to help you stay in control of your betting.</p>
 
@@ -130,15 +136,15 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
                 onChange={e => setLossLimitInput(e.target.value)}
                 placeholder="e.g. 50"
                 min="1"
-                className="w-28 pl-7 pr-3 py-2 bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500"
+                className="w-28 pl-7 pr-3 py-2 bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-orange-500"
               />
             </div>
             <button
               onClick={setLossLimit}
               disabled={saving === 'loss_limit'}
-              className="bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 transition-colors"
+              className="bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 transition-colors"
             >
-              {saving === 'loss_limit' ? 'Saving…' : saved === 'loss_limit' ? '✓ Saved' : 'Set Limit'}
+              {saving === 'loss_limit' ? 'Saving…' : saved === 'loss_limit' ? 'Saved' : 'Set Limit'}
             </button>
             {settings.loss_limit && (
               <button
@@ -150,7 +156,7 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
             )}
           </div>
           {settings.loss_limit && (
-            <p className="text-amber-400/70 text-xs mt-2">⚠️ Current limit: £{settings.loss_limit}/week</p>
+            <p className="text-amber-400/70 text-xs mt-2">Current limit: £{settings.loss_limit}/week</p>
           )}
         </div>
 
@@ -162,7 +168,7 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
           <p className="text-white/40 text-xs mb-3">Pause all alerts and hide the add-bet form for a set period. Your data stays safe.</p>
           {onBreak ? (
             <div className="bg-amber-500/10 border border-amber-500/20 p-4">
-              <p className="text-amber-300 text-sm font-semibold mb-1">🌙 Break active</p>
+              <p className="text-amber-300 text-sm font-semibold mb-1">Break active</p>
               <p className="text-white/40 text-xs">
                 Your break runs until {new Date(settings.take_a_break_until!).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}.
               </p>
@@ -178,7 +184,7 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
               <select
                 value={breakDays}
                 onChange={e => setBreakDays(e.target.value)}
-                className="bg-white/5 border border-white/10 px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500"
+                className="bg-white/5 border border-white/10 px-3 py-2 text-white text-sm focus:outline-none focus:border-orange-500"
               >
                 <option value="1">1 day</option>
                 <option value="3">3 days</option>
@@ -191,7 +197,7 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
                 disabled={saving === 'take_a_break_until'}
                 className="bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-sm font-semibold px-4 py-2 transition-colors disabled:opacity-50"
               >
-                {saving === 'take_a_break_until' ? 'Saving…' : '🌙 Take a Break'}
+                {saving === 'take_a_break_until' ? 'Saving…' : 'Take a Break'}
               </button>
             </div>
           )}
@@ -201,7 +207,8 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
       {/* External help */}
       <section className="bg-white/[0.03] border border-white/8 p-5">
         <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
-          <span className="text-lg">❤️</span> Need Support?
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#6B6860]"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          Need Support?
         </h2>
         <p className="text-white/40 text-sm mb-4">
           If you&apos;re concerned about your gambling, free support is available 24/7.
@@ -220,10 +227,10 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
               className="flex items-center justify-between p-3 bg-white/3 hover:bg-white/6 border border-white/8 transition-colors group"
             >
               <div>
-                <p className="text-white text-sm font-medium group-hover:text-violet-300 transition-colors">{r.name}</p>
+                <p className="text-white text-sm font-medium group-hover:text-orange-400 transition-colors">{r.name}</p>
                 <p className="text-white/30 text-xs">{r.desc}</p>
               </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/20 group-hover:text-violet-400 transition-colors shrink-0"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/20 group-hover:text-orange-400 transition-colors shrink-0"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             </a>
           ))}
         </div>
