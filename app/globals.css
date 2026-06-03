@@ -245,6 +245,21 @@ h1, h2, h3, h4 {
   display: none;
 }
 
+/* Landing page nav links */
+.nav-link {
+  color: #6B6860;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.nav-link:hover { color: #EDE9DF; }
+
+.nav-link-wc {
+  color: #F97316;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.nav-link-wc:hover { opacity: 0.75; }
+
 /* Landing page ticker */
 @keyframes ticker-scroll {
   0%   { transform: translateX(0); }

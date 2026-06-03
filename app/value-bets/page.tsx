@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import Image from 'next/image'
 import PublicFooter from '@/components/layout/PublicFooter'
 
 export const metadata: Metadata = {
@@ -27,7 +26,6 @@ async function getTodaysPicks() {
   }
 }
 
-// Sample picks shown when DB is empty / first run
 const SAMPLE_PICKS = [
   { home_team: 'Arsenal', away_team: 'Wolves', league: 'Premier League', bet_type: 'Home Win', odds: 1.52, ev_percent: 17.4, ai_probability: 74 },
   { home_team: 'Barcelona', away_team: 'Getafe', league: 'La Liga', bet_type: 'BTTS — Yes', odds: 1.68, ev_percent: 19.1, ai_probability: 71 },
@@ -35,6 +33,12 @@ const SAMPLE_PICKS = [
   { home_team: 'Bayern Munich', away_team: 'Stuttgart', league: 'Bundesliga', bet_type: 'Home Win', odds: 1.45, ev_percent: 16.8, ai_probability: 78 },
   { home_team: 'Juventus', away_team: 'Roma', league: 'Serie A', bet_type: 'Under 2.5 Goals', odds: 1.78, ev_percent: 15.9, ai_probability: 70 },
 ]
+
+const NAV_STYLE = {
+  position: 'fixed' as const, top: 0, left: 0, right: 0, zIndex: 50,
+  borderBottom: '1px solid #1A1A22',
+  background: 'rgba(9,9,12,0.97)', backdropFilter: 'blur(8px)',
+}
 
 export default async function ValueBetsPage() {
   const picks = await getTodaysPicks()
@@ -44,152 +48,177 @@ export default async function ValueBetsPage() {
   const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
   return (
-    <div className="min-h-screen bg-[#0B0B14] text-white">
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B0B14]/90 backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg">M</div>
-            <span className="text-white font-bold text-xl">Match<span className="text-violet-400">Mind</span></span>
+    <div className="min-h-screen" style={{ background: '#09090C', color: '#EDE9DF' }}>
+
+      {/* Nav */}
+      <nav style={NAV_STYLE}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '52px' }}>
+          <Link href="/" style={{ textDecoration: 'none' }}>
+            <span className="font-black text-xl" style={{ color: '#EDE9DF', letterSpacing: '-0.04em' }}>
+              MATCH<span style={{ color: '#F97316' }}>MIND</span>
+            </span>
           </Link>
-          <div className="flex items-center gap-3">
-            <Link href="/login" className="text-white/50 hover:text-white text-sm transition-colors px-4 py-2">Sign In</Link>
-            <Link href="/signup" className="bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
-              Start Free
-            </Link>
+          <div className="hidden md:flex items-center gap-6" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+            <Link href="/predictions" className="nav-link">Predictions</Link>
+            <Link href="/value-bets" style={{ color: '#F97316', textDecoration: 'none' }}>Value Bets</Link>
+            <Link href="/track-record" className="nav-link">Track Record</Link>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Link href="/login" className="nav-link" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Sign in</Link>
+            <Link href="/signup" className="font-mono" style={{
+              fontSize: '11px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase',
+              background: '#F97316', color: '#fff', padding: '8px 16px', textDecoration: 'none',
+            }}>Start free →</Link>
           </div>
         </div>
       </nav>
 
-      <div className="pt-28 pb-20 px-4 max-w-4xl mx-auto">
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '80px 24px 80px' }}>
 
         {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 rounded-full px-4 py-1.5 mb-6">
-            <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse inline-block" />
-            <span className="text-violet-300 text-sm font-medium">Updated daily by AI · Free, no sign-up needed</span>
+        <div style={{ paddingTop: '40px', marginBottom: '48px', borderBottom: '1px solid #1A1A22', paddingBottom: '40px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <span className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#F97316' }}>
+              Updated daily · free
+            </span>
+            <span style={{ height: '1px', width: '32px', background: '#1A1A22' }} />
+            <span className="font-mono" style={{ fontSize: '10px', color: '#6B6860' }}>{today}</span>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-black mb-4">
-            Today&apos;s AI Football{' '}
-            <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">Value Bets</span>
+          <h1 style={{ fontSize: 'clamp(2.5rem, 6vw, 5rem)', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1.0, color: '#EDE9DF', margin: '0 0 16px' }}>
+            AI Football<br />Value Bets.
           </h1>
-          <p className="text-white/40 text-lg max-w-2xl mx-auto mb-2">
-            Every pick is selected because the bookmaker odds underestimate the true probability — giving you a statistical edge over time.
+          <p style={{ fontSize: '16px', color: '#6B6860', maxWidth: '520px', lineHeight: 1.6 }}>
+            Every pick is selected because the bookmaker odds underestimate the true probability —
+            giving you a statistical edge over time.
           </p>
-          <p className="text-white/25 text-sm">{today}</p>
         </div>
 
-        {/* What is EV — brief explainer */}
-        <div className="bg-violet-600/8 border border-violet-500/20 rounded-2xl p-5 mb-8 flex items-start gap-4">
-          <div className="text-2xl shrink-0">💡</div>
-          <div>
-            <p className="text-violet-300 font-semibold text-sm mb-1">What does EV% mean?</p>
-            <p className="text-white/50 text-sm leading-relaxed">
-              Expected Value (EV) measures how much profit you&apos;d make per £1 wagered over thousands of bets.
-              A pick with +20% EV means on average you&apos;d profit 20p per £1 staked — the bookmaker has mispriced this outcome.
-              <strong className="text-white/70"> Positive EV doesn&apos;t guarantee a single win</strong>, but it guarantees profitability over time.
-            </p>
-          </div>
+        {/* EV explainer — text only, no card */}
+        <div style={{ marginBottom: '32px', borderBottom: '1px solid #1A1A22', paddingBottom: '32px' }}>
+          <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#6B6860', marginBottom: '10px' }}>
+            What is EV%?
+          </p>
+          <p style={{ fontSize: '14px', color: '#6B6860', lineHeight: 1.7, maxWidth: '680px' }}>
+            Expected Value measures how much profit you&apos;d make per £1 wagered over thousands of bets.
+            A pick with <span style={{ color: '#F97316', fontWeight: 700 }}>+20% EV</span> means you&apos;d profit 20p per £1 staked on average.
+            Positive EV doesn&apos;t guarantee any single win — but it guarantees profitability over time.
+          </p>
         </div>
 
+        {/* Demo notice */}
         {isDemo && (
-          <div className="mb-6 bg-amber-500/8 border border-amber-500/20 rounded-xl p-4 flex items-center gap-3 text-sm">
-            <span className="text-xl">📊</span>
-            <p className="text-amber-300">Sample picks shown — real AI picks generate each morning. <Link href="/signup" className="text-amber-200 underline">Sign up free</Link> to get live picks emailed to you daily.</p>
+          <div style={{ marginBottom: '24px', padding: '12px 16px', border: '1px solid rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.05)' }}>
+            <p className="font-mono" style={{ fontSize: '11px', color: '#F59E0B' }}>
+              Sample picks shown — real AI picks generate each morning.{' '}
+              <Link href="/signup" style={{ color: '#F59E0B', textDecoration: 'underline' }}>Sign up free</Link> to get live picks emailed daily.
+            </p>
           </div>
         )}
 
-        {/* Picks */}
-        <div className="space-y-4 mb-10">
-          {displayPicks.slice(0, 5).map((pick: any, i: number) => (
-            <div key={i} className="bg-[#13131F] border border-white/8 hover:border-violet-500/30 rounded-2xl p-5 transition-all">
-              <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <h3 className="text-white font-bold">{pick.home_team} vs {pick.away_team}</h3>
-                    <span className="text-xs text-white/30 bg-white/5 px-2 py-0.5 rounded-full">{pick.league}</span>
-                  </div>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <span className="bg-violet-600/20 text-violet-300 text-xs font-semibold px-3 py-1 rounded-lg border border-violet-500/25">{pick.bet_type}</span>
-                    <span className="text-white font-bold">@ {Number(pick.odds).toFixed(2)}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="text-center">
-                    <p className="text-emerald-400 font-black text-xl">+{Number(pick.ev_percent).toFixed(0)}%</p>
-                    <p className="text-white/30 text-[10px] uppercase tracking-wide">EV</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-white font-bold text-lg">{pick.ai_probability}%</p>
-                    <p className="text-white/30 text-[10px] uppercase tracking-wide">AI prob.</p>
-                  </div>
-                </div>
-              </div>
+        {/* Picks table */}
+        <div style={{ border: '1px solid #1A1A22', marginBottom: '48px' }}>
+          {/* Column headers */}
+          <div className="font-mono hidden md:grid" style={{
+            gridTemplateColumns: '2fr 1.5fr 80px 80px 80px',
+            gap: '16px', padding: '10px 20px',
+            fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6B6860',
+            background: '#0E0E12', borderBottom: '1px solid #1A1A22',
+          }}>
+            <span>Match</span>
+            <span>Bet type</span>
+            <span style={{ textAlign: 'right' }}>Odds</span>
+            <span style={{ textAlign: 'right' }}>EV edge</span>
+            <span style={{ textAlign: 'right' }}>AI prob.</span>
+          </div>
 
-              {/* EV bar */}
-              <div className="mt-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-white/30 text-xs">AI probability vs implied bookmaker probability</span>
-                  <span className="text-emerald-400 text-xs font-semibold">Edge: +{Number(pick.ev_percent).toFixed(0)}%</span>
-                </div>
-                <div className="relative h-2 bg-white/5 rounded-full overflow-hidden">
-                  {/* Implied odds line */}
-                  <div
-                    className="absolute top-0 left-0 h-full bg-white/15 rounded-full"
-                    style={{ width: `${Math.round(100 / Number(pick.odds))}%` }}
-                  />
-                  {/* AI probability */}
-                  <div
-                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-violet-500 to-emerald-500 rounded-full"
-                    style={{ width: `${pick.ai_probability}%` }}
-                  />
-                </div>
+          {displayPicks.slice(0, 5).map((pick: any, i: number) => (
+            <div key={i} style={{
+              display: 'grid',
+              gridTemplateColumns: '2fr 1.5fr 80px 80px 80px',
+              gap: '16px',
+              padding: '18px 20px',
+              alignItems: 'center',
+              borderBottom: i < displayPicks.slice(0, 5).length - 1 ? '1px solid #1A1A22' : 'none',
+              borderLeft: '3px solid #F97316',
+            }}>
+              <div>
+                <p style={{ fontWeight: 700, fontSize: '14px', color: '#EDE9DF', margin: 0 }}>
+                  {pick.home_team} <span style={{ color: '#3A3A48' }}>vs</span> {pick.away_team}
+                </p>
+                <p className="font-mono" style={{ fontSize: '10px', color: '#6B6860', marginTop: '3px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  {pick.league}
+                </p>
               </div>
+              <p style={{ fontSize: '13px', color: '#9E9B8E', margin: 0 }}>{pick.bet_type}</p>
+              <p className="font-mono" style={{ fontWeight: 700, fontSize: '14px', color: '#EDE9DF', textAlign: 'right', margin: 0 }}>
+                {Number(pick.odds).toFixed(2)}
+              </p>
+              <p className="font-mono" style={{ fontWeight: 900, fontSize: '15px', color: '#00C853', textAlign: 'right', margin: 0 }}>
+                +{Number(pick.ev_percent).toFixed(0)}%
+              </p>
+              <p className="font-mono" style={{ fontSize: '13px', color: '#9E9B8E', textAlign: 'right', margin: 0 }}>
+                {pick.ai_probability}%
+              </p>
             </div>
           ))}
-        </div>
 
-        {/* CTA */}
-        <div className="bg-gradient-to-b from-violet-600/10 to-indigo-600/5 border border-violet-500/20 rounded-2xl p-8 text-center">
-          <h2 className="text-white font-black text-2xl mb-3">Get picks emailed every morning</h2>
-          <p className="text-white/40 mb-6 max-w-lg mx-auto">
-            Sign up free and get today&apos;s AI value bets in your inbox at 9 AM. Plus: track your bets, chat with the AI coach, and see your personal ROI.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/signup" className="bg-violet-600 hover:bg-violet-500 text-white font-bold px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-violet-500/25">
-              Start Free — No Card Needed →
-            </Link>
-            <Link href="/track-record" className="bg-white/5 hover:bg-white/8 border border-white/10 text-white/70 hover:text-white font-semibold px-6 py-3.5 rounded-xl transition-all text-sm">
-              View Our Track Record
+          {/* Gate row */}
+          <div style={{ padding: '14px 20px', textAlign: 'center', background: '#0E0E12', borderTop: '1px solid #1A1A22' }}>
+            <Link href="/signup" className="font-mono" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#F97316', textDecoration: 'none' }}>
+              Get all picks emailed at 9 AM — sign up free →
             </Link>
           </div>
         </div>
 
-        {/* FAQ schema-friendly content for SEO */}
-        <div className="mt-14 space-y-6">
-          <h2 className="text-2xl font-black text-white">Frequently Asked Questions</h2>
+        {/* CTA */}
+        <div style={{ border: '1px solid #1A1A22', borderTop: '4px solid #F97316', padding: '40px', marginBottom: '56px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#EDE9DF', marginBottom: '8px', letterSpacing: '-0.02em' }}>
+            Get picks emailed every morning.
+          </h2>
+          <p style={{ fontSize: '14px', color: '#6B6860', marginBottom: '24px', maxWidth: '480px' }}>
+            Sign up free and get today&apos;s AI value bets in your inbox at 9 AM.
+            Plus: track your bets, chat with the AI coach, and see your personal ROI.
+          </p>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <Link href="/signup" className="font-mono" style={{
+              fontSize: '12px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase',
+              background: '#F97316', color: '#fff', padding: '12px 28px', textDecoration: 'none', display: 'inline-block',
+            }}>
+              Start Free →
+            </Link>
+            <Link href="/track-record" className="font-mono" style={{
+              fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+              border: '1px solid #2A2A35', color: '#6B6860', padding: '12px 28px', textDecoration: 'none', display: 'inline-block',
+            }}>
+              View track record
+            </Link>
+          </div>
+        </div>
+
+        {/* FAQ */}
+        <div>
+          <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#6B6860', marginBottom: '24px' }}>
+            FAQ
+          </p>
           {[
-            {
-              q: 'How does MatchMind find value bets?',
-              a: 'MatchMind\'s AI analyses team form, injuries, head-to-head records, and market odds across 15 leagues. It calculates the true probability of each outcome and flags bets where the bookmaker odds imply a lower probability than the AI estimates — these are called value bets.',
-            },
-            {
-              q: 'What is Expected Value (EV) in betting?',
-              a: 'Expected Value is the theoretical profit per unit staked over a large number of bets. A bet with +20% EV means that if you placed it 100 times, you\'d expect to profit £20 per £1 staked. Individual bets can still lose — EV is a long-run measure of quality.',
-            },
-            {
-              q: 'Are these football tips guaranteed to win?',
-              a: 'No tip service can guarantee wins. MatchMind\'s AI identifies statistical edges using Expected Value — bets that are priced better than their true probability. Over a large sample, positive EV bets should be profitable, but variance means short-term losing runs are normal.',
-            },
-            {
-              q: 'Which football leagues does MatchMind cover?',
-              a: 'MatchMind currently covers Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Champions League, Europa League, Championship, Turkish Süper Lig, and more — 15 leagues in total.',
-            },
-          ].map((item, i) => (
-            <div key={i} className="border-b border-white/5 pb-5">
-              <h3 className="text-white font-semibold mb-2">{item.q}</h3>
-              <p className="text-white/45 text-sm leading-relaxed">{item.a}</p>
-            </div>
+            { q: 'How does MatchMind find value bets?', a: "MatchMind's AI analyses team form, injuries, head-to-head records, and market odds across 25 leagues. It calculates the true probability of each outcome and flags bets where the bookmaker odds imply a lower probability than the AI estimates." },
+            { q: 'What is Expected Value (EV) in betting?', a: "Expected Value is the theoretical profit per unit staked over a large number of bets. A bet with +20% EV means that if you placed it 100 times, you'd expect to profit £20 per £1 staked. Individual bets can still lose — EV is a long-run measure of quality." },
+            { q: 'Are these football tips guaranteed to win?', a: "No tip service can guarantee wins. MatchMind's AI identifies statistical edges using Expected Value — bets that are priced better than their true probability. Over a large sample, positive EV bets should be profitable, but variance means short-term losing runs are normal." },
+            { q: 'Which football leagues does MatchMind cover?', a: 'MatchMind covers 25 leagues including Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Champions League, Europa League, Championship, and more.' },
+          ].map((item, i, arr) => (
+            <details key={i} style={{ borderTop: '1px solid #1A1A22', borderBottom: i === arr.length - 1 ? '1px solid #1A1A22' : 'none' }}>
+              <summary style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                cursor: 'pointer', listStyle: 'none', padding: '18px 0',
+                fontWeight: 700, fontSize: '14px', color: '#EDE9DF',
+              }}>
+                <span>{item.q}</span>
+                <span className="font-mono" style={{ color: '#F97316', fontSize: '20px', lineHeight: 1, marginLeft: '16px', flexShrink: 0 }}>+</span>
+              </summary>
+              <p style={{ fontSize: '14px', lineHeight: 1.7, color: '#6B6860', paddingBottom: '18px', margin: 0, paddingRight: '32px' }}>
+                {item.a}
+              </p>
+            </details>
           ))}
         </div>
 

@@ -145,25 +145,11 @@ export default async function LandingPage() {
           </Link>
 
           <div className="hidden md:flex items-center gap-8" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-            {[
-              { label: 'Picks', href: '#picks' },
-              { label: 'World Cup', href: '/world-cup', color: '#F97316' },
-              { label: 'How it works', href: '#how' },
-              { label: 'Track record', href: '/track-record' },
-              { label: 'Pricing', href: '#pricing' },
-            ].map(l => (
-              l.href.startsWith('#')
-                ? <a key={l.label} href={l.href} style={{ color: l.color ?? '#6B6860', textDecoration: 'none', transition: 'color 0.15s' }}
-                    onMouseEnter={e => (e.currentTarget.style.color = '#EDE9DF')}
-                    onMouseLeave={e => (e.currentTarget.style.color = l.color ?? '#6B6860')}>
-                    {l.label}
-                  </a>
-                : <Link key={l.label} href={l.href} style={{ color: l.color ?? '#6B6860', textDecoration: 'none', transition: 'color 0.15s' }}
-                    onMouseEnter={e => (e.currentTarget.style.color = '#EDE9DF')}
-                    onMouseLeave={e => (e.currentTarget.style.color = l.color ?? '#6B6860')}>
-                    {l.label}
-                  </Link>
-            ))}
+            <a href="#picks" className="nav-link">Picks</a>
+            <Link href="/world-cup" className="nav-link-wc">World Cup</Link>
+            <a href="#how" className="nav-link">How it works</a>
+            <Link href="/track-record" className="nav-link">Track record</Link>
+            <a href="#pricing" className="nav-link">Pricing</a>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

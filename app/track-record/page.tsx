@@ -1,8 +1,6 @@
 import Link from 'next/link'
 import PublicFooter from '@/components/layout/PublicFooter'
 
-// Lowered from 3600 → 300 so newly graded picks appear within 5 min
-// (matches the API's revalidate). Track-record credibility benefits from freshness.
 export const revalidate = 300
 
 async function getTrackRecord() {
@@ -19,160 +17,190 @@ async function getTrackRecord() {
 }
 
 function ResultBadge({ result }: { result: string }) {
-  const map: Record<string, string> = {
-    win: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
-    loss: 'text-red-400 bg-red-500/10 border-red-500/15',
-    void: 'text-white/40 bg-white/5 border-white/10',
+  const styles: Record<string, { color: string; bg: string; border: string; label: string }> = {
+    win:  { color: '#00C853', bg: 'rgba(0,200,83,0.08)',  border: 'rgba(0,200,83,0.25)',  label: 'Won'  },
+    loss: { color: '#FF3355', bg: 'rgba(255,51,85,0.08)', border: 'rgba(255,51,85,0.2)',  label: 'Lost' },
+    void: { color: '#6B6860', bg: 'rgba(107,104,96,0.1)', border: 'rgba(107,104,96,0.2)', label: 'Void' },
   }
-  const label: Record<string, string> = { win: '✅ Won', loss: '❌ Lost', void: '↩️ Void' }
+  const s = styles[result] ?? styles.void
   return (
-    <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${map[result] || ''}`}>
-      {label[result] || result}
+    <span className="font-mono" style={{
+      fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+      padding: '3px 8px', color: s.color, background: s.bg, border: `1px solid ${s.border}`,
+    }}>
+      {s.label}
     </span>
   )
 }
 
+const NAV_STYLE = {
+  position: 'fixed' as const, top: 0, left: 0, right: 0, zIndex: 50,
+  borderBottom: '1px solid #1A1A22',
+  background: 'rgba(9,9,12,0.97)', backdropFilter: 'blur(8px)',
+}
+
 export default async function TrackRecordPage() {
   const { stats, byLeague, byBetType, recent } = await getTrackRecord()
-
   const hasData = stats && stats.total > 0
 
   return (
-    <div className="min-h-screen bg-[#0B0B14] text-white">
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B0B14]/80 backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg">M</div>
-            <span className="text-white font-bold text-xl tracking-tight">Match<span className="text-violet-400">Mind</span></span>
+    <div className="min-h-screen" style={{ background: '#09090C', color: '#EDE9DF' }}>
+
+      {/* Nav */}
+      <nav style={NAV_STYLE}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '52px' }}>
+          <Link href="/" style={{ textDecoration: 'none' }}>
+            <span className="font-black text-xl" style={{ color: '#EDE9DF', letterSpacing: '-0.04em' }}>
+              MATCH<span style={{ color: '#F97316' }}>MIND</span>
+            </span>
           </Link>
-          <div className="flex items-center gap-3">
-            <Link href="/login" className="text-white/50 hover:text-white text-sm transition-colors px-4 py-2">Sign In</Link>
-            <Link href="/signup" className="bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
-              Start Free
-            </Link>
+          <div className="hidden md:flex items-center gap-6" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+            <Link href="/predictions" className="nav-link">Predictions</Link>
+            <Link href="/value-bets" className="nav-link">Value Bets</Link>
+            <Link href="/track-record" style={{ color: '#F97316', textDecoration: 'none' }}>Track Record</Link>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Link href="/login" className="nav-link" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Sign in</Link>
+            <Link href="/signup" className="font-mono" style={{
+              fontSize: '11px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase',
+              background: '#F97316', color: '#fff', padding: '8px 16px', textDecoration: 'none',
+            }}>Start free →</Link>
           </div>
         </div>
       </nav>
 
-      <div className="pt-28 pb-20 px-4 max-w-6xl mx-auto">
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '80px 24px 80px' }}>
 
         {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-4 py-1.5 mb-6">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block" />
-            <span className="text-emerald-300 text-sm font-medium">Auto-verified against live match results</span>
+        <div style={{ paddingTop: '40px', marginBottom: '48px', borderBottom: '1px solid #1A1A22', paddingBottom: '40px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <span className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#00C853' }}>
+              Auto-verified
+            </span>
+            <span style={{ height: '1px', width: '32px', background: '#1A1A22' }} />
+            <span className="font-mono" style={{ fontSize: '10px', color: '#6B6860' }}>
+              Every pick logged before kick-off · no cherry-picking
+            </span>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-black mb-4">
-            AI Prediction{' '}
-            <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">Track Record</span>
+          <h1 style={{ fontSize: 'clamp(2.5rem, 6vw, 5rem)', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1.0, color: '#EDE9DF', margin: '0 0 12px' }}>
+            AI Prediction<br />Track Record.
           </h1>
-          <p className="text-white/40 text-lg max-w-xl mx-auto">
+          <p style={{ fontSize: '16px', color: '#6B6860', maxWidth: '560px', lineHeight: 1.6 }}>
             Every prediction is logged before kickoff and automatically verified against the final result.
-            No cherry-picking. No editing history.
+            No editing history. No cherry-picking.
           </p>
         </div>
 
         {!hasData ? (
-          /* Empty state — shown until predictions start accumulating */
-          <div className="text-center py-20">
-            <div className="bg-[#13162b] border border-white/10 rounded-2xl p-12 max-w-lg mx-auto">
-              <p className="text-5xl mb-4">📊</p>
-              <h2 className="text-2xl font-bold text-white mb-2">Building the record</h2>
-              <p className="text-white/40 text-sm mb-6">
-                Our AI makes predictions daily. Results are auto-verified after each match finishes.
-                Come back in a few days to see the first verified results.
-              </p>
-              <div className="space-y-3 text-left bg-white/5 rounded-xl p-4 mb-6">
-                {[
-                  'Predictions logged before kickoff — no post-match editing',
-                  'Results fetched from official API-Football data',
-                  'Win/loss auto-calculated, P&L tracked per unit stake',
-                ].map(p => (
-                  <div key={p} className="flex items-start gap-2 text-sm text-white/50">
-                    <span className="text-emerald-400 shrink-0 mt-0.5">✓</span> {p}
-                  </div>
-                ))}
-              </div>
-              <Link href="/signup" className="inline-block bg-violet-600 hover:bg-violet-500 text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors">
-                Get Early Access →
-              </Link>
-            </div>
+          /* Empty state */
+          <div style={{ maxWidth: '560px', margin: '80px auto', border: '1px solid #1A1A22', padding: '48px' }}>
+            <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#6B6860', marginBottom: '20px' }}>
+              Building the record
+            </p>
+            <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#EDE9DF', marginBottom: '12px', letterSpacing: '-0.02em' }}>
+              Predictions are accumulating.
+            </h2>
+            <p style={{ fontSize: '14px', color: '#6B6860', lineHeight: 1.65, marginBottom: '32px' }}>
+              Our AI makes predictions daily. Results are auto-verified after each match finishes.
+              Check back in a few days to see the first verified results.
+            </p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {[
+                'Predictions locked before kickoff — no post-match editing',
+                'Results fetched from official API-Football data',
+                'Win/loss auto-calculated, P&L tracked per unit stake',
+              ].map(p => (
+                <li key={p} style={{ display: 'flex', gap: '10px', fontSize: '13px', color: '#6B6860' }}>
+                  <span style={{ color: '#F97316', flexShrink: 0 }}>→</span> {p}
+                </li>
+              ))}
+            </ul>
+            <Link href="/signup" className="font-mono" style={{
+              display: 'inline-block', fontSize: '11px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase',
+              background: '#F97316', color: '#fff', padding: '12px 24px', textDecoration: 'none',
+            }}>
+              Get early access →
+            </Link>
           </div>
         ) : (
           <>
-            {/* Top stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              {[
-                { label: 'Total Tips', value: String(stats.total), icon: '📋', highlight: false },
-                { label: 'Win Rate', value: `${stats.winRate}%`, icon: '🎯', highlight: stats.winRate >= 55 },
-                { label: 'Total P&L', value: `${stats.totalProfit >= 0 ? '+' : ''}${stats.totalProfit}u`, icon: '📈', highlight: stats.totalProfit > 0 },
-                { label: 'ROI', value: `${stats.roi >= 0 ? '+' : ''}${stats.roi}%`, icon: '💹', highlight: stats.roi > 0 },
-              ].map(s => (
-                <div key={s.label} className="bg-[#13162b] border border-white/8 rounded-2xl p-5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span>{s.icon}</span>
-                    <p className="text-white/40 text-xs">{s.label}</p>
+            {/* Stats strip */}
+            <div style={{ border: '1px solid #1A1A22', marginBottom: '32px' }}>
+              <div className="font-mono" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', padding: '8px 20px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#3A3A48', borderBottom: '1px solid #1A1A22', background: '#0E0E12' }}>
+                <span>Performance summary</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                {[
+                  { label: 'Total tips', value: String(stats.total), color: '#EDE9DF' },
+                  { label: 'Win rate', value: `${stats.winRate}%`, color: stats.winRate >= 50 ? '#00C853' : '#EDE9DF' },
+                  { label: 'Total P&L', value: `${stats.totalProfit >= 0 ? '+' : ''}${stats.totalProfit}u`, color: stats.totalProfit >= 0 ? '#00C853' : '#FF3355' },
+                  { label: 'ROI', value: `${stats.roi >= 0 ? '+' : ''}${stats.roi}%`, color: stats.roi >= 0 ? '#00C853' : '#FF3355' },
+                ].map((s, i) => (
+                  <div key={s.label} style={{ padding: '20px 20px', borderRight: i < 3 ? '1px solid #1A1A22' : 'none' }}>
+                    <p className="font-mono" style={{ fontSize: '2rem', fontWeight: 900, color: s.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums', margin: '0 0 6px' }}>
+                      {s.value}
+                    </p>
+                    <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6B6860' }}>
+                      {s.label}
+                    </p>
+                    {i === 0 && (
+                      <p className="font-mono" style={{ fontSize: '10px', color: '#3A3A48', marginTop: '4px' }}>
+                        {stats.wins}W · {stats.losses}L · {stats.voids} void
+                      </p>
+                    )}
                   </div>
-                  <p className={`text-2xl font-black ${s.highlight ? 'text-emerald-400' : 'text-white'}`}>{s.value}</p>
-                  <p className="text-white/25 text-xs mt-0.5">{stats.wins}W · {stats.losses}L · {stats.voids} void</p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
-            {/* Value bets performance highlight */}
+            {/* Value bets highlight */}
             {stats.valueBets?.total > 0 && (
-              <div className="bg-gradient-to-r from-emerald-600/15 to-teal-600/10 border border-emerald-500/30 rounded-2xl p-5 mb-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="text-2xl">🔥</span>
-                  <div>
-                    <p className="text-white font-bold">Value Bets Performance</p>
-                    <p className="text-white/40 text-xs">High EV% picks only (our best calls)</p>
-                  </div>
+              <div style={{ border: '1px solid #1A1A22', borderLeft: '4px solid #F97316', marginBottom: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', padding: '0' }}>
+                <div style={{ padding: '20px', borderRight: '1px solid #1A1A22', gridColumn: 'span 1' }}>
+                  <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#F97316', marginBottom: '8px' }}>
+                    Value bets only
+                  </p>
+                  <p style={{ fontSize: '13px', color: '#6B6860' }}>High EV% picks — our best calls</p>
                 </div>
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <p className="text-emerald-400 text-xl font-black">{stats.valueBets.winRate}%</p>
-                    <p className="text-white/30 text-xs">Win Rate</p>
+                {[
+                  { label: 'Win rate', value: `${stats.valueBets.winRate}%`, color: '#00C853' },
+                  { label: 'ROI', value: `${stats.valueBets.roi >= 0 ? '+' : ''}${stats.valueBets.roi}%`, color: '#00C853' },
+                ].map((s, i) => (
+                  <div key={s.label} style={{ padding: '20px', borderRight: i === 0 ? '1px solid #1A1A22' : 'none' }}>
+                    <p className="font-mono" style={{ fontSize: '2rem', fontWeight: 900, color: s.color, lineHeight: 1, margin: '0 0 4px' }}>{s.value}</p>
+                    <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6B6860' }}>{s.label}</p>
                   </div>
-                  <div>
-                    <p className="text-emerald-400 text-xl font-black">{stats.valueBets.roi >= 0 ? '+' : ''}{stats.valueBets.roi}%</p>
-                    <p className="text-white/30 text-xs">ROI</p>
-                  </div>
-                  <div>
-                    <p className="text-emerald-400 text-xl font-black">{stats.valueBets.total}</p>
-                    <p className="text-white/30 text-xs">Tips</p>
-                  </div>
-                </div>
+                ))}
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* By League and By Bet Type */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
+
               {/* By League */}
               {byLeague.length > 0 && (
-                <div className="bg-[#13162b] border border-white/8 rounded-2xl p-5">
-                  <h2 className="text-white font-bold mb-4 flex items-center gap-2">⚽ By League</h2>
-                  <div className="space-y-3">
-                    {byLeague.slice(0, 6).map((l: any) => (
-                      <div key={l.league} className="flex items-center gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <p className="text-white text-sm font-medium truncate">{l.league}</p>
-                            <div className="flex items-center gap-2 shrink-0 ml-2">
-                              <span className="text-white/30 text-xs">{l.wins}W·{l.losses}L</span>
-                              <span className={`text-xs font-bold ${l.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                {l.profit >= 0 ? '+' : ''}{l.profit}u
-                              </span>
-                            </div>
-                          </div>
-                          <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-gradient-to-r from-violet-500 to-emerald-500"
-                              style={{ width: `${l.winRate}%` }}
-                            />
-                          </div>
-                        </div>
-                        <span className="text-white/30 text-xs w-8 text-right shrink-0">{l.winRate}%</span>
+                <div style={{ border: '1px solid #1A1A22' }}>
+                  <div className="font-mono" style={{ padding: '10px 16px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6B6860', borderBottom: '1px solid #1A1A22', background: '#0E0E12' }}>
+                    By League
+                  </div>
+                  <div>
+                    {/* Header row */}
+                    <div className="font-mono" style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 60px 60px', gap: '8px', padding: '8px 16px', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#3A3A48', borderBottom: '1px solid #1A1A22' }}>
+                      <span>League</span>
+                      <span style={{ textAlign: 'center' }}>W</span>
+                      <span style={{ textAlign: 'center' }}>L</span>
+                      <span style={{ textAlign: 'right' }}>Win%</span>
+                      <span style={{ textAlign: 'right' }}>P&L</span>
+                    </div>
+                    {byLeague.slice(0, 6).map((l: any, i: number) => (
+                      <div key={l.league} style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 60px 60px', gap: '8px', padding: '10px 16px', alignItems: 'center', borderBottom: i < 5 ? '1px solid #1A1A22' : 'none' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#EDE9DF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.league}</span>
+                        <span className="font-mono" style={{ fontSize: '13px', color: '#00C853', textAlign: 'center' }}>{l.wins}</span>
+                        <span className="font-mono" style={{ fontSize: '13px', color: '#FF3355', textAlign: 'center' }}>{l.losses}</span>
+                        <span className="font-mono" style={{ fontSize: '13px', fontWeight: 700, color: '#EDE9DF', textAlign: 'right' }}>{l.winRate}%</span>
+                        <span className="font-mono" style={{ fontSize: '13px', fontWeight: 700, color: l.profit >= 0 ? '#00C853' : '#FF3355', textAlign: 'right' }}>
+                          {l.profit >= 0 ? '+' : ''}{l.profit}u
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -181,21 +209,27 @@ export default async function TrackRecordPage() {
 
               {/* By Bet Type */}
               {byBetType.length > 0 && (
-                <div className="bg-[#13162b] border border-white/8 rounded-2xl p-5">
-                  <h2 className="text-white font-bold mb-4 flex items-center gap-2">🎯 By Bet Type</h2>
-                  <div className="space-y-3">
-                    {byBetType.slice(0, 6).map((t: any) => (
-                      <div key={t.type} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="bg-violet-600/20 text-violet-300 text-xs px-2 py-0.5 rounded-lg border border-violet-500/20 font-semibold">{t.type}</span>
-                          <span className="text-white/30 text-xs">{t.wins}W · {t.losses}L</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-white/50 text-xs">{t.winRate}%</span>
-                          <span className={`text-sm font-bold ${t.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {t.profit >= 0 ? '+' : ''}{t.profit}u
-                          </span>
-                        </div>
+                <div style={{ border: '1px solid #1A1A22' }}>
+                  <div className="font-mono" style={{ padding: '10px 16px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6B6860', borderBottom: '1px solid #1A1A22', background: '#0E0E12' }}>
+                    By Bet Type
+                  </div>
+                  <div>
+                    <div className="font-mono" style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 60px 60px', gap: '8px', padding: '8px 16px', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#3A3A48', borderBottom: '1px solid #1A1A22' }}>
+                      <span>Bet type</span>
+                      <span style={{ textAlign: 'center' }}>W</span>
+                      <span style={{ textAlign: 'center' }}>L</span>
+                      <span style={{ textAlign: 'right' }}>Win%</span>
+                      <span style={{ textAlign: 'right' }}>P&L</span>
+                    </div>
+                    {byBetType.slice(0, 6).map((t: any, i: number) => (
+                      <div key={t.type} style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 60px 60px', gap: '8px', padding: '10px 16px', alignItems: 'center', borderBottom: i < 5 ? '1px solid #1A1A22' : 'none' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#EDE9DF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.type}</span>
+                        <span className="font-mono" style={{ fontSize: '13px', color: '#00C853', textAlign: 'center' }}>{t.wins}</span>
+                        <span className="font-mono" style={{ fontSize: '13px', color: '#FF3355', textAlign: 'center' }}>{t.losses}</span>
+                        <span className="font-mono" style={{ fontSize: '13px', fontWeight: 700, color: '#EDE9DF', textAlign: 'right' }}>{t.winRate}%</span>
+                        <span className="font-mono" style={{ fontSize: '13px', fontWeight: 700, color: t.profit >= 0 ? '#00C853' : '#FF3355', textAlign: 'right' }}>
+                          {t.profit >= 0 ? '+' : ''}{t.profit}u
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -203,65 +237,72 @@ export default async function TrackRecordPage() {
               )}
             </div>
 
-            {/* Recent predictions */}
-            <div className="bg-[#13162b] border border-white/8 rounded-2xl p-5">
-              <h2 className="text-white font-bold mb-4">Recent Verified Predictions</h2>
-              <div className="space-y-3">
-                {recent.map((r: any) => {
-                  const kickOff = new Date(r.kick_off).toLocaleDateString('en-GB', {
-                    weekday: 'short', day: 'numeric', month: 'short'
-                  })
-                  return (
-                    <div key={r.id} className={`border rounded-xl p-4 ${
-                      r.result === 'win' ? 'bg-emerald-950/20 border-emerald-500/20' :
-                      r.result === 'loss' ? 'bg-red-950/15 border-red-500/10' :
-                      'bg-white/[0.02] border-white/5'
-                    }`}>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-white font-bold text-sm truncate">{r.home_team} vs {r.away_team}</p>
-                          <p className="text-white/30 text-xs">{r.league} · {kickOff}</p>
-                          {r.home_score !== null && (
-                            <p className="text-white/50 text-xs mt-0.5">
-                              Final: {r.home_score} – {r.away_score}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex flex-col items-end gap-1.5 shrink-0">
-                          <ResultBadge result={r.result} />
-                          {r.is_value_bet && (
-                            <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">🔥 Value</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className="bg-violet-600/20 text-violet-300 text-xs font-semibold px-2 py-0.5 rounded-lg border border-violet-500/20">{r.bet_type}</span>
-                        {r.odds && <span className="text-white text-xs font-bold">@ {r.odds}</span>}
-                        {r.ev_percent && <span className="text-emerald-400 text-xs font-bold">EV: +{r.ev_percent}%</span>}
-                        {r.profit_loss !== null && (
-                          <span className={`text-xs font-bold ml-auto ${r.profit_loss >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {r.profit_loss >= 0 ? '+' : ''}{r.profit_loss}u
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
+            {/* Recent picks */}
+            <div style={{ border: '1px solid #1A1A22', marginBottom: '48px' }}>
+              <div className="font-mono" style={{ padding: '10px 20px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6B6860', borderBottom: '1px solid #1A1A22', background: '#0E0E12' }}>
+                Recent verified predictions
               </div>
+              {/* Table header */}
+              <div className="font-mono hidden md:grid" style={{ gridTemplateColumns: '2fr 1.2fr 1fr 70px 70px 70px 60px', gap: '12px', padding: '8px 20px', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#3A3A48', borderBottom: '1px solid #1A1A22' }}>
+                <span>Match</span>
+                <span>Bet type</span>
+                <span>Date</span>
+                <span style={{ textAlign: 'right' }}>Odds</span>
+                <span style={{ textAlign: 'right' }}>EV</span>
+                <span style={{ textAlign: 'right' }}>P&L</span>
+                <span style={{ textAlign: 'right' }}>Result</span>
+              </div>
+              {recent.map((r: any, i: number) => {
+                const kickOff = new Date(r.kick_off).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+                const borderLeft = r.result === 'win' ? '3px solid #00C853' : r.result === 'loss' ? '3px solid #FF3355' : '3px solid #3A3A48'
+                return (
+                  <div key={r.id} style={{
+                    display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 70px 70px 70px 60px',
+                    gap: '12px', padding: '14px 20px', alignItems: 'center',
+                    borderBottom: i < recent.length - 1 ? '1px solid #1A1A22' : 'none',
+                    borderLeft,
+                  }}>
+                    <div>
+                      <p style={{ fontWeight: 600, fontSize: '13px', color: '#EDE9DF', margin: 0 }}>{r.home_team} vs {r.away_team}</p>
+                      <p className="font-mono" style={{ fontSize: '10px', color: '#6B6860', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{r.league}</p>
+                    </div>
+                    <p style={{ fontSize: '12px', color: '#9E9B8E', margin: 0 }}>{r.bet_type}</p>
+                    <p className="font-mono" style={{ fontSize: '11px', color: '#6B6860', margin: 0 }}>{kickOff}</p>
+                    <p className="font-mono" style={{ fontSize: '13px', fontWeight: 700, color: '#EDE9DF', textAlign: 'right', margin: 0 }}>
+                      {r.odds ? r.odds.toFixed(2) : '—'}
+                    </p>
+                    <p className="font-mono" style={{ fontSize: '13px', fontWeight: 700, color: '#00C853', textAlign: 'right', margin: 0 }}>
+                      {r.ev_percent ? `+${r.ev_percent}%` : '—'}
+                    </p>
+                    <p className="font-mono" style={{ fontSize: '13px', fontWeight: 700, textAlign: 'right', margin: 0, color: r.profit_loss != null ? (r.profit_loss >= 0 ? '#00C853' : '#FF3355') : '#6B6860' }}>
+                      {r.profit_loss != null ? `${r.profit_loss >= 0 ? '+' : ''}${r.profit_loss}u` : '—'}
+                    </p>
+                    <div style={{ textAlign: 'right' }}>
+                      <ResultBadge result={r.result} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* CTA */}
+            <div style={{ border: '1px solid #1A1A22', borderTop: '4px solid #F97316', padding: '40px', textAlign: 'center' }}>
+              <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#F97316', marginBottom: '12px' }}>
+                Follow picks live
+              </p>
+              <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#EDE9DF', marginBottom: '8px', letterSpacing: '-0.02em' }}>
+                Get AI value bets, alerts and coaching.
+              </h2>
+              <p style={{ fontSize: '14px', color: '#6B6860', marginBottom: '28px' }}>Free to start. No card needed.</p>
+              <Link href="/signup" className="font-mono" style={{
+                display: 'inline-block', fontSize: '12px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase',
+                background: '#F97316', color: '#fff', padding: '14px 32px', textDecoration: 'none',
+              }}>
+                Start Free →
+              </Link>
             </div>
           </>
         )}
-
-        {/* CTA */}
-        <div className="mt-12 text-center">
-          <div className="bg-gradient-to-b from-violet-600/10 to-indigo-600/5 border border-violet-500/20 rounded-2xl p-8">
-            <p className="text-white font-bold text-xl mb-2">Want to follow these picks live?</p>
-            <p className="text-white/40 text-sm mb-6">Get AI value bets, lineup alerts, and the AI Acca Builder — free to start.</p>
-            <Link href="/signup" className="inline-block bg-violet-600 hover:bg-violet-500 text-white font-bold px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-violet-500/25">
-              Start Free — No Card Needed →
-            </Link>
-          </div>
-        </div>
       </div>
       <PublicFooter />
     </div>
