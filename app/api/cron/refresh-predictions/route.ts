@@ -217,7 +217,6 @@ async function refreshLeagues(
   // Look 7 days out (was 4) so off-peak leagues like Saudi/J1/MLS surface
   // upcoming weekend matches even when the cron runs early in the week.
   const in3days = getDatePlusDays(7)
-  const tomorrow = getDatePlusDays(1)
 
   const leagueResults = await batchedAll(
     leagues,
@@ -229,12 +228,21 @@ async function refreshLeagues(
       // leagues, returning 0 fixtures for tournaments/calendar leagues in
       // every Jan-Jul window. Cause of the 20-day-stale cache before WC.
       const season = getSeasonForLeague(league)
-      const [fixtures, oddsToday, oddsTomorrow, injuries, standings] = await Promise.all([
+      // Odds query window MUST match the fixtures window — otherwise the
+      // cron pulls fixtures 7 days out but only odds for today+tomorrow,
+      // so anything 3+ days away has no odds in the map and falls to the
+      // bottom of the with-odds-priority sort (or gets cut by the cap).
+      // Symptom: pre-WC week, USA v Germany (Jun 6) wasn't surfacing
+      // because its odds weren't fetched. /odds endpoint is per-day so we
+      // loop the 7-day window. ~5 extra calls per league but Pro tier has
+      // 7,500/day to spare.
+      const oddsDates: string[] = []
+      for (let i = 0; i < 8; i++) oddsDates.push(getDatePlusDays(i))
+      const [fixtures, injuries, standings, ...oddsByDay] = await Promise.all([
         apiFetch(`/fixtures?league=${league.id}&season=${season}&from=${today}&to=${in3days}&status=NS`, diag),
-        apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}`, diag),
-        apiFetch(`/odds?league=${league.id}&season=${season}&date=${tomorrow}`, diag),
         apiFetch(`/injuries?league=${league.id}&season=${season}&date=${today}`, diag),
         apiFetch(`/standings?league=${league.id}&season=${season}`, diag),
+        ...oddsDates.map((d) => apiFetch(`/odds?league=${league.id}&season=${season}&date=${d}`, diag)),
       ])
 
       const standingMap: Record<number, number> = {}
@@ -243,7 +251,11 @@ async function refreshLeagues(
         if (s?.team?.id) standingMap[s.team.id] = s.rank
       }
 
-      const oddsData = [...(oddsToday || []), ...(oddsTomorrow || [])]
+      // Merge odds from every day of the window into a single map.
+      const oddsData: any[] = []
+      for (const dayOdds of oddsByDay) {
+        if (dayOdds) oddsData.push(...dayOdds)
+      }
       const oddsMap: Record<number, ReturnType<typeof extractOdds>> = {}
       const pinnacleMap: Record<number, ReturnType<typeof extractOdds>> = {}
       const oddsBookmakerName: Record<number, string> = {}
