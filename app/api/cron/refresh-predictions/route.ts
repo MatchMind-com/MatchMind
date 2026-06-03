@@ -311,11 +311,14 @@ async function refreshLeagues(
       const allFixturesForLeague = (fixtures || []) as any[]
       const withOdds = allFixturesForLeague.filter((f: any) => oddsMap[f.fixture?.id]).sort(byDateAsc)
       const withoutOdds = allFixturesForLeague.filter((f: any) => !oddsMap[f.fixture?.id]).sort(byDateAsc)
-      // Cap is per-league. For Friendlies (id=10) during pre-WC week there
-      // are 100+ fixtures across 7 days. 20 picks lets us surface Wed
-      // through Sun — every WC team's tune-up. Other leagues stay at 4
-      // since they rarely have more than a matchday's worth in window.
-      const perLeagueCap = league.id === 10 ? 20 : 4
+      // Cap is per-league. For Friendlies (id=10) during pre-WC week
+      // there are ~100 fixtures across 7 days. We want to surface every
+      // WC-team tune-up: that's USA v Germany, Belgium v Tunisia,
+      // Portugal v Chile, Argentina v Honduras, Morocco v Norway etc
+      // through to WC kickoff. 40 picks lets the full weekend +
+      // mid-week slate fit without dropping anyone material. No extra
+      // API calls — same fixtures pull, just bigger slice.
+      const perLeagueCap = league.id === 10 ? 40 : 4
       const orderedFixtures = [...withOdds, ...withoutOdds].slice(0, perLeagueCap)
 
       return orderedFixtures.map((f: any) => ({
@@ -353,8 +356,13 @@ async function refreshLeagues(
     return picked
   }
 
-  // Cap proportional to tier size: keep ~2 per league as headroom
-  const cap = Math.max(8, leagues.length * 2)
+  // Cap proportional to tier size: keep ~3 per league as headroom. Bumped
+  // from ×2 → ×3 so during pre-WC week the friendlies cap of 40 actually
+  // gets used rather than being cut by the cross-league round-robin.
+  // Extra GPT calls cost some money — acceptable for the pre-WC content
+  // surge. Can drop back to ×2 once the tournament starts and the WC
+  // league itself becomes the focus.
+  const cap = Math.max(8, leagues.length * 3)
   const allFixtures = roundRobinPick(leagueResults, cap)
 
   if (allFixtures.length === 0) {
