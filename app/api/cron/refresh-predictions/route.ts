@@ -104,7 +104,9 @@ function extractOdds(bookmaker: any) {
   //   5  Goals Over/Under        34 BTTS - First Half
   //   8  Both Teams Score        36 Win To Nil
   //   12 Double Chance           45 Corners Over/Under (9.5)
-  // Card markets (id 14) aren't reliably exposed by Bet365 — skipped.
+  //   7  HT/FT Double            24 Result + BTTS combo
+  //   27 Clean Sheet Home        28 Clean Sheet Away
+  //   9  Handicap Result (European Handicap, ±1/±2/±3)
   const mw = bets.find((b: any) => b.id === 1)
   const ou = bets.find((b: any) => b.id === 5)
   const btts = bets.find((b: any) => b.id === 8)
@@ -113,6 +115,11 @@ function extractOdds(bookmaker: any) {
   const htBtts = bets.find((b: any) => b.id === 34)
   const winNil = bets.find((b: any) => b.id === 36)
   const corners = bets.find((b: any) => b.id === 45)
+  const htft = bets.find((b: any) => b.id === 7)        // HT/FT Double
+  const resultBtts = bets.find((b: any) => b.id === 24) // Result + BTTS combo
+  const cleanSheetH = bets.find((b: any) => b.id === 27)
+  const cleanSheetA = bets.find((b: any) => b.id === 28)
+  const handicap = bets.find((b: any) => b.id === 9)    // European Handicap
 
   const findOdd = (bet: any, valueName: string): number => {
     if (!bet) return 0
@@ -151,6 +158,30 @@ function extractOdds(bookmaker: any) {
   const corners95Over  = findOdd(corners, 'Over 9.5')
   const corners95Under = findOdd(corners, 'Under 9.5')
 
+  // HT/FT Double — 6 most-common selections (Bet365 doesn't always offer
+  // all 9 combinations). Each selection is "HT result / FT result".
+  const htftHH = findOdd(htft, 'Home/Home')  // Home leads at HT, wins FT
+  const htftHA = findOdd(htft, 'Home/Away')  // rare upset comeback
+  const htftHD = findOdd(htft, 'Home/Draw')
+  const htftDH = findOdd(htft, 'Draw/Home')  // Draw at HT → Home wins
+  const htftDA = findOdd(htft, 'Draw/Away')
+  const htftDD = findOdd(htft, 'Draw/Draw')
+
+  // Result + BTTS combo (id=24) — e.g. "Home/Yes" = Home Win AND both score
+  const rbttsHomeYes = findOdd(resultBtts, 'Home/Yes')
+  const rbttsHomeNo  = findOdd(resultBtts, 'Home/No')
+  const rbttsDrawYes = findOdd(resultBtts, 'Draw/Yes')
+  const rbttsAwayYes = findOdd(resultBtts, 'Away/Yes')
+  const rbttsAwayNo  = findOdd(resultBtts, 'Away/No')
+
+  // Clean Sheet
+  const csHomeYes = findOdd(cleanSheetH, 'Yes')
+  const csAwayYes = findOdd(cleanSheetA, 'Yes')
+
+  // European Handicap — typically the -1 / +1 lines are most common
+  const ehHomeMinus1 = findOdd(handicap, 'Home -1')
+  const ehAwayMinus1 = findOdd(handicap, 'Away -1')
+
   if (!home && !draw && !away) return null
   return {
     home, draw, away,
@@ -161,6 +192,14 @@ function extractOdds(bookmaker: any) {
     ht_btts: htBttsYes,
     win_nil_home: winNilHome, win_nil_away: winNilAway,
     corners_over: corners95Over, corners_under: corners95Under,
+    // Tier 1.5 additions: HT/FT + Result+BTTS combos + Clean Sheets + Handicap
+    htft_hh: htftHH, htft_ha: htftHA, htft_hd: htftHD,
+    htft_dh: htftDH, htft_da: htftDA, htft_dd: htftDD,
+    rbtts_home_yes: rbttsHomeYes, rbtts_home_no: rbttsHomeNo,
+    rbtts_draw_yes: rbttsDrawYes,
+    rbtts_away_yes: rbttsAwayYes, rbtts_away_no: rbttsAwayNo,
+    cs_home: csHomeYes, cs_away: csAwayYes,
+    eh_home_m1: ehHomeMinus1, eh_away_m1: ehAwayMinus1,
   }
 }
 
@@ -622,6 +661,48 @@ Return JSON with this exact structure. CALIBRATE every probability against the i
     const winNilHomeEV   = evOr(winNilHomePct, o?.win_nil_home)
     const winNilAwayEV   = evOr(winNilAwayPct, o?.win_nil_away)
 
+    // ── Tier 1.5: derived probabilities for 11 new markets ──────────────
+    // Independent-event approximations. Football outcomes aren't strictly
+    // independent (a Home Win at 1-0 implies BTTS=No) so apply a 0.85
+    // correlation discount to combo probs. Conservative — stops over-
+    // confidence on combinations like "Home Win + BTTS".
+    const combo = (a: number | null, b: number | null) =>
+      (a != null && b != null) ? Math.min(99, Math.round((a / 100) * (b / 100) * 0.85 * 100)) : null
+
+    // HT/FT — Home leads at HT × Home wins FT (heavy correlation, so 0.85 ×)
+    // Note: Home/Home is the most common HT/FT bet; derive from htHome × home win
+    const htftHHPct  = combo(htHomePct, homeWinPct)
+    const htftDHPct  = combo(htDrawPct, homeWinPct)
+    const htftDDPct  = combo(htDrawPct, drawPct)
+    const htftDAPct  = combo(htDrawPct, awayWinPct)
+    // Result + BTTS combos
+    const rbttsHomeYesPct = combo(homeWinPct, bttsPct)
+    const rbttsHomeNoPct  = combo(homeWinPct, bttsNoPct)
+    const rbttsDrawYesPct = combo(drawPct, bttsPct)
+    const rbttsAwayYesPct = combo(awayWinPct, bttsPct)
+    const rbttsAwayNoPct  = combo(awayWinPct, bttsNoPct)
+    // Clean Sheet ≈ Win-to-Nil (close enough for our purposes)
+    const csHomePct = winNilHomePct
+    const csAwayPct = winNilAwayPct
+    // European Handicap -1: home wins by 2+ goals. Roughly homeWin × 0.55
+    // (most home wins are 1-goal margins, so ~45% of home wins are by 2+).
+    const ehHomePct = homeWinPct != null ? Math.round(homeWinPct * 0.55) : null
+    const ehAwayPct = awayWinPct != null ? Math.round(awayWinPct * 0.55) : null
+
+    const htftHHEV  = evOr(htftHHPct, o?.htft_hh)
+    const htftDHEV  = evOr(htftDHPct, o?.htft_dh)
+    const htftDDEV  = evOr(htftDDPct, o?.htft_dd)
+    const htftDAEV  = evOr(htftDAPct, o?.htft_da)
+    const rbttsHYEV = evOr(rbttsHomeYesPct, o?.rbtts_home_yes)
+    const rbttsHNEV = evOr(rbttsHomeNoPct, o?.rbtts_home_no)
+    const rbttsDYEV = evOr(rbttsDrawYesPct, o?.rbtts_draw_yes)
+    const rbttsAYEV = evOr(rbttsAwayYesPct, o?.rbtts_away_yes)
+    const rbttsANEV = evOr(rbttsAwayNoPct, o?.rbtts_away_no)
+    const csHomeEV  = evOr(csHomePct, o?.cs_home)
+    const csAwayEV  = evOr(csAwayPct, o?.cs_away)
+    const ehHomeEV  = evOr(ehHomePct, o?.eh_home_m1)
+    const ehAwayEV  = evOr(ehAwayPct, o?.eh_away_m1)
+
     // Tightened EV ceiling: real value-bet edges sit in 1-5%. Picks
     // claiming +15-25% EV are almost always calibration errors (GPT
     // overestimating probability OR our prob using a default value
@@ -662,6 +743,23 @@ Return JSON with this exact structure. CALIBRATE every probability against the i
       // Win to Nil
       { label: 'Home Win to Nil',  category: 'winnil',  ev: winNilHomeEV,   odds: o?.win_nil_home, aiPct: winNilHomePct },
       { label: 'Away Win to Nil',  category: 'winnil',  ev: winNilAwayEV,   odds: o?.win_nil_away, aiPct: winNilAwayPct },
+      // HT/FT — high-payout markets ideal for big mismatches
+      { label: 'HT Home / FT Home', category: 'htft',   ev: htftHHEV,       odds: o?.htft_hh,      aiPct: htftHHPct },
+      { label: 'HT Draw / FT Home', category: 'htft',   ev: htftDHEV,       odds: o?.htft_dh,      aiPct: htftDHPct },
+      { label: 'HT Draw / FT Draw', category: 'htft',   ev: htftDDEV,       odds: o?.htft_dd,      aiPct: htftDDPct },
+      { label: 'HT Draw / FT Away', category: 'htft',   ev: htftDAEV,       odds: o?.htft_da,      aiPct: htftDAPct },
+      // Result + BTTS combos
+      { label: 'Home & BTTS Yes',   category: 'rbtts',  ev: rbttsHYEV,      odds: o?.rbtts_home_yes, aiPct: rbttsHomeYesPct },
+      { label: 'Home & BTTS No',    category: 'rbtts',  ev: rbttsHNEV,      odds: o?.rbtts_home_no,  aiPct: rbttsHomeNoPct },
+      { label: 'Draw & BTTS Yes',   category: 'rbtts',  ev: rbttsDYEV,      odds: o?.rbtts_draw_yes, aiPct: rbttsDrawYesPct },
+      { label: 'Away & BTTS Yes',   category: 'rbtts',  ev: rbttsAYEV,      odds: o?.rbtts_away_yes, aiPct: rbttsAwayYesPct },
+      { label: 'Away & BTTS No',    category: 'rbtts',  ev: rbttsANEV,      odds: o?.rbtts_away_no,  aiPct: rbttsAwayNoPct },
+      // Clean Sheet
+      { label: 'Home Clean Sheet',  category: 'cs',     ev: csHomeEV,       odds: o?.cs_home,      aiPct: csHomePct },
+      { label: 'Away Clean Sheet',  category: 'cs',     ev: csAwayEV,       odds: o?.cs_away,      aiPct: csAwayPct },
+      // European Handicap -1 (team wins by 2+ goals)
+      { label: 'Home -1 Handicap',  category: 'eh',     ev: ehHomeEV,       odds: o?.eh_home_m1,   aiPct: ehHomePct },
+      { label: 'Away -1 Handicap',  category: 'eh',     ev: ehAwayEV,       odds: o?.eh_away_m1,   aiPct: ehAwayPct },
     ]
     const valueBets = allCandidates
       .filter(x => x.ev !== null && x.ev > 0 && x.ev <= MAX_REAL_EV)
