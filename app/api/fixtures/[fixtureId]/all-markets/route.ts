@@ -14,10 +14,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
 
-// Vercel Hobby plan caps function duration at 10s. We aim to return well
-// under that (typically 3-5s) so the panel never spins forever.
-export const maxDuration = 10
-const TOTAL_BUDGET_MS = 9000 // leave 1s of buffer for response serialisation
+// 30s function budget (was 10s — Vercel Pro tier supports up to 300s).
+// User reported every market showing "AI evaluator unavailable — markets
+// shown with neutral grading" because API-Football fixture+odds+form
+// pulls were eating most of the 10s window, leaving the GPT eval with
+// <2s budget → it got skipped or aborted. With 30s the AI step almost
+// always completes (GPT-4o-mini typically returns 30 verdicts in 2-4s).
+export const maxDuration = 30
+const TOTAL_BUDGET_MS = 28000 // leave 2s of buffer for response serialisation
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 const API_KEY = process.env.API_FOOTBALL_KEY!

@@ -97,13 +97,20 @@ function extractOdds(bookmaker: any) {
   const mw = bets.find((b: any) => b.id === 1)
   const ou = bets.find((b: any) => b.id === 5)
   const btts = bets.find((b: any) => b.id === 8)
+  const dc = bets.find((b: any) => b.id === 12) // Double Chance
   const home = parseFloat(mw?.values?.find((v: any) => v.value === 'Home')?.odd || '0')
   const draw = parseFloat(mw?.values?.find((v: any) => v.value === 'Draw')?.odd || '0')
   const away = parseFloat(mw?.values?.find((v: any) => v.value === 'Away')?.odd || '0')
   const over25 = parseFloat(ou?.values?.find((v: any) => v.value === 'Over 2.5')?.odd || '0')
+  const under25 = parseFloat(ou?.values?.find((v: any) => v.value === 'Under 2.5')?.odd || '0')
   const bttsYes = parseFloat(btts?.values?.find((v: any) => v.value === 'Yes')?.odd || '0')
+  const bttsNo = parseFloat(btts?.values?.find((v: any) => v.value === 'No')?.odd || '0')
+  // Double Chance — API uses values like "Home/Draw", "Home/Away", "Draw/Away"
+  const dc1x = parseFloat(dc?.values?.find((v: any) => v.value === 'Home/Draw')?.odd || '0')
+  const dcx2 = parseFloat(dc?.values?.find((v: any) => v.value === 'Draw/Away')?.odd || '0')
+  const dc12 = parseFloat(dc?.values?.find((v: any) => v.value === 'Home/Away')?.odd || '0')
   if (!home && !draw && !away) return null
-  return { home, draw, away, over25, btts: bttsYes }
+  return { home, draw, away, over25, under25, btts: bttsYes, btts_no: bttsNo, dc_1x: dc1x, dc_x2: dcx2, dc_12: dc12 }
 }
 
 function calcEV(aiPct: number, decimalOdds: number): number | null {
@@ -502,26 +509,61 @@ Return JSON with this exact structure:
     const over25Pct = pred.over_2_5_pct ?? 55
     const bttsPct = pred.btts_pct ?? 50
 
-    const homeEV   = o?.home   ? calcEV(homeWinPct, o.home)   : null
-    const drawEV   = o?.draw   ? calcEV(drawPct, o.draw)       : null
-    const awayEV   = o?.away   ? calcEV(awayWinPct, o.away)   : null
-    const over25EV = o?.over25 ? calcEV(over25Pct, o.over25)  : null
-    const bttsEV   = o?.btts   ? calcEV(bttsPct, o.btts)      : null
+    // Derived probabilities — no extra GPT call. These give the cron a much
+    // wider market set to find value in (was 5 markets, now 10) so the
+    // recommended pick isn't always "Over 2.5". The implied/derived probs
+    // sum correctly because they're complements / combinations of what
+    // GPT already returned.
+    const under25Pct = Math.max(0, 100 - over25Pct)
+    const bttsNoPct  = Math.max(0, 100 - bttsPct)
+    const dc1xPct    = Math.min(100, homeWinPct + drawPct)    // 1X (Home or Draw)
+    const dcx2Pct    = Math.min(100, drawPct + awayWinPct)    // X2 (Draw or Away)
+    const dc12Pct    = Math.min(100, homeWinPct + awayWinPct) // 12 (Home or Away)
+
+    const homeEV    = o?.home    ? calcEV(homeWinPct, o.home)   : null
+    const drawEV    = o?.draw    ? calcEV(drawPct, o.draw)      : null
+    const awayEV    = o?.away    ? calcEV(awayWinPct, o.away)   : null
+    const over25EV  = o?.over25  ? calcEV(over25Pct, o.over25)  : null
+    const under25EV = o?.under25 ? calcEV(under25Pct, o.under25): null
+    const bttsEV    = o?.btts    ? calcEV(bttsPct, o.btts)      : null
+    const bttsNoEV  = o?.btts_no ? calcEV(bttsNoPct, o.btts_no) : null
+    const dc1xEV    = o?.dc_1x   ? calcEV(dc1xPct, o.dc_1x)     : null
+    const dcx2EV    = o?.dc_x2   ? calcEV(dcx2Pct, o.dc_x2)     : null
+    const dc12EV    = o?.dc_12   ? calcEV(dc12Pct, o.dc_12)     : null
 
     const MAX_REAL_EV = 25
     const MAX_REAL_ODDS = 4.0
-    const valueBets = [
-      { label: 'Home Win',  ev: homeEV,   odds: o?.home,   aiPct: homeWinPct },
-      { label: 'Draw',      ev: drawEV,   odds: o?.draw,   aiPct: drawPct },
-      { label: 'Away Win',  ev: awayEV,   odds: o?.away,   aiPct: awayWinPct },
-      { label: 'Over 2.5',  ev: over25EV, odds: o?.over25, aiPct: over25Pct },
-      { label: 'BTTS',      ev: bttsEV,   odds: o?.btts,   aiPct: bttsPct },
+    // 10 markets evaluated. The category tag drives a soft diversity rule
+    // below — when multiple markets tie within 3% EV, we prefer non-totals
+    // so the site doesn't display 8 of 9 picks as "Over 2.5".
+    const allCandidates = [
+      { label: 'Home Win',  category: '1x2',     ev: homeEV,    odds: o?.home,    aiPct: homeWinPct },
+      { label: 'Draw',      category: '1x2',     ev: drawEV,    odds: o?.draw,    aiPct: drawPct },
+      { label: 'Away Win',  category: '1x2',     ev: awayEV,    odds: o?.away,    aiPct: awayWinPct },
+      { label: '1X',        category: 'dc',      ev: dc1xEV,    odds: o?.dc_1x,   aiPct: dc1xPct },
+      { label: 'X2',        category: 'dc',      ev: dcx2EV,    odds: o?.dc_x2,   aiPct: dcx2Pct },
+      { label: '12',        category: 'dc',      ev: dc12EV,    odds: o?.dc_12,   aiPct: dc12Pct },
+      { label: 'Over 2.5',  category: 'totals',  ev: over25EV,  odds: o?.over25,  aiPct: over25Pct },
+      { label: 'Under 2.5', category: 'totals',  ev: under25EV, odds: o?.under25, aiPct: under25Pct },
+      { label: 'BTTS',      category: 'btts',    ev: bttsEV,    odds: o?.btts,    aiPct: bttsPct },
+      { label: 'BTTS No',   category: 'btts',    ev: bttsNoEV,  odds: o?.btts_no, aiPct: bttsNoPct },
     ]
+    const valueBets = allCandidates
       .filter(x => x.ev !== null && x.ev > 0 && x.ev <= MAX_REAL_EV)
       .filter(x => !x.odds || x.odds <= MAX_REAL_ODDS)
       .sort((a, b) => (b.ev ?? 0) - (a.ev ?? 0))
 
-    const bestValue = valueBets[0] ?? null
+    // Diversity rule: if the top EV is a Totals pick (Over/Under 2.5) AND
+    // another category is within 3% EV of it, prefer the non-totals pick.
+    // Fixes the "every site recommendation is Over 2.5" monoculture
+    // visible during friendly-heavy weeks.
+    let bestValue = valueBets[0] ?? null
+    if (bestValue?.category === 'totals' && valueBets.length > 1) {
+      const nonTotalsAlt = valueBets.find(
+        v => v.category !== 'totals' && (bestValue!.ev! - (v.ev ?? 0)) <= 3,
+      )
+      if (nonTotalsAlt) bestValue = nonTotalsAlt
+    }
     const pinnacleEdge = calcPinnacleEdge(f._pinnacleOdds ?? null, o ?? null)
 
     return {
