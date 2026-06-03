@@ -234,12 +234,18 @@ async function refreshLeagues(
       // leagues, returning 0 fixtures for tournaments/calendar leagues in
       // every Jan-Jul window. Cause of the 20-day-stale cache before WC.
       const season = getSeasonForLeague(league)
-      // Expanded odds window: today + next 3 days (was today + tomorrow).
-      // Catches matches like USA v Germany / Brazil v Egypt that kick off
-      // 3-4 days out. Earlier attempt at 8 days broke the cron (rate
-      // limit OR too-many-parallel-calls), so we cap at 4 — still 2x
-      // better than before, comfortably within API-Football rate ceiling.
-      const oddsDates = [today, getDatePlusDays(1), getDatePlusDays(2), getDatePlusDays(3)]
+      // Odds window = 6 days (today + 5 ahead). Covers a full Wed→Mon
+      // weekend so Saturday + Sunday friendlies surface in the cache.
+      // Safe to bump now that batch concurrency is down to 2 + 1500ms
+      // delay — previous 8-day attempt broke at the old concurrency=3.
+      const oddsDates = [
+        today,
+        getDatePlusDays(1),
+        getDatePlusDays(2),
+        getDatePlusDays(3),
+        getDatePlusDays(4),
+        getDatePlusDays(5),
+      ]
       const [fixtures, injuries, standings, ...oddsByDay] = await Promise.all([
         apiFetch(`/fixtures?league=${league.id}&season=${season}&from=${today}&to=${in3days}&status=NS`, diag),
         apiFetch(`/injuries?league=${league.id}&season=${season}&date=${today}`, diag),
@@ -305,11 +311,11 @@ async function refreshLeagues(
       const allFixturesForLeague = (fixtures || []) as any[]
       const withOdds = allFixturesForLeague.filter((f: any) => oddsMap[f.fixture?.id]).sort(byDateAsc)
       const withoutOdds = allFixturesForLeague.filter((f: any) => !oddsMap[f.fixture?.id]).sort(byDateAsc)
-      // Cap higher for Friendlies (id=10) — pre-WC week has 100+ fixtures,
-      // 12 picks lets both today's tune-ups AND tomorrow's surface. Other
-      // leagues stay at 4 since they rarely have more than a matchday's
-      // worth in window.
-      const perLeagueCap = league.id === 10 ? 12 : 4
+      // Cap is per-league. For Friendlies (id=10) during pre-WC week there
+      // are 100+ fixtures across 7 days. 20 picks lets us surface Wed
+      // through Sun — every WC team's tune-up. Other leagues stay at 4
+      // since they rarely have more than a matchday's worth in window.
+      const perLeagueCap = league.id === 10 ? 20 : 4
       const orderedFixtures = [...withOdds, ...withoutOdds].slice(0, perLeagueCap)
 
       return orderedFixtures.map((f: any) => ({
