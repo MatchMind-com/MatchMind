@@ -218,9 +218,15 @@ async function refreshLeagues(
   // upcoming weekend matches even when the cron runs early in the week.
   const in3days = getDatePlusDays(7)
 
+  // Concurrency tuning: each league fires 7 parallel API calls (fixtures,
+  // injuries, standings, +4 odds). Concurrency 3 = 21 in-flight calls per
+  // batch → silently hit API-Football's per-second rate ceiling, ~40% of
+  // calls returned 429 (visible as api_failures count in cron response).
+  // Dropped to 2 leagues/batch (14 in-flight) + 1500ms delay (was 800ms)
+  // to halve the burst. Slower per cron run but no rate-limit drops.
   const leagueResults = await batchedAll(
     leagues,
-    3,
+    2,
     async (league) => {
       // Per-league season: European leagues = Aug-May start year, calendar
       // leagues (Friendlies, WC, MLS, Brasileirão, etc) = current year.
@@ -320,7 +326,7 @@ async function refreshLeagues(
         _awayPosition: standingMap[f.teams?.away?.id] ?? null,
       }))
     },
-    800
+    1500
   )
 
   function roundRobinPick<T>(perLeague: T[][], cap: number): T[] {
