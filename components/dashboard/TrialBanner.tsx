@@ -28,7 +28,7 @@ export default function TrialBanner({ daysLeft }: { daysLeft: number }) {
       <div className="flex items-center gap-2 shrink-0">
         <Link
           href="/dashboard/billing"
-          className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors
+          className={`text-xs font-bold px-3 py-1.5 transition-colors
             ${urgency
               ? 'bg-amber-500 hover:bg-amber-400 text-black'
               : 'bg-violet-600 hover:bg-violet-500 text-white'

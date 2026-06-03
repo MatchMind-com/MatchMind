@@ -53,7 +53,7 @@ interface Props {
 type Step = 'pick' | 'parsing' | 'review' | 'saving' | 'done'
 
 const inputCls =
-  'w-full bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand'
+  'w-full bg-bg-base border border-border-subtle px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand'
 
 // HEIC/HEIF (iPhone default) and a few other formats can't be rendered by
 // the browser <img> tag and the OpenAI vision API also rejects HEIC. We
@@ -364,7 +364,7 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
     >
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" />
       <div
-        className="relative bg-bg-surface border border-border-strong rounded-2xl w-full max-w-2xl shadow-2xl max-h-[92vh] overflow-y-auto"
+        className="relative bg-bg-surface border border-border-strong w-full max-w-2xl shadow-2xl max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -392,7 +392,7 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
         <div className="p-5">
           {/* Error banner */}
           {error && (
-            <div className="bg-loss/10 border border-loss/30 text-loss text-xs rounded-lg p-3 mb-4 space-y-2">
+            <div className="bg-loss/10 border border-loss/30 text-loss text-xs p-3 mb-4 space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <span className="leading-relaxed">{error}</span>
                 <button
@@ -434,9 +434,9 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
 
               {previewUrl ? (
                 <>
-                  <div className="bg-bg-base border border-border-subtle rounded-xl p-3">
+                  <div className="bg-bg-base border border-border-subtle p-3">
                     {imgFailed ? (
-                      <div className="w-full bg-loss/5 border border-loss/30 rounded-lg p-6 text-center">
+                      <div className="w-full bg-loss/5 border border-loss/30 p-6 text-center">
                         <p className="text-loss text-sm font-semibold mb-1">Can’t display this image</p>
                         <p className="text-fg-muted text-[11px] leading-relaxed">
                           Your browser couldn’t render this file format. iPhone HEIC photos are a common cause —
@@ -447,7 +447,7 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
                       <img
                         src={previewUrl}
                         alt="Bet slip preview"
-                        className="w-full max-h-[50vh] object-contain rounded-lg"
+                        className="w-full max-h-[50vh] object-contain"
                         onError={() => setImgFailed(true)}
                       />
                     )}
@@ -469,7 +469,7 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
                       type="button"
                       onClick={analyse}
                       disabled={imgFailed}
-                      className="px-5 py-2.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="px-5 py-2.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       Analyse slip →
                     </button>
@@ -480,10 +480,10 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
                   <button
                     type="button"
                     onClick={pickFile}
-                    className="w-full border-2 border-dashed border-border-strong hover:border-brand rounded-2xl p-8 sm:p-12 transition-colors group"
+                    className="w-full border-2 border-dashed border-border-strong hover:border-brand p-8 sm:p-12 transition-colors group"
                   >
                     <div className="flex flex-col items-center gap-3">
-                      <div className="w-14 h-14 rounded-full bg-brand/10 group-hover:bg-brand/20 flex items-center justify-center transition-colors">
+                      <div className="w-14 h-14 bg-brand/10 group-hover:bg-brand/20 flex items-center justify-center transition-colors">
                         <CameraIcon />
                       </div>
                       <p className="text-fg font-bold text-base">Tap to take photo or upload</p>
@@ -513,7 +513,7 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
           {/* STEP: parsing */}
           {step === 'parsing' && (
             <div className="py-12 text-center">
-              <div className="inline-block w-10 h-10 border-3 border-brand border-t-transparent rounded-full animate-spin mb-4" />
+              <div className="inline-block w-10 h-10 border-3 border-brand border-t-transparent animate-spin mb-4" />
               <p className="text-fg font-semibold mb-1">Reading your slip…</p>
               <p className="text-fg-muted text-xs">Usually takes 5-10 seconds</p>
             </div>
@@ -523,7 +523,7 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
           {step === 'review' && parsed && (
             <div className="space-y-4">
               {/* Slip-level summary */}
-              <div className="bg-bg-elevated rounded-xl p-3 border border-border-subtle grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-bg-elevated p-3 border border-border-subtle grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <SummaryStat label="Type" value={isAcca ? `${parsed.legs.length}-fold` : 'Single'} />
                 <SummaryStat
                   label="Total odds"
@@ -605,7 +605,7 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
                 {parsed.legs.map((leg, i) => (
                   <div
                     key={i}
-                    className="bg-bg-base/60 border border-border-subtle rounded-xl p-3 space-y-2"
+                    className="bg-bg-base/60 border border-border-subtle p-3 space-y-2"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-stat text-[10px] font-bold uppercase tracking-wider text-fg-muted">
@@ -665,7 +665,7 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
               </div>
 
               {parsed.parse_notes && (
-                <p className="text-fg-muted text-[11px] italic bg-bg-base/40 border border-border-subtle rounded-lg p-2">
+                <p className="text-fg-muted text-[11px] italic bg-bg-base/40 border border-border-subtle p-2">
                   AI note: {parsed.parse_notes}
                 </p>
               )}
@@ -681,7 +681,7 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
                 <button
                   type="button"
                   onClick={save}
-                  className="px-5 py-2.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors"
+                  className="px-5 py-2.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider transition-colors"
                 >
                   Save to history →
                 </button>
@@ -692,7 +692,7 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
           {/* STEP: saving */}
           {step === 'saving' && (
             <div className="py-12 text-center">
-              <div className="inline-block w-10 h-10 border-3 border-brand border-t-transparent rounded-full animate-spin mb-4" />
+              <div className="inline-block w-10 h-10 border-3 border-brand border-t-transparent animate-spin mb-4" />
               <p className="text-fg font-semibold">Saving…</p>
             </div>
           )}
@@ -700,7 +700,7 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
           {/* STEP: done */}
           {step === 'done' && (
             <div className="py-8 text-center space-y-4">
-              <div className="w-14 h-14 mx-auto rounded-full bg-success/15 border border-success/40 flex items-center justify-center">
+              <div className="w-14 h-14 mx-auto bg-success/15 border border-success/40 flex items-center justify-center">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-success">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
@@ -717,14 +717,14 @@ export default function BetSlipScanner({ onClose, onSaved }: Props) {
                 <button
                   type="button"
                   onClick={reset}
-                  className="px-4 py-2 bg-bg-base border border-border-subtle hover:border-border-strong text-fg-secondary text-xs font-bold uppercase tracking-wider rounded-lg transition-colors"
+                  className="px-4 py-2 bg-bg-base border border-border-subtle hover:border-border-strong text-fg-secondary text-xs font-bold uppercase tracking-wider transition-colors"
                 >
                   Scan another
                 </button>
                 <button
                   type="button"
                   onClick={() => { onSaved(); onClose() }}
-                  className="px-5 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors"
+                  className="px-5 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider transition-colors"
                 >
                   Done
                 </button>

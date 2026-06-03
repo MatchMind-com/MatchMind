@@ -13,7 +13,7 @@ export default function EarningsCalculator() {
   const presets = [4.99, 9.99, 14.99, 19.99]
 
   return (
-    <div className="bg-[#12121F] border border-amber-500/25 rounded-2xl p-6 shadow-xl">
+    <div className="bg-[#12121F] border border-amber-500/25 p-6 shadow-xl">
       <div className="flex items-center gap-2 mb-5">
         <span className="text-xl">💰</span>
         <div>
@@ -30,7 +30,7 @@ export default function EarningsCalculator() {
             <button
               key={p}
               onClick={() => setPrice(p)}
-              className={`text-sm font-bold px-3 py-1.5 rounded-lg border transition-all ${
+              className={`text-sm font-bold px-3 py-1.5 border transition-all ${
                 price === p
                   ? 'bg-amber-500 border-amber-400 text-black'
                   : 'bg-white/5 border-white/10 text-white/50 hover:text-white'
@@ -62,14 +62,14 @@ export default function EarningsCalculator() {
 
       {/* Results */}
       <div className="space-y-2 mb-5">
-        <div className="flex items-center justify-between bg-white/[0.04] rounded-xl px-4 py-3">
+        <div className="flex items-center justify-between bg-white/[0.04] px-4 py-3">
           <div>
             <p className="text-white/50 text-xs">Monthly earnings</p>
             <p className="text-white/25 text-[10px] mt-0.5">{subs} subs × £{cut.toFixed(2)}</p>
           </div>
           <p className="text-amber-400 font-black text-xl">£{monthly.toFixed(0)}</p>
         </div>
-        <div className="flex items-center justify-between bg-amber-500/8 border border-amber-500/20 rounded-xl px-4 py-3">
+        <div className="flex items-center justify-between bg-amber-500/8 border border-amber-500/20 px-4 py-3">
           <div>
             <p className="text-white/70 text-xs font-semibold">Annual earnings</p>
             <p className="text-white/30 text-[10px] mt-0.5">12 months × £{monthly.toFixed(0)}</p>
@@ -78,7 +78,7 @@ export default function EarningsCalculator() {
         </div>
       </div>
 
-      <Link href="/signup" className="block w-full text-center bg-amber-500 hover:bg-amber-400 text-black font-bold px-6 py-3 rounded-xl text-sm transition-all shadow-lg shadow-amber-500/25">
+      <Link href="/signup" className="block w-full text-center bg-amber-500 hover:bg-amber-400 text-black font-bold px-6 py-3 text-sm transition-all shadow-lg shadow-amber-500/25">
         Start Earning as a Tipster →
       </Link>
 

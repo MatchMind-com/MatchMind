@@ -34,11 +34,11 @@ function HeadlineRow({ item }: { item: NewsItem }) {
       href={item.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-start gap-3 py-3 px-4 hover:bg-bg-elevated/60 transition-colors group rounded-lg"
+      className="flex items-start gap-3 py-3 px-4 hover:bg-bg-elevated/60 transition-colors group"
     >
       {/* Thumbnail */}
       {item.thumbnail ? (
-        <div className="relative w-14 h-14 rounded-md overflow-hidden bg-bg-elevated shrink-0">
+        <div className="relative w-14 h-14 overflow-hidden bg-bg-elevated shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={item.thumbnail}
@@ -48,7 +48,7 @@ function HeadlineRow({ item }: { item: NewsItem }) {
           />
         </div>
       ) : (
-        <div className="w-14 h-14 rounded-md bg-bg-elevated shrink-0 flex items-center justify-center text-fg-muted text-xs">
+        <div className="w-14 h-14 bg-bg-elevated shrink-0 flex items-center justify-center text-fg-muted text-xs">
           {item.flag}
         </div>
       )}
@@ -77,7 +77,7 @@ function HeadlineRow({ item }: { item: NewsItem }) {
 function HeadlineSkeleton() {
   return (
     <div className="flex items-start gap-3 py-3 px-4 animate-pulse">
-      <div className="w-14 h-14 rounded-md bg-bg-elevated shrink-0" />
+      <div className="w-14 h-14 bg-bg-elevated shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="h-4 w-full bg-bg-elevated rounded mb-2" />
         <div className="h-3 w-2/3 bg-bg-elevated rounded mb-2" />

@@ -46,7 +46,7 @@ export default function MyBetsTab({ currency, initialLeague, initialBetType }: P
           <nav
             role="tablist"
             aria-label="Past performance view"
-            className="inline-flex bg-bg-elevated rounded-lg p-0.5"
+            className="inline-flex bg-bg-elevated p-0.5"
           >
             {([
               { id: 'history', label: 'History' },
@@ -60,7 +60,7 @@ export default function MyBetsTab({ currency, initialLeague, initialBetType }: P
                   role="tab"
                   aria-selected={active}
                   onClick={() => setView(t.id)}
-                  className={`px-3 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                  className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors ${
                     active
                       ? 'bg-brand text-white'
                       : 'text-fg-muted hover:text-fg'

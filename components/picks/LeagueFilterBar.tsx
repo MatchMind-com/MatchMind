@@ -40,7 +40,7 @@ export default function LeagueFilterBar({ leagues, selected, onToggle, onClear }
         <button
           type="button"
           onClick={onClear}
-          className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all duration-150 ${
+          className={`shrink-0 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all duration-150 ${
             isAllActive
               ? 'bg-brand text-bg-base'
               : 'text-fg-muted hover:text-fg-secondary bg-transparent border border-border-subtle'
@@ -56,7 +56,7 @@ export default function LeagueFilterBar({ leagues, selected, onToggle, onClear }
               key={l.key}
               type="button"
               onClick={() => onToggle(l.key)}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all duration-150 inline-flex items-center gap-1.5 ${
+              className={`shrink-0 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all duration-150 inline-flex items-center gap-1.5 ${
                 active
                   ? 'bg-brand text-bg-base'
                   : 'text-fg-muted hover:text-fg-secondary bg-transparent border border-border-subtle'

@@ -159,8 +159,8 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
   if (settingUp) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-8 max-w-md w-full text-center">
-          <div className="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto mb-4">
+        <div className="bg-[#0E1628] border border-white/[0.07] p-8 max-w-md w-full text-center">
+          <div className="w-14 h-14 bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto mb-4">
             <svg className="w-7 h-7 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -175,12 +175,12 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
             onChange={e => setStartInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && setupBankroll()}
             placeholder="e.g. 500"
-            className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3 text-white text-xl text-center mb-4 focus:outline-none focus:border-orange-500/50 focus:bg-white/[0.06] transition-colors"
+            className="w-full bg-white/[0.04] border border-white/[0.07] px-4 py-3 text-white text-xl text-center mb-4 focus:outline-none focus:border-orange-500/50 focus:bg-white/[0.06] transition-colors"
           />
           <button
             onClick={setupBankroll}
             disabled={loading || !startInput}
-            className="w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50"
+            className="w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-3 transition-colors disabled:opacity-50"
           >
             {loading ? 'Setting up…' : 'Start Tracking →'}
           </button>
@@ -192,7 +192,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null
     return (
-      <div className="bg-[#0E1628] border border-white/[0.12] rounded-xl p-3 shadow-xl">
+      <div className="bg-[#0E1628] border border-white/[0.12] p-3 shadow-xl">
         <p className="text-slate-400 text-xs mb-1">{label}</p>
         <p className="text-white font-bold">£{Number(payload[0].value).toFixed(2)}</p>
         {payload[0].payload?.note && (
@@ -207,7 +207,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
 
       {/* LOSS LIMIT WARNING */}
       {lossLimitTriggered && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex items-center gap-3">
+        <div className="bg-red-500/10 border border-red-500/30 p-4 flex items-center gap-3">
           <span className="text-red-400 text-xl">⚠</span>
           <div>
             <p className="text-red-300 font-bold text-sm">Loss limit reached — consider pausing</p>
@@ -216,7 +216,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
         </div>
       )}
       {lossLimitNear && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-center gap-3">
+        <div className="bg-amber-500/10 border border-amber-500/30 p-4 flex items-center gap-3">
           <span className="text-amber-400 text-xl">⚠</span>
           <div>
             <p className="text-amber-300 font-bold text-sm">Approaching your loss limit</p>
@@ -227,15 +227,15 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
 
       {/* TOP STATS — 4 cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5">
+        <div className="bg-[#0E1628] border border-white/[0.07] p-5">
           <p className="text-slate-500 text-[10px] uppercase tracking-widest font-semibold mb-3">Current Balance</p>
           <p className="text-3xl md:text-4xl font-black text-white leading-none">£{stats.current.toFixed(2)}</p>
         </div>
-        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5">
+        <div className="bg-[#0E1628] border border-white/[0.07] p-5">
           <p className="text-slate-500 text-[10px] uppercase tracking-widest font-semibold mb-3">Starting</p>
           <p className="text-3xl md:text-4xl font-black text-slate-400 leading-none">£{stats.startingBalance.toFixed(2)}</p>
         </div>
-        <div className={`bg-[#0E1628] rounded-2xl p-5 border ${pnl >= 0 ? 'border-emerald-500/20' : 'border-red-500/20'}`}>
+        <div className={`bg-[#0E1628] p-5 border ${pnl >= 0 ? 'border-emerald-500/20' : 'border-red-500/20'}`}>
           <p className="text-slate-500 text-[10px] uppercase tracking-widest font-semibold mb-3">Growth</p>
           <p className={`text-3xl md:text-4xl font-black leading-none ${pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
             {pnl >= 0 ? '+' : ''}£{Math.abs(pnl).toFixed(2)}
@@ -244,7 +244,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
             {pnl >= 0 ? '▲' : '▼'} {Math.abs(stats.growthPct)}% all time
           </p>
         </div>
-        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5">
+        <div className="bg-[#0E1628] border border-white/[0.07] p-5">
           <p className="text-slate-500 text-[10px] uppercase tracking-widest font-semibold mb-3">Peak · Drawdown</p>
           <p className="text-2xl md:text-3xl font-black text-orange-400 leading-none">£{stats.peak.toFixed(2)}</p>
           <p className={`text-xs mt-1.5 ${stats.currentDrawdownPct < -5 ? 'text-red-400' : 'text-slate-500'}`}>
@@ -254,7 +254,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
       </div>
 
       {/* HOW THIS WORKS — collapsible explainer */}
-      <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl overflow-hidden">
+      <div className="bg-[#0E1628] border border-white/[0.07] overflow-hidden">
         <button onClick={() => setShowHelp(!showHelp)} className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/[0.02] transition-colors">
           <div className="flex items-center gap-3">
             <span className="text-orange-400">💡</span>
@@ -281,7 +281,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
               <p className="text-slate-400 leading-relaxed text-xs mb-2">
                 The <span className="text-white">Kelly Criterion</span> is the mathematically optimal fraction of your bankroll to stake on a bet with a known edge. Formula:
               </p>
-              <p className="text-orange-300 font-mono text-[11px] bg-white/[0.03] px-3 py-2 rounded-lg border border-white/[0.06]">
+              <p className="text-orange-300 font-mono text-[11px] bg-white/[0.03] px-3 py-2 border border-white/[0.06]">
                 stake = bankroll × ((odds − 1) × true_prob − (1 − true_prob)) / (odds − 1)
               </p>
               <p className="text-slate-400 leading-relaxed text-xs mt-2">
@@ -331,7 +331,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
       {/* UNIT SIZING + KELLY CALCULATOR — 2-col on desktop */}
       <div className="grid md:grid-cols-2 gap-3">
         {/* Unit sizing */}
-        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5">
+        <div className="bg-[#0E1628] border border-white/[0.07] p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-white font-bold text-sm">Unit sizing</h3>
             <span className="text-[10px] text-slate-500 uppercase tracking-wider">Browser-saved</span>
@@ -342,7 +342,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
               type="number" step="0.5" min="0.5" max="10"
               value={unitPct}
               onChange={e => saveUnitPct(Number(e.target.value) || 2)}
-              className="w-20 bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 py-2 text-white text-center focus:outline-none focus:border-orange-500/50"
+              className="w-20 bg-white/[0.04] border border-white/[0.07] px-3 py-2 text-white text-center focus:outline-none focus:border-orange-500/50"
             />
             <span className="text-slate-400 text-sm">% of bankroll</span>
             <span className="text-slate-600 text-sm">=</span>
@@ -351,7 +351,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
           <div className="flex gap-2 mt-3">
             {[1, 2, 3, 5].map(p => (
               <button key={p} onClick={() => saveUnitPct(p)}
-                className={`text-[11px] font-semibold px-2.5 py-1 rounded-md transition-colors ${
+                className={`text-[11px] font-semibold px-2.5 py-1 transition-colors ${
                   unitPct === p ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' : 'bg-white/[0.03] text-slate-500 hover:text-white border border-white/[0.06]'
                 }`}>
                 {p}%
@@ -361,7 +361,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
         </div>
 
         {/* Kelly calculator */}
-        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5">
+        <div className="bg-[#0E1628] border border-white/[0.07] p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-white font-bold text-sm">Kelly stake calculator</h3>
             <div className="flex gap-1">
@@ -380,17 +380,17 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
             <div>
               <label className="text-[10px] text-slate-500 uppercase tracking-wider">Edge (EV%)</label>
               <input type="number" value={kEdge} onChange={e => setKEdge(e.target.value)}
-                className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-orange-500/50"
+                className="w-full bg-white/[0.04] border border-white/[0.07] px-3 py-2 text-white text-sm focus:outline-none focus:border-orange-500/50"
               />
             </div>
             <div>
               <label className="text-[10px] text-slate-500 uppercase tracking-wider">Odds</label>
               <input type="number" step="0.05" value={kOdds} onChange={e => setKOdds(e.target.value)}
-                className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-orange-500/50"
+                className="w-full bg-white/[0.04] border border-white/[0.07] px-3 py-2 text-white text-sm focus:outline-none focus:border-orange-500/50"
               />
             </div>
           </div>
-          <div className="bg-orange-500/5 border border-orange-500/25 rounded-xl px-4 py-3 flex items-baseline justify-between">
+          <div className="bg-orange-500/5 border border-orange-500/25 px-4 py-3 flex items-baseline justify-between">
             <span className="text-orange-300/80 text-xs font-semibold">Suggested stake:</span>
             <div>
               <span className="text-orange-400 font-black text-2xl">£{kellyResult.toFixed(2)}</span>
@@ -401,7 +401,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
       </div>
 
       {/* GROWTH CHART */}
-      <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5">
+      <div className="bg-[#0E1628] border border-white/[0.07] p-5">
         <h3 className="text-white font-bold text-sm mb-5">Bankroll growth</h3>
         {chartData.length > 1 ? (
           <ResponsiveContainer width="100%" height={260}>
@@ -432,7 +432,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
 
       {/* MONTHLY P&L */}
       {months.length >= 1 && (
-        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5">
+        <div className="bg-[#0E1628] border border-white/[0.07] p-5">
           <h3 className="text-white font-bold text-sm mb-5">Monthly P&amp;L</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={months}>
@@ -455,22 +455,22 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
       )}
 
       {/* RECORD SNAPSHOT */}
-      <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-5">
+      <div className="bg-[#0E1628] border border-white/[0.07] p-5">
         <h3 className="text-white font-bold text-sm mb-4">Record balance snapshot</h3>
         <div className="flex gap-3 flex-wrap">
           <input type="number" value={newBalance} onChange={e => setNewBalance(e.target.value)} placeholder="Current balance (£)"
-            className="flex-1 min-w-[160px] bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-orange-500/50 placeholder:text-slate-600" />
+            className="flex-1 min-w-[160px] bg-white/[0.04] border border-white/[0.07] px-4 py-2.5 text-white focus:outline-none focus:border-orange-500/50 placeholder:text-slate-600" />
           <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Note (optional)"
-            className="flex-1 min-w-[160px] bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-orange-500/50 placeholder:text-slate-600" />
+            className="flex-1 min-w-[160px] bg-white/[0.04] border border-white/[0.07] px-4 py-2.5 text-white focus:outline-none focus:border-orange-500/50 placeholder:text-slate-600" />
           <button onClick={recordBalance} disabled={loading || !newBalance}
-            className="bg-orange-500 hover:bg-orange-400 text-white font-bold px-6 py-2.5 rounded-xl transition-colors disabled:opacity-50 whitespace-nowrap">
+            className="bg-orange-500 hover:bg-orange-400 text-white font-bold px-6 py-2.5 transition-colors disabled:opacity-50 whitespace-nowrap">
             {loading ? 'Saving…' : '+ Record'}
           </button>
         </div>
       </div>
 
       {/* VARIANCE SIMULATOR (collapsible) */}
-      <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl overflow-hidden">
+      <div className="bg-[#0E1628] border border-white/[0.07] overflow-hidden">
         <button onClick={() => setShowSim(!showSim)} className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/[0.02] transition-colors">
           <div className="flex items-center gap-3">
             <span className="text-orange-400">🎲</span>
@@ -486,7 +486,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
 
       {/* HISTORY */}
       {snapshots.length > 0 && (
-        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl overflow-hidden">
+        <div className="bg-[#0E1628] border border-white/[0.07] overflow-hidden">
           <div className="px-5 py-4 border-b border-white/[0.07]">
             <h3 className="text-white font-bold text-sm">History</h3>
           </div>
@@ -497,7 +497,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
               return (
                 <div key={s.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-white/[0.02] transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${i === 0 ? 'bg-orange-400' : 'bg-white/20'}`} />
+                    <div className={`w-1.5 h-1.5 flex-shrink-0 ${i === 0 ? 'bg-orange-400' : 'bg-white/20'}`} />
                     <div>
                       <span className="text-slate-300 text-sm">
                         {new Date(s.recorded_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -521,7 +521,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
       )}
 
       {/* DANGER ZONE — reset everything */}
-      <div className="bg-[#0E1628] border border-red-500/20 rounded-2xl overflow-hidden">
+      <div className="bg-[#0E1628] border border-red-500/20 overflow-hidden">
         <div className="px-5 py-4 border-b border-red-500/15">
           <h3 className="text-xs font-semibold text-red-400 uppercase tracking-widest">Danger Zone</h3>
         </div>
@@ -533,7 +533,7 @@ export default function BankrollTracker({ userId, initialBankroll, startingBankr
           <button
             onClick={resetBankroll}
             disabled={resetting}
-            className="shrink-0 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 rounded-xl text-sm text-red-400 font-semibold transition-colors disabled:opacity-50"
+            className="shrink-0 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-sm text-red-400 font-semibold transition-colors disabled:opacity-50"
           >
             {resetting ? 'Resetting…' : 'Reset bankroll'}
           </button>
@@ -580,12 +580,12 @@ function VarianceSim({ params, setParams }: { params: SimParams; setParams: (p: 
         <Slider label="Weeks" value={params.weeks} onChange={v => setParams({ ...params, weeks: v })} min={4} max={52} step={1} />
       </div>
       <button onClick={run} disabled={running}
-        className="w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl transition-colors">
+        className="w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white font-bold py-2.5 transition-colors">
         {running ? 'Simulating 1,000 seasons…' : 'Run simulation'}
       </button>
 
       {result && (
-        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 space-y-3">
+        <div className="bg-white/[0.02] border border-white/[0.06] p-4 space-y-3">
           <p className="text-slate-400 text-xs">
             Starting from <span className="text-white font-semibold">£{params.bankroll.toFixed(2)}</span>, across <span className="text-white font-semibold">{params.weeks}</span> weeks of {params.betsPerWeek} bets/week at {params.stakePct}% stakes:
           </p>
@@ -608,7 +608,7 @@ function VarianceSim({ params, setParams }: { params: SimParams; setParams: (p: 
 
 function Stat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="bg-[#0E1628] border border-white/[0.06] rounded-lg px-3 py-2 text-center">
+    <div className="bg-[#0E1628] border border-white/[0.06] px-3 py-2 text-center">
       <p className={`${color} font-bold text-base leading-none`}>{value}</p>
       <p className="text-slate-600 text-[10px] uppercase tracking-wider mt-1">{label}</p>
     </div>

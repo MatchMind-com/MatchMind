@@ -23,7 +23,7 @@ export default function BankrollTabs({
 
   return (
     <div>
-      <div className="inline-flex bg-white/[0.04] border border-white/[0.08] rounded-xl p-1 mb-5">
+      <div className="inline-flex bg-white/[0.04] border border-white/[0.08] p-1 mb-5">
         <TabButton active={tab === 'tracker'} onClick={() => setTab('tracker')}>
           Bankroll
         </TabButton>
@@ -58,7 +58,7 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ${
+      className={`px-4 py-2 text-xs font-bold uppercase tracking-wide transition-all ${
         active
           ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
           : 'text-white/50 hover:text-white/80'

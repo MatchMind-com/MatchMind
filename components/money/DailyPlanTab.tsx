@@ -145,12 +145,12 @@ export default function DailyPlanTab({ currency, onSwitchToGoals }: Props) {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-28 bg-bg-surface border border-border-subtle rounded-2xl animate-pulse" />
-        <div className="h-16 bg-bg-surface border border-border-subtle rounded-2xl animate-pulse" />
+        <div className="h-28 bg-bg-surface border border-border-subtle animate-pulse" />
+        <div className="h-16 bg-bg-surface border border-border-subtle animate-pulse" />
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="h-40 bg-bg-surface border border-border-subtle rounded-2xl animate-pulse"
+            className="h-40 bg-bg-surface border border-border-subtle animate-pulse"
           />
         ))}
       </div>
@@ -159,7 +159,7 @@ export default function DailyPlanTab({ currency, onSwitchToGoals }: Props) {
 
   if (error) {
     return (
-      <div className="bg-loss/10 border border-loss/30 text-loss text-sm rounded-2xl p-4">
+      <div className="bg-loss/10 border border-loss/30 text-loss text-sm p-4">
         {error}
       </div>
     )
@@ -170,7 +170,7 @@ export default function DailyPlanTab({ currency, onSwitchToGoals }: Props) {
   // ── Empty state: no active goal ────────────────────────────────────
   if (!data.plan || !data.goal) {
     return (
-      <section className="bg-bg-surface border border-border-subtle rounded-2xl p-8 lg:p-12 text-center">
+      <section className="bg-bg-surface border border-border-subtle p-8 lg:p-12 text-center">
         <p className="eyebrow mb-3 text-brand">DAILY PLAN</p>
         <h2 className="text-fg font-black text-2xl lg:text-3xl tracking-tight mb-3">
           Set a Dream Bet goal first.
@@ -182,7 +182,7 @@ export default function DailyPlanTab({ currency, onSwitchToGoals }: Props) {
         <button
           type="button"
           onClick={onSwitchToGoals}
-          className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-bg-base font-bold py-3 px-5 rounded-lg text-sm transition-colors"
+          className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-bg-base font-bold py-3 px-5 text-sm transition-colors"
         >
           Set your goal
           <span aria-hidden>→</span>
@@ -207,7 +207,7 @@ export default function DailyPlanTab({ currency, onSwitchToGoals }: Props) {
   return (
     <section className="space-y-5 lg:space-y-6">
       {/* PROGRESS STRIP */}
-      <div className="bg-bg-surface border border-border-subtle rounded-2xl p-5 lg:p-6">
+      <div className="bg-bg-surface border border-border-subtle p-5 lg:p-6">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <p className="eyebrow mb-2">YOUR DREAM BET · 30-DAY PLAN</p>
@@ -231,13 +231,13 @@ export default function DailyPlanTab({ currency, onSwitchToGoals }: Props) {
             type="button"
             onClick={() => load(true)}
             disabled={refreshing}
-            className="text-xs font-bold uppercase tracking-wider px-3 py-2 rounded-lg border border-border-subtle bg-bg-elevated hover:border-border-strong text-fg-secondary hover:text-fg transition-colors disabled:opacity-50 whitespace-nowrap"
+            className="text-xs font-bold uppercase tracking-wider px-3 py-2 border border-border-subtle bg-bg-elevated hover:border-border-strong text-fg-secondary hover:text-fg transition-colors disabled:opacity-50 whitespace-nowrap"
           >
             {refreshing ? 'Refreshing…' : 'Refresh plan'}
           </button>
         </div>
 
-        <div className="bg-bg-base rounded-full h-3 overflow-hidden border border-border-subtle">
+        <div className="bg-bg-base h-3 overflow-hidden border border-border-subtle">
           <div
             className={`h-full transition-all ${
               goal.onTrack
@@ -253,7 +253,7 @@ export default function DailyPlanTab({ currency, onSwitchToGoals }: Props) {
             {Math.round(progressPct)}% of target
           </span>
           <span
-            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border ${
               goal.onTrack
                 ? 'bg-success/15 border-success/30 text-success'
                 : 'bg-value/15 border-value/30 text-value'
@@ -266,7 +266,7 @@ export default function DailyPlanTab({ currency, onSwitchToGoals }: Props) {
 
       {/* PLAN SUMMARY */}
       {summary && (
-        <div className="bg-bg-surface border border-border-subtle rounded-2xl p-4 lg:p-5">
+        <div className="bg-bg-surface border border-border-subtle p-4 lg:p-5">
           <p className="eyebrow mb-2 text-fg-muted">ACROSS {summary.daysCovered} DAYS</p>
           <p className="text-fg-secondary text-sm leading-relaxed">
             <span className="font-stat font-bold text-fg">
@@ -315,7 +315,7 @@ export default function DailyPlanTab({ currency, onSwitchToGoals }: Props) {
           <button
             type="button"
             onClick={() => setShowAllDays(true)}
-            className="text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-lg border border-border-subtle bg-bg-elevated hover:border-brand hover:text-brand text-fg-secondary transition-colors"
+            className="text-xs font-bold uppercase tracking-wider px-4 py-2.5 border border-border-subtle bg-bg-elevated hover:border-brand hover:text-brand text-fg-secondary transition-colors"
           >
             Show next {remainingDays} days
           </button>
@@ -354,7 +354,7 @@ function DayCard({
 }) {
   return (
     <article
-      className={`bg-bg-surface rounded-2xl p-5 lg:p-6 transition-colors ${
+      className={`bg-bg-surface p-5 lg:p-6 transition-colors ${
         highlight
           ? 'border border-brand/40'
           : 'border border-border-subtle'
@@ -381,7 +381,7 @@ function DayCard({
 
       {/* Suggested bets list (or empty / fixtures-pending state) */}
       {day.suggestedBets.length === 0 ? (
-        <div className="bg-bg-base/50 border border-border-subtle rounded-xl px-4 py-5 text-center">
+        <div className="bg-bg-base/50 border border-border-subtle px-4 py-5 text-center">
           <p className="text-fg-muted text-sm font-medium">
             {day.fixturesPending
               ? 'Picks not yet available — refresh closer to the date.'
@@ -448,7 +448,7 @@ function BetRow({ bet, currency }: { bet: SuggestedBet; currency: Currency }) {
   const isThin = !isFallback && bet.edgeStrength === 'thin'
 
   return (
-    <div className={`bg-bg-elevated rounded-xl px-4 py-3.5 ${
+    <div className={`bg-bg-elevated px-4 py-3.5 ${
       isAcca ? 'border border-value/30' : isFallback ? 'border border-border-subtle/60 opacity-80' : ''
     }`}>
       {/* Top row: match + league/kickoff eyebrow + chips */}
@@ -522,7 +522,7 @@ function BetRow({ bet, currency }: { bet: SuggestedBet; currency: Currency }) {
           <span className="font-stat text-xl md:text-2xl font-bold text-brand leading-none">
             @{bet.odds.toFixed(2)}
           </span>
-          <span className={`font-stat text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap border ${
+          <span className={`font-stat text-[11px] font-bold px-2 py-0.5 whitespace-nowrap border ${
             bet.ev > 0
               ? 'text-value bg-value/10 border-value/30'
               : 'text-fg-muted bg-bg-base border-border-subtle'
@@ -571,7 +571,7 @@ function BetRow({ bet, currency }: { bet: SuggestedBet; currency: Currency }) {
           type="button"
           onClick={addToBets}
           disabled={adding || added || !hasStake}
-          className={`text-xs font-semibold py-2 px-3 rounded-lg border transition-all duration-200 inline-flex items-center gap-1.5 ${
+          className={`text-xs font-semibold py-2 px-3 border transition-all duration-200 inline-flex items-center gap-1.5 ${
             added
               ? 'bg-success/10 text-success border-success/30 cursor-default'
               : errored

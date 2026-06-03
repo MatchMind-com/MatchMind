@@ -8,7 +8,7 @@ const Tip = ({ active, payload, label }: any) => {
   const v = payload[0].value
   const pos = v >= 0
   return (
-    <div className="bg-[#161B26] border border-white/[0.12] rounded-xl p-3 text-sm shadow-xl">
+    <div className="bg-[#161B26] border border-white/[0.12] p-3 text-sm shadow-xl">
       <div className="text-slate-500 mb-1 text-xs">{label}</div>
       <div className={`font-bold ${pos ? 'text-emerald-400' : 'text-red-400'}`}>
         {pos ? '+' : ''}{typeof v === 'number' ? v.toFixed(2) : v}
@@ -60,11 +60,11 @@ export default function PerformanceChart({ bets }: { bets: BetSlip[] }) {
   ]
 
   return (
-    <div className="bg-[#161B26] border border-white/[0.07] rounded-2xl p-5">
+    <div className="bg-[#161B26] border border-white/[0.07] p-5">
       {/* Header */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+          <div className="w-8 h-8 bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
             <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
               <polyline points="16 7 22 7 22 13" />
@@ -77,12 +77,12 @@ export default function PerformanceChart({ bets }: { bets: BetSlip[] }) {
         </div>
 
         {!isEmpty && (
-          <div className="flex bg-white/[0.04] border border-white/[0.07] p-1 rounded-xl gap-1">
+          <div className="flex bg-white/[0.04] border border-white/[0.07] p-1 gap-1">
             {TABS.map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setView(key)}
-                className={`text-xs px-3 py-1.5 rounded-lg transition-all font-semibold ${
+                className={`text-xs px-3 py-1.5 transition-all font-semibold ${
                   view === key
                     ? 'bg-orange-500/15 border border-orange-500/25 text-orange-400'
                     : 'text-white/40 hover:text-white/70'

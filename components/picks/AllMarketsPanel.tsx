@@ -215,10 +215,10 @@ function SelectionRow({
     : 'bg-transparent hover:bg-bg-elevated text-fg-muted hover:text-fg border-border-subtle/50 hover:border-border-subtle opacity-60 hover:opacity-100'
 
   return (
-    <div className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-bg-base/50 transition-colors group">
+    <div className="flex items-center gap-3 py-2 px-3 hover:bg-bg-base/50 transition-colors group">
       {/* Verdict dot */}
       <span
-        className={`relative flex h-2.5 w-2.5 rounded-full ${dot.bg} ${dot.ring} shrink-0`}
+        className={`relative flex h-2.5 w-2.5 ${dot.bg} ${dot.ring} shrink-0`}
         title={dot.label}
         aria-label={`AI verdict: ${dot.label}`}
       />
@@ -312,7 +312,7 @@ function CategoryGroup({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between gap-2 py-2 px-3 rounded-lg bg-bg-elevated hover:bg-bg-base transition-colors"
+        className="w-full flex items-center justify-between gap-2 py-2 px-3 bg-bg-elevated hover:bg-bg-base transition-colors"
         aria-expanded={open}
       >
         <span className="flex items-center gap-2 min-w-0">
@@ -327,7 +327,7 @@ function CategoryGroup({
         </span>
         <span className="flex items-center gap-2 shrink-0">
           {betCount > 0 && (
-            <span className="font-stat text-[10px] font-bold text-success bg-success/10 border border-success/30 px-1.5 py-0.5 rounded-full">
+            <span className="font-stat text-[10px] font-bold text-success bg-success/10 border border-success/30 px-1.5 py-0.5">
               {betCount} BET
             </span>
           )}
@@ -340,7 +340,7 @@ function CategoryGroup({
       {open && (
         <div className="mt-2 space-y-3">
           {markets.map((m) => (
-            <div key={`${m.name}-${m.line ?? ''}`} className="bg-bg-base/40 rounded-xl border border-border-subtle p-2">
+            <div key={`${m.name}-${m.line ?? ''}`} className="bg-bg-base/40 border border-border-subtle p-2">
               {markets.length > 1 && (
                 <p className="eyebrow px-2 mb-1.5">{m.name}</p>
               )}
@@ -441,7 +441,7 @@ export default function AllMarketsPanel({
   }, [data])
 
   return (
-    <div className="bg-bg-surface border border-border-subtle rounded-xl p-3 md:p-4 mt-3">
+    <div className="bg-bg-surface border border-border-subtle p-3 md:p-4 mt-3">
       {/* Header */}
       <div className="flex items-center justify-between mb-3 gap-3">
         <div className="min-w-0">
@@ -470,7 +470,7 @@ export default function AllMarketsPanel({
       {loading && !data && (
         <div className="space-y-2">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="bg-bg-elevated rounded-lg h-12 animate-pulse" />
+            <div key={i} className="bg-bg-elevated h-12 animate-pulse" />
           ))}
         </div>
       )}
@@ -478,7 +478,7 @@ export default function AllMarketsPanel({
       {/* Error — only for true network/HTTP failures (the API now returns
           a shaped payload with a `note` for any "no markets" case). */}
       {error && !loading && (
-        <div className="bg-loss/5 border border-loss/20 rounded-lg p-3 text-center my-2">
+        <div className="bg-loss/5 border border-loss/20 p-3 text-center my-2">
           <p className="text-loss text-sm font-semibold">Couldn’t load markets</p>
           <p className="text-fg-muted text-[11px] mt-1">{error}</p>
           <button
@@ -493,7 +493,7 @@ export default function AllMarketsPanel({
 
       {/* Empty (or AI-failed) — shaped payload returned a diagnostic note. */}
       {!loading && !error && data && data.markets.length === 0 && (
-        <div className="bg-bg-elevated border border-border-subtle rounded-lg p-4 text-center my-2">
+        <div className="bg-bg-elevated border border-border-subtle p-4 text-center my-2">
           <p className="text-fg text-sm font-semibold mb-1">No markets to show</p>
           <p className="text-fg-muted text-[12px] leading-relaxed">
             {data.diagnostics?.note ??
@@ -510,7 +510,7 @@ export default function AllMarketsPanel({
       {/* Soft notice — markets did load, but the AI evaluator didn't return
           (rare, but the user deserves to know rather than see all-skip). */}
       {!loading && !error && data && data.markets.length > 0 && data.diagnostics?.ai_evaluated === false && (
-        <div className="bg-value/5 border border-value/20 rounded-lg px-3 py-2 mb-2 text-[11px] text-value text-center">
+        <div className="bg-value/5 border border-value/20 px-3 py-2 mb-2 text-[11px] text-value text-center">
           {data.diagnostics?.note ?? 'AI verdicts unavailable — showing odds only.'}
         </div>
       )}
@@ -519,16 +519,16 @@ export default function AllMarketsPanel({
       {data && data.markets.length > 0 && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-[10px] text-fg-muted">
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-success" /> BET
+            <span className="h-2 w-2 bg-success" /> BET
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-value" /> LEAN
+            <span className="h-2 w-2 bg-value" /> LEAN
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-fg-muted/40" /> SKIP
+            <span className="h-2 w-2 bg-fg-muted/40" /> SKIP
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-loss" /> AVOID
+            <span className="h-2 w-2 bg-loss" /> AVOID
           </span>
         </div>
       )}

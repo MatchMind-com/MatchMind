@@ -48,7 +48,7 @@ export default function GoalsTab({
   return (
     <section className="space-y-5">
       {hasActiveGoal && onViewDailyPlan && (
-        <div className="bg-bg-surface border border-brand/30 rounded-2xl px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+        <div className="bg-bg-surface border border-brand/30 px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
           <div>
             <p className="eyebrow text-brand mb-1">AI DAILY PLAN</p>
             <p className="text-fg text-sm">
@@ -58,7 +58,7 @@ export default function GoalsTab({
           <button
             type="button"
             onClick={onViewDailyPlan}
-            className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-bg-base font-bold py-2.5 px-4 rounded-lg text-sm transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-bg-base font-bold py-2.5 px-4 text-sm transition-colors whitespace-nowrap"
           >
             View daily plan
             <span aria-hidden>→</span>

@@ -64,7 +64,7 @@ export default function CoachHeader({
           onClick={onToggleNews}
           title={newsOpen ? 'Close news panel' : 'Open football news'}
           aria-pressed={newsOpen}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border transition-all ${
             newsOpen
               ? 'bg-brand/10 border-brand text-brand'
               : 'border-border-subtle text-fg-secondary hover:border-brand hover:text-brand'
@@ -77,7 +77,7 @@ export default function CoachHeader({
         <button
           onClick={onOpenMemories}
           title="Open Coach memory"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border border-border-subtle text-fg-secondary hover:border-brand hover:text-brand transition-all"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-border-subtle text-fg-secondary hover:border-brand hover:text-brand transition-all"
         >
           <MemoryIcon />
           <span className="hidden sm:inline">Memory</span>
@@ -86,7 +86,7 @@ export default function CoachHeader({
         <button
           onClick={onToggleVoice}
           title={voiceMode ? 'Voice mode ON — click to turn off' : 'Turn on voice mode'}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border transition-all ${
             voiceMode
               ? 'bg-brand/10 border-brand text-brand'
               : 'border-border-subtle text-fg-secondary hover:border-brand hover:text-brand'

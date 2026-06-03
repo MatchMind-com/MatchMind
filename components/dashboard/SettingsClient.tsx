@@ -19,9 +19,9 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className={`relative w-11 h-6 rounded-full transition-colors ${checked ? 'bg-violet-600' : 'bg-white/10'}`}
+      className={`relative w-11 h-6 transition-colors ${checked ? 'bg-violet-600' : 'bg-white/10'}`}
     >
-      <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
+      <span className={`absolute top-1 left-1 w-4 h-4 bg-white shadow transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
     </button>
   )
 }
@@ -73,7 +73,7 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-8">
-        <div className="w-10 h-10 rounded-xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-xl">⚙️</div>
+        <div className="w-10 h-10 bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-xl">⚙️</div>
         <div>
           <h1 className="text-2xl font-bold text-white">Settings</h1>
           <p className="text-white/40 text-sm">Notifications, responsible gambling & account preferences</p>
@@ -81,7 +81,7 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
       </div>
 
       {/* Notifications */}
-      <section className="bg-white/[0.03] border border-white/8 rounded-2xl p-5 mb-5">
+      <section className="bg-white/[0.03] border border-white/8 p-5 mb-5">
         <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
           <span className="text-lg">🔔</span> Notifications
         </h2>
@@ -111,7 +111,7 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
       </section>
 
       {/* Responsible Gambling */}
-      <section className="bg-white/[0.03] border border-white/8 rounded-2xl p-5 mb-5">
+      <section className="bg-white/[0.03] border border-white/8 p-5 mb-5">
         <h2 className="text-white font-semibold mb-1 flex items-center gap-2">
           <span className="text-lg">🛡️</span> Responsible Gambling
         </h2>
@@ -130,13 +130,13 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
                 onChange={e => setLossLimitInput(e.target.value)}
                 placeholder="e.g. 50"
                 min="1"
-                className="w-28 pl-7 pr-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-violet-500"
+                className="w-28 pl-7 pr-3 py-2 bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500"
               />
             </div>
             <button
               onClick={setLossLimit}
               disabled={saving === 'loss_limit'}
-              className="bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+              className="bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 transition-colors"
             >
               {saving === 'loss_limit' ? 'Saving…' : saved === 'loss_limit' ? '✓ Saved' : 'Set Limit'}
             </button>
@@ -161,7 +161,7 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
           <p className="text-white text-sm font-medium mb-1">Take a Break</p>
           <p className="text-white/40 text-xs mb-3">Pause all alerts and hide the add-bet form for a set period. Your data stays safe.</p>
           {onBreak ? (
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
+            <div className="bg-amber-500/10 border border-amber-500/20 p-4">
               <p className="text-amber-300 text-sm font-semibold mb-1">🌙 Break active</p>
               <p className="text-white/40 text-xs">
                 Your break runs until {new Date(settings.take_a_break_until!).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}.
@@ -178,7 +178,7 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
               <select
                 value={breakDays}
                 onChange={e => setBreakDays(e.target.value)}
-                className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500"
+                className="bg-white/5 border border-white/10 px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500"
               >
                 <option value="1">1 day</option>
                 <option value="3">3 days</option>
@@ -189,7 +189,7 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
               <button
                 onClick={takeABreak}
                 disabled={saving === 'take_a_break_until'}
-                className="bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-sm font-semibold px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
+                className="bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-sm font-semibold px-4 py-2 transition-colors disabled:opacity-50"
               >
                 {saving === 'take_a_break_until' ? 'Saving…' : '🌙 Take a Break'}
               </button>
@@ -199,7 +199,7 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
       </section>
 
       {/* External help */}
-      <section className="bg-white/[0.03] border border-white/8 rounded-2xl p-5">
+      <section className="bg-white/[0.03] border border-white/8 p-5">
         <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
           <span className="text-lg">❤️</span> Need Support?
         </h2>
@@ -217,7 +217,7 @@ export default function SettingsClient({ userId, initialSettings }: Props) {
               href={r.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between p-3 bg-white/3 hover:bg-white/6 border border-white/8 rounded-xl transition-colors group"
+              className="flex items-center justify-between p-3 bg-white/3 hover:bg-white/6 border border-white/8 transition-colors group"
             >
               <div>
                 <p className="text-white text-sm font-medium group-hover:text-violet-300 transition-colors">{r.name}</p>

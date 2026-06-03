@@ -26,7 +26,7 @@ function MatchCard({ fixture, onClick }: { fixture: Fixture; onClick: () => void
   return (
     <button
       onClick={onClick}
-      className={`flex-shrink-0 w-52 rounded-xl border transition-all duration-200 hover:scale-[1.02] hover:border-white/20 cursor-pointer text-left overflow-hidden group
+      className={`flex-shrink-0 w-52 border transition-all duration-200 hover:scale-[1.02] hover:border-white/20 cursor-pointer text-left overflow-hidden group
         ${isLive ? 'border-emerald-500/30 bg-emerald-950/20' : 'border-white/8 bg-[#161B26]'}
         ${fixture.isFavouriteTeam ? 'ring-1 ring-orange-500/40' : ''}
       `}
@@ -69,7 +69,7 @@ function MatchCard({ fixture, onClick }: { fixture: Fixture; onClick: () => void
         <div className="flex items-center justify-between">
           {isLive ? (
             <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="w-1.5 h-1.5 bg-emerald-400 animate-pulse" />
               {fixture.status === 'HT' ? 'HT' : `${fixture.elapsed}'`}
             </span>
           ) : isFinished ? (
@@ -115,11 +115,11 @@ export default function TodaysGames() {
           <div className="h-4 w-32 bg-white/5 rounded animate-pulse" />
         </div>
         <div className="flex gap-2 mb-4">
-          {[...Array(4)].map((_, i) => <div key={i} className="h-8 w-24 rounded-lg bg-white/5 animate-pulse" />)}
+          {[...Array(4)].map((_, i) => <div key={i} className="h-8 w-24 bg-white/5 animate-pulse" />)}
         </div>
         <div className="flex gap-3 overflow-hidden">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex-shrink-0 w-52 h-28 rounded-xl bg-white/5 animate-pulse" />
+            <div key={i} className="flex-shrink-0 w-52 h-28 bg-white/5 animate-pulse" />
           ))}
         </div>
       </div>
@@ -128,7 +128,7 @@ export default function TodaysGames() {
 
   if (fixtures.length === 0) {
     return (
-      <div className="mb-6 p-4 rounded-xl border border-white/8 bg-[#161B26] text-center">
+      <div className="mb-6 p-4 border border-white/8 bg-[#161B26] text-center">
         <p className="text-white/30 text-sm">No matches scheduled in the next few days</p>
       </div>
     )
@@ -176,7 +176,7 @@ export default function TodaysGames() {
                 <button
                   key={day}
                   onClick={() => setActiveDay(day)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-all ${
                     isActive
                       ? 'bg-orange-500/15 border border-orange-500/30 text-orange-400'
                       : 'bg-white/[0.04] border border-white/[0.07] text-white/40 hover:text-white/70 hover:bg-white/[0.07]'
@@ -185,7 +185,7 @@ export default function TodaysGames() {
                   {day}
                   {hasLive ? (
                     <span className="flex items-center gap-0.5 text-emerald-400 font-bold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="w-1.5 h-1.5 bg-emerald-400 animate-pulse" />
                       {liveCount}
                     </span>
                   ) : (

@@ -79,7 +79,7 @@ export default function AICoaching({ userId, bets }: AICoachingProps) {
     <div className="card flex flex-col gap-5">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-[#3B5BDB]/20 rounded-lg">
+        <div className="p-2 bg-[#3B5BDB]/20">
           <Sparkles size={20} className="text-[#3B5BDB]" />
         </div>
         <div>
@@ -95,7 +95,7 @@ export default function AICoaching({ userId, bets }: AICoachingProps) {
             key={s}
             onClick={() => handleSuggestion(s)}
             disabled={loading}
-            className="px-3 py-1.5 text-xs bg-[#0F1117] border border-[#2D3152] hover:border-[#3B5BDB] text-gray-300 hover:text-white rounded-full transition-all duration-200 disabled:opacity-50"
+            className="px-3 py-1.5 text-xs bg-[#0F1117] border border-[#2D3152] hover:border-[#3B5BDB] text-gray-300 hover:text-white transition-all duration-200 disabled:opacity-50"
           >
             {s}
           </button>
@@ -133,14 +133,14 @@ export default function AICoaching({ userId, bets }: AICoachingProps) {
 
       {/* Error */}
       {error && (
-        <div className="bg-[#FF4757]/10 border border-[#FF4757]/30 rounded-lg px-4 py-3">
+        <div className="bg-[#FF4757]/10 border border-[#FF4757]/30 px-4 py-3">
           <p className="text-[#FF4757] text-sm">{error}</p>
         </div>
       )}
 
       {/* Response */}
       {response && (
-        <div className="bg-[#0F1117] border border-[#2D3152] rounded-xl p-4">
+        <div className="bg-[#0F1117] border border-[#2D3152] p-4">
           <div className="flex items-center gap-2 mb-3">
             <Bot size={16} className="text-[#00C896]" />
             <span className="text-xs font-semibold text-[#00C896] uppercase tracking-wide">

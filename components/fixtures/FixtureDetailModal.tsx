@@ -202,7 +202,7 @@ export default function FixtureDetailModal({ fixtureId, homeName, awayName, onCl
     >
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
       <div
-        className="relative bg-bg-surface border border-border-strong rounded-2xl w-full max-w-4xl shadow-2xl max-h-[94vh] flex flex-col overflow-hidden"
+        className="relative bg-bg-surface border border-border-strong w-full max-w-4xl shadow-2xl max-h-[94vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -235,7 +235,7 @@ export default function FixtureDetailModal({ fixtureId, homeName, awayName, onCl
               </div>
               {data && (
                 <span
-                  className={`font-stat font-bold uppercase tracking-wider text-[10px] px-2 py-0.5 rounded-full border ${
+                  className={`font-stat font-bold uppercase tracking-wider text-[10px] px-2 py-0.5 border ${
                     isLive
                       ? 'bg-loss/10 border-loss/40 text-loss animate-pulse'
                       : isFinished
@@ -296,7 +296,7 @@ export default function FixtureDetailModal({ fixtureId, homeName, awayName, onCl
         <div className="flex-1 overflow-y-auto p-5">
           {loading && !data && <LoadingState />}
           {error && (
-            <div className="bg-loss/10 border border-loss/30 text-loss text-sm rounded-lg p-3">
+            <div className="bg-loss/10 border border-loss/30 text-loss text-sm p-3">
               Failed to load — {error}.{' '}
               <button onClick={() => void fetchDetail()} className="underline font-bold uppercase tracking-wider text-[10px] ml-2">
                 Retry
@@ -320,8 +320,8 @@ export default function FixtureDetailModal({ fixtureId, homeName, awayName, onCl
 function LoadingState() {
   return (
     <div className="space-y-3">
-      <div className="h-32 bg-bg-elevated rounded-xl animate-pulse" />
-      <div className="h-32 bg-bg-elevated rounded-xl animate-pulse" />
+      <div className="h-32 bg-bg-elevated animate-pulse" />
+      <div className="h-32 bg-bg-elevated animate-pulse" />
     </div>
   )
 }
@@ -332,7 +332,7 @@ function OverviewTab({ data }: { data: FixtureDetail }) {
     <div className="space-y-4">
       {/* AI prediction */}
       {pred && (
-        <section className="bg-bg-base/60 border border-border-subtle rounded-xl p-4">
+        <section className="bg-bg-base/60 border border-border-subtle p-4">
           <p className="eyebrow mb-3">AI Prediction</p>
           <div className="grid grid-cols-3 gap-2 mb-3">
             <PredictionBar label={data.home.name} pct={pred.homeWinPercent} accent="brand" />
@@ -356,7 +356,7 @@ function OverviewTab({ data }: { data: FixtureDetail }) {
       )}
 
       {/* Quick stats */}
-      <section className="bg-bg-base/60 border border-border-subtle rounded-xl p-4">
+      <section className="bg-bg-base/60 border border-border-subtle p-4">
         <p className="eyebrow mb-3">Recent form</p>
         <div className="grid grid-cols-2 gap-4">
           <FormStrip team={data.home.name} form={data.home.form} />
@@ -376,7 +376,7 @@ function PredictionBar({ label, pct, accent }: { label: string; pct: any; accent
         <span className="text-fg-secondary truncate">{label}</span>
         <span className="font-stat font-bold text-fg tabular-nums">{safe}%</span>
       </div>
-      <div className="h-2 bg-bg-elevated rounded-full overflow-hidden">
+      <div className="h-2 bg-bg-elevated overflow-hidden">
         <div
           className={accent === 'brand' ? 'h-full bg-brand' : 'h-full bg-fg-muted/40'}
           style={{ width: `${Math.max(0, Math.min(100, safe))}%` }}
@@ -430,14 +430,14 @@ function LineupsTab({ data }: { data: FixtureDetail }) {
 
 function LineupBlock({ lineup }: { lineup: Lineup }) {
   return (
-    <section className="bg-bg-base/60 border border-border-subtle rounded-xl p-4">
+    <section className="bg-bg-base/60 border border-border-subtle p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           {lineup.team_logo && <img src={lineup.team_logo} alt="" className="h-5 w-5 object-contain" />}
           <span className="text-fg font-bold text-sm truncate">{lineup.team_name}</span>
         </div>
         {lineup.formation && (
-          <span className="font-stat text-brand text-[12px] font-bold tabular-nums px-2 py-0.5 rounded-full bg-brand/10 border border-brand/30">
+          <span className="font-stat text-brand text-[12px] font-bold tabular-nums px-2 py-0.5 bg-brand/10 border border-brand/30">
             {lineup.formation}
           </span>
         )}
@@ -544,13 +544,13 @@ function StatsTab({ data }: { data: FixtureDetail }) {
         const hStr = show(hv) + (hv != null && r.suffix ? r.suffix : '')
         const aStr = show(av) + (av != null && r.suffix ? r.suffix : '')
         return (
-          <div key={r.key} className="py-2 px-3 rounded-lg bg-bg-base/40">
+          <div key={r.key} className="py-2 px-3 bg-bg-base/40">
             <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center mb-1.5">
               <span className="font-stat text-fg text-right tabular-nums text-sm font-bold">{hStr}</span>
               <span className="text-fg-muted text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">{r.label}</span>
               <span className="font-stat text-fg text-left tabular-nums text-sm font-bold">{aStr}</span>
             </div>
-            <div className="flex h-1 rounded-full overflow-hidden bg-bg-elevated">
+            <div className="flex h-1 overflow-hidden bg-bg-elevated">
               <div className="bg-brand/70" style={{ width: `${hPct}%` }} />
               <div className="bg-fg-secondary/40" style={{ width: `${aPct}%` }} />
             </div>
@@ -583,7 +583,7 @@ function EventsTab({ data }: { data: FixtureDetail }) {
         return (
           <li
             key={i}
-            className={`flex items-center gap-3 py-2 px-3 rounded-lg bg-bg-base/40 ${isHome ? '' : 'flex-row-reverse'}`}
+            className={`flex items-center gap-3 py-2 px-3 bg-bg-base/40 ${isHome ? '' : 'flex-row-reverse'}`}
           >
             <span className="font-stat text-fg-muted text-[12px] tabular-nums w-10 shrink-0 text-center">
               {e.minute ?? 0}{e.extra ? `+${e.extra}` : ''}'
@@ -604,15 +604,15 @@ function EventsTab({ data }: { data: FixtureDetail }) {
 function FormTab({ data }: { data: FixtureDetail }) {
   return (
     <div className="space-y-5">
-      <section className="bg-bg-base/60 border border-border-subtle rounded-xl p-4">
+      <section className="bg-bg-base/60 border border-border-subtle p-4">
         <p className="eyebrow mb-3">Last 5 — {data.home.name}</p>
         <FormList form={data.home.form} />
       </section>
-      <section className="bg-bg-base/60 border border-border-subtle rounded-xl p-4">
+      <section className="bg-bg-base/60 border border-border-subtle p-4">
         <p className="eyebrow mb-3">Last 5 — {data.away.name}</p>
         <FormList form={data.away.form} />
       </section>
-      <section className="bg-bg-base/60 border border-border-subtle rounded-xl p-4">
+      <section className="bg-bg-base/60 border border-border-subtle p-4">
         <p className="eyebrow mb-3">Head-to-head (last 5)</p>
         {data.h2h?.length ? (
           <ul className="space-y-1">
@@ -663,7 +663,7 @@ function InjuriesTab({ data }: { data: FixtureDetail }) {
 
 function InjuriesBlock({ teamName, injuries }: { teamName: string; injuries: Injury[] }) {
   return (
-    <section className="bg-bg-base/60 border border-border-subtle rounded-xl p-4">
+    <section className="bg-bg-base/60 border border-border-subtle p-4">
       <p className="eyebrow mb-3">{teamName} — Injuries</p>
       {injuries?.length ? (
         <ul className="space-y-1.5">

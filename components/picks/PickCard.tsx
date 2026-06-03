@@ -8,9 +8,9 @@ import dynamic from 'next/dynamic'
 const AllMarketsPanel = dynamic(() => import('./AllMarketsPanel'), {
   ssr: false,
   loading: () => (
-    <div className="bg-bg-surface border border-border-subtle rounded-xl p-4 mt-3">
-      <div className="bg-bg-elevated rounded-lg h-12 animate-pulse mb-2" />
-      <div className="bg-bg-elevated rounded-lg h-12 animate-pulse" />
+    <div className="bg-bg-surface border border-border-subtle p-4 mt-3">
+      <div className="bg-bg-elevated h-12 animate-pulse mb-2" />
+      <div className="bg-bg-elevated h-12 animate-pulse" />
     </div>
   ),
 })
@@ -152,7 +152,7 @@ export default function PickCard({ pred }: Props) {
   }
 
   return (
-    <article className="bg-bg-surface border border-border-subtle rounded-2xl p-5 hover:border-border-strong transition-colors duration-200">
+    <article className="bg-bg-surface border border-border-subtle p-5 hover:border-border-strong transition-colors duration-200">
       {/* Eyebrow row — league + kickoff */}
       <div className="flex items-center justify-between mb-4 min-h-[14px]">
         <div className="eyebrow flex items-center gap-1.5 truncate">
@@ -176,7 +176,7 @@ export default function PickCard({ pred }: Props) {
               className="w-10 h-10 object-contain flex-shrink-0"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-bg-elevated flex-shrink-0" />
+            <div className="w-10 h-10 bg-bg-elevated flex-shrink-0" />
           )}
           <span className="text-fg font-bold text-sm md:text-base truncate">{pred.home_team}</span>
         </div>
@@ -197,13 +197,13 @@ export default function PickCard({ pred }: Props) {
               className="w-10 h-10 object-contain flex-shrink-0"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-bg-elevated flex-shrink-0" />
+            <div className="w-10 h-10 bg-bg-elevated flex-shrink-0" />
           )}
         </div>
       </div>
 
       {/* PICK row — contrasting elevated surface */}
-      <div className="bg-bg-elevated rounded-xl px-4 py-3.5 mb-4">
+      <div className="bg-bg-elevated px-4 py-3.5 mb-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
             <p className="eyebrow mb-1">PICK</p>
@@ -219,7 +219,7 @@ export default function PickCard({ pred }: Props) {
               </span>
             )}
             {ev != null && (
-              <span className="font-stat text-[11px] font-bold text-value bg-value/10 border border-value/30 px-2 py-0.5 rounded-full whitespace-nowrap">
+              <span className="font-stat text-[11px] font-bold text-value bg-value/10 border border-value/30 px-2 py-0.5 whitespace-nowrap">
                 {ev > 0 ? '+' : ''}
                 {ev}% EV
               </span>
@@ -258,7 +258,7 @@ export default function PickCard({ pred }: Props) {
 
       {/* Inline stats panel — toggled by "Stats" action */}
       {statsOpen && (
-        <div className="mb-4 bg-bg-base/50 border border-border-subtle rounded-xl px-4 py-3 space-y-2">
+        <div className="mb-4 bg-bg-base/50 border border-border-subtle px-4 py-3 space-y-2">
           <p className="eyebrow">AI probabilities</p>
           <div className="grid grid-cols-3 gap-2 text-center">
             <div>
@@ -342,7 +342,7 @@ export default function PickCard({ pred }: Props) {
           type="button"
           onClick={addToBets}
           disabled={adding || added}
-          className={`text-xs font-semibold py-2 px-3 rounded-lg border transition-all duration-200 inline-flex items-center gap-1.5 ${
+          className={`text-xs font-semibold py-2 px-3 border transition-all duration-200 inline-flex items-center gap-1.5 ${
             added
               ? 'bg-success/10 text-success border-success/30 cursor-default'
               : error
@@ -350,41 +350,37 @@ export default function PickCard({ pred }: Props) {
               : 'bg-bg-elevated hover:bg-brand hover:text-bg-base text-fg border-border-subtle hover:border-brand'
           }`}
         >
-          <span className="text-[14px] leading-none">{added ? '✓' : '+'}</span>
-          {added ? 'Added' : error ? 'Try again' : adding ? 'Adding…' : 'Add to bets'}
+          {added ? 'Added' : error ? 'Try again' : adding ? 'Adding…' : '+ Add to bets'}
         </button>
 
         <button
           type="button"
           onClick={() => setMarketsOpen((v) => !v)}
-          className={`text-xs font-semibold py-2 px-3 rounded-lg border transition-all duration-200 inline-flex items-center gap-1.5 ${
+          className={`text-xs font-semibold py-2 px-3 border transition-all duration-200 inline-flex items-center gap-1.5 ${
             marketsOpen
               ? 'bg-brand text-bg-base border-brand'
               : 'bg-bg-elevated hover:bg-bg-base hover:border-border-strong text-fg border-border-subtle'
           }`}
           aria-expanded={marketsOpen}
         >
-          <span className="text-[12px] leading-none">📊</span>
-          {marketsOpen ? 'Hide markets' : 'All Markets'}
+          {marketsOpen ? 'Hide markets' : 'All markets'}
         </button>
 
         <button
           type="button"
           onClick={() => setStatsOpen((v) => !v)}
-          className="text-xs font-semibold py-2 px-3 rounded-lg border border-border-subtle bg-bg-elevated hover:bg-bg-base hover:border-border-strong text-fg transition-all duration-200 inline-flex items-center gap-1.5"
+          className="text-xs font-semibold py-2 px-3 border border-border-subtle bg-bg-elevated hover:bg-bg-base hover:border-border-strong text-fg transition-all duration-200"
           aria-expanded={statsOpen}
         >
-          <span className="text-[12px] leading-none">📈</span>
-          {statsOpen ? 'Hide stats' : 'Stats →'}
+          {statsOpen ? 'Hide stats' : 'Stats'}
         </button>
 
         <button
           type="button"
           onClick={openInCoach}
-          className="text-xs font-semibold py-2 px-3 rounded-lg border border-border-subtle bg-bg-elevated hover:bg-bg-base hover:border-border-strong text-fg transition-all duration-200 inline-flex items-center gap-1.5"
+          className="text-xs font-semibold py-2 px-3 border border-border-subtle bg-bg-elevated hover:bg-bg-base hover:border-border-strong text-fg transition-all duration-200"
         >
-          <span className="text-[12px] leading-none">💬</span>
-          Discuss in coach
+          Ask coach
         </button>
       </div>
 

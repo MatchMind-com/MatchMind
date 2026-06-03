@@ -40,12 +40,12 @@ export default function UpgradeModal({ isOpen, onClose, betCount, trigger = 'pay
       style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="relative w-full max-w-2xl bg-[#0F0F1A] border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+      <div className="relative w-full max-w-2xl bg-[#0F0F1A] border border-white/10 overflow-hidden shadow-2xl">
 
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all z-10"
+          className="absolute top-4 right-4 w-8 h-8 bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all z-10"
         >
           ✕
         </button>
@@ -54,7 +54,7 @@ export default function UpgradeModal({ isOpen, onClose, betCount, trigger = 'pay
         <div className="relative px-8 pt-8 pb-6 text-center" style={{
           background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.1) 100%)'
         }}>
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg shadow-violet-500/30">
+          <div className="w-16 h-16 bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg shadow-violet-500/30">
             🔒
           </div>
           {trigger === 'paywall' ? (
@@ -82,9 +82,9 @@ export default function UpgradeModal({ isOpen, onClose, betCount, trigger = 'pay
         <div className="px-6 pb-6">
           <div className="mt-4">
             {/* Pro Plan — full width, single plan */}
-            <div className="relative bg-gradient-to-b from-violet-600/15 to-transparent border border-violet-500/40 rounded-2xl p-6">
+            <div className="relative bg-gradient-to-b from-violet-600/15 to-transparent border border-violet-500/40 p-6">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span className="bg-violet-600 text-white text-xs font-bold px-4 py-1 rounded-full">🎁 7-Day Free Trial — No Card Needed</span>
+                <span className="bg-violet-600 text-white text-xs font-bold px-4 py-1">🎁 7-Day Free Trial — No Card Needed</span>
               </div>
               <div className="mt-2 flex items-center justify-between mb-4">
                 <div>
@@ -107,7 +107,7 @@ export default function UpgradeModal({ isOpen, onClose, betCount, trigger = 'pay
               </div>
               <a
                 href="/api/stripe/create-checkout?plan=pro"
-                className="block w-full text-center bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl text-sm transition-all shadow-lg shadow-violet-500/30"
+                className="block w-full text-center bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold py-3.5 text-sm transition-all shadow-lg shadow-violet-500/30"
               >
                 Start Free Trial — Unlock Everything →
               </a>

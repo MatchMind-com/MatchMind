@@ -104,11 +104,11 @@ export default function BillingPage({ profile }: { profile: any }) {
 
       {/* Active plan banner */}
       {tier !== 'free' && (
-        <div className="p-5 rounded-2xl bg-[#0E1628] border border-blue-500/25 flex items-center justify-between gap-4">
+        <div className="p-5 bg-[#0E1628] border border-blue-500/25 flex items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-0.5">
               <span className="text-sm font-bold text-white">{tier.charAt(0).toUpperCase() + tier.slice(1)} Plan</span>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              <span className={`text-[10px] font-bold px-2 py-0.5 ${
                 status === 'trialing' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/25' :
                 status === 'active' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/25' :
                 'bg-red-500/20 text-red-300 border border-red-500/25'
@@ -121,7 +121,7 @@ export default function BillingPage({ profile }: { profile: any }) {
           <button
             onClick={handleManage}
             disabled={loading === 'manage'}
-            className="px-4 py-2 bg-white/[0.04] hover:bg-white/[0.07] text-sm font-semibold text-white rounded-xl border border-white/[0.07] transition-colors"
+            className="px-4 py-2 bg-white/[0.04] hover:bg-white/[0.07] text-sm font-semibold text-white border border-white/[0.07] transition-colors"
           >
             {loading === 'manage' ? 'Loading…' : 'Manage Subscription'}
           </button>
@@ -137,7 +137,7 @@ export default function BillingPage({ profile }: { profile: any }) {
           return (
             <div
               key={plan.id}
-              className={`relative rounded-2xl p-6 flex flex-col border transition-all ${
+              className={`relative p-6 flex flex-col border transition-all ${
                 isPro
                   ? 'bg-[#0E1628] border-blue-500/30'
                   : 'bg-[#0E1628] border-white/[0.07]'
@@ -145,7 +145,7 @@ export default function BillingPage({ profile }: { profile: any }) {
             >
               {/* Popular badge */}
               {plan.badge && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-black px-3 py-1 rounded-full bg-blue-600 text-white uppercase tracking-wide whitespace-nowrap">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-black px-3 py-1 bg-blue-600 text-white uppercase tracking-wide whitespace-nowrap">
                   {plan.badge}
                 </div>
               )}
@@ -154,7 +154,7 @@ export default function BillingPage({ profile }: { profile: any }) {
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-lg font-black text-white tracking-tight">{plan.name}</h3>
                   {isCurrent && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-slate-300 border border-white/[0.1]">
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-white/10 text-slate-300 border border-white/[0.1]">
                       Current
                     </span>
                   )}
@@ -183,7 +183,7 @@ export default function BillingPage({ profile }: { profile: any }) {
               <button
                 onClick={() => handleUpgrade(plan.id)}
                 disabled={isCurrent || loading === plan.id}
-                className={`w-full py-3 rounded-xl text-sm font-bold transition-all ${
+                className={`w-full py-3 text-sm font-bold transition-all ${
                   isCurrent
                     ? 'bg-white/[0.04] text-slate-500 cursor-default border border-white/[0.07]'
                     : isPro

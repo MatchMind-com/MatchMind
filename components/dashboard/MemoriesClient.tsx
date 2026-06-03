@@ -103,9 +103,9 @@ export default function MemoriesClient() {
         </div>
 
         {/* Stats card */}
-        <div className="rounded-2xl bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 p-5 mb-6">
+        <div className="bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 p-5 mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-2xl">
+            <div className="w-12 h-12 bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-2xl">
               🧠
             </div>
             <div>
@@ -125,12 +125,12 @@ export default function MemoriesClient() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search by meaning — try 'my favourite team' or 'losing streaks'"
-            className="flex-1 rounded-2xl bg-white/[0.04] border border-white/10 px-4 py-3 text-sm placeholder:text-white/30 focus:outline-none focus:border-orange-500/40 focus:bg-white/[0.06] transition"
+            className="flex-1 bg-white/[0.04] border border-white/10 px-4 py-3 text-sm placeholder:text-white/30 focus:outline-none focus:border-orange-500/40 focus:bg-white/[0.06] transition"
           />
           <button
             type="submit"
             disabled={searching}
-            className="rounded-2xl bg-orange-500 hover:bg-orange-400 disabled:opacity-50 px-5 py-3 text-sm font-bold text-black transition"
+            className="bg-orange-500 hover:bg-orange-400 disabled:opacity-50 px-5 py-3 text-sm font-bold text-black transition"
           >
             {searching ? '…' : 'Recall'}
           </button>
@@ -138,7 +138,7 @@ export default function MemoriesClient() {
             <button
               type="button"
               onClick={clearSearch}
-              className="rounded-2xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 px-4 py-3 text-sm font-semibold text-white/70 transition"
+              className="bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 px-4 py-3 text-sm font-semibold text-white/70 transition"
             >
               Clear
             </button>
@@ -157,14 +157,14 @@ export default function MemoriesClient() {
         )}
 
         {!loading && notReady && (
-          <div className="rounded-2xl bg-amber-500/5 border border-amber-500/20 p-6 text-amber-200/80 text-sm">
+          <div className="bg-amber-500/5 border border-amber-500/20 p-6 text-amber-200/80 text-sm">
             <div className="font-bold text-amber-300 mb-1">Memory Lane needs a one-time setup.</div>
             Run <code className="px-1.5 py-0.5 rounded bg-black/30 text-amber-200">supabase/memory-lane.sql</code> in your Supabase SQL editor to enable persistent memory.
           </div>
         )}
 
         {!loading && !notReady && memories.length === 0 && (
-          <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-10 text-center">
+          <div className="bg-white/[0.03] border border-white/10 p-10 text-center">
             <div className="text-4xl mb-2">💭</div>
             <div className="text-white/70 font-semibold mb-1">No memories yet</div>
             <div className="text-white/40 text-sm">
@@ -215,12 +215,12 @@ function MemoryCard({
 }) {
   const isUser = memory.role === 'user'
   return (
-    <div className="group rounded-2xl bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] hover:border-white/[0.12] p-4 transition-all">
+    <div className="group bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] hover:border-white/[0.12] p-4 transition-all">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
             <span
-              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 ${
                 isUser
                   ? 'bg-blue-500/15 text-blue-300 border border-blue-500/25'
                   : 'bg-orange-500/15 text-orange-300 border border-orange-500/25'

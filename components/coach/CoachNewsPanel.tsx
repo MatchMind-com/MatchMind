@@ -137,7 +137,7 @@ export default function CoachNewsPanel({ open, onClose }: CoachNewsPanelProps) {
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-bg-elevated text-fg-muted hover:text-fg flex items-center justify-center transition shrink-0"
+            className="w-8 h-8 hover:bg-bg-elevated text-fg-muted hover:text-fg flex items-center justify-center transition shrink-0"
             title="Close (Esc)"
             aria-label="Close news panel"
           >
@@ -149,7 +149,7 @@ export default function CoachNewsPanel({ open, onClose }: CoachNewsPanelProps) {
         <div className="px-5 py-3 border-b border-border-subtle shrink-0 flex items-center gap-2">
           <button
             onClick={() => setFilter('all')}
-            className={`text-[11px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+            className={`text-[11px] font-semibold px-3 py-1.5 border transition-colors ${
               filter === 'all'
                 ? 'bg-brand text-bg-base border-brand'
                 : 'bg-transparent text-fg-secondary border-border-subtle hover:border-brand hover:text-brand'
@@ -162,7 +162,7 @@ export default function CoachNewsPanel({ open, onClose }: CoachNewsPanelProps) {
           </button>
           <button
             onClick={() => setFilter('transfer')}
-            className={`text-[11px] font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+            className={`text-[11px] font-semibold px-3 py-1.5 border transition-colors ${
               filter === 'transfer'
                 ? 'bg-brand text-bg-base border-brand'
                 : 'bg-transparent text-fg-secondary border-border-subtle hover:border-brand hover:text-brand'
@@ -183,7 +183,7 @@ export default function CoachNewsPanel({ open, onClose }: CoachNewsPanelProps) {
                 {[0, 1, 2].map(i => (
                   <span
                     key={i}
-                    className="w-1.5 h-1.5 rounded-full bg-brand animate-bounce"
+                    className="w-1.5 h-1.5 bg-brand animate-bounce"
                     style={{ animationDelay: `${i * 150}ms` }}
                   />
                 ))}
@@ -219,13 +219,13 @@ export default function CoachNewsPanel({ open, onClose }: CoachNewsPanelProps) {
                         src={item.thumbnail}
                         alt=""
                         loading="lazy"
-                        className="w-12 h-12 rounded-md object-cover shrink-0 bg-bg-elevated"
+                        className="w-12 h-12 object-cover shrink-0 bg-bg-elevated"
                         onError={e => {
                           e.currentTarget.style.display = 'none'
                         }}
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-md bg-bg-elevated shrink-0 flex items-center justify-center text-fg-muted text-base">
+                      <div className="w-12 h-12 bg-bg-elevated shrink-0 flex items-center justify-center text-fg-muted text-base">
                         {item.flag || '⚽'}
                       </div>
                     )}

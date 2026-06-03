@@ -69,7 +69,7 @@ export default function DashboardClient({ userId, email }: { userId: string; ema
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent animate-spin"></div>
           <span className="text-slate-500 text-sm">Loading your dashboard...</span>
         </div>
       </div>
@@ -99,7 +99,7 @@ export default function DashboardClient({ userId, email }: { userId: string; ema
         {/* Paywall notice bar — shows when at the limit */}
         {isAtPaywall && (
           <div
-            className="flex items-center justify-between px-5 py-4 rounded-2xl border cursor-pointer"
+            className="flex items-center justify-between px-5 py-4 border cursor-pointer"
             style={{
               background: 'linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(99,102,241,0.08) 100%)',
               borderColor: 'rgba(239,68,68,0.25)',
@@ -115,7 +115,7 @@ export default function DashboardClient({ userId, email }: { userId: string; ema
                 <p className="text-xs text-slate-500">Upgrade to Pro to log unlimited bets and unlock all AI insights</p>
               </div>
             </div>
-            <button className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold px-4 py-2 rounded-xl flex-shrink-0">
+            <button className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold px-4 py-2 flex-shrink-0">
               Upgrade Now →
             </button>
           </div>

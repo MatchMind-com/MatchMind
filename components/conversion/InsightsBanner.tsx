@@ -52,7 +52,7 @@ export default function InsightsBanner({ bets, subscriptionTier }: InsightsBanne
   return (
     <>
       <div
-        className="relative overflow-hidden rounded-2xl border mb-6"
+        className="relative overflow-hidden border mb-6"
         style={{
           background: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(139,92,246,0.08) 100%)',
           borderColor: 'rgba(99,102,241,0.3)',
@@ -70,7 +70,7 @@ export default function InsightsBanner({ bets, subscriptionTier }: InsightsBanne
         <div className="flex items-center justify-between px-5 py-3.5 gap-4">
           {/* Left: lock icon + message */}
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-violet-500/20 flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 bg-violet-500/20 flex items-center justify-center flex-shrink-0">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2.5">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -93,13 +93,13 @@ export default function InsightsBanner({ bets, subscriptionTier }: InsightsBanne
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={() => setShowModal(true)}
-              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-lg shadow-violet-500/20 whitespace-nowrap"
+              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-bold px-4 py-2 transition-all shadow-lg shadow-violet-500/20 whitespace-nowrap"
             >
               Unlock Pro →
             </button>
             <button
               onClick={() => setDismissed(true)}
-              className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-500 hover:text-slate-300 transition-all text-xs flex-shrink-0"
+              className="w-7 h-7 bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-500 hover:text-slate-300 transition-all text-xs flex-shrink-0"
               title="Dismiss"
             >
               ✕

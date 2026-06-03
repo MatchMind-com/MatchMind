@@ -53,14 +53,14 @@ export default function LiveFootballData({ onLeagueChange }: { onLeagueChange?: 
   }
 
   return (
-    <div className="bg-[#12121F] rounded-xl border border-white/10 overflow-hidden">
+    <div className="bg-[#12121F] border border-white/10 overflow-hidden">
       {/* League selector */}
       <div className="flex gap-1 p-3 border-b border-white/10 overflow-x-auto">
         {LEAGUES.map(l => (
           <button
             key={l.id}
             onClick={() => handleLeague(l.id)}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+            className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all ${
               league === l.id
                 ? 'bg-violet-600 text-white'
                 : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -93,7 +93,7 @@ export default function LiveFootballData({ onLeagueChange }: { onLeagueChange?: 
       <div className="p-3 space-y-2 max-h-72 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="w-5 h-5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-violet-500 border-t-transparent animate-spin" />
           </div>
         ) : data.length === 0 ? (
           <p className="text-gray-500 text-xs text-center py-6">

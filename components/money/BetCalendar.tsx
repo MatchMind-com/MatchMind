@@ -168,14 +168,14 @@ export default function BetCalendar({ bets, currency, selectedDate, onSelectDate
             type="button"
             onClick={prev}
             aria-label="Previous month"
-            className="w-8 h-8 inline-flex items-center justify-center rounded-lg bg-bg-base border border-border-subtle hover:border-border-strong text-fg-secondary hover:text-fg transition-colors"
+            className="w-8 h-8 inline-flex items-center justify-center bg-bg-base border border-border-subtle hover:border-border-strong text-fg-secondary hover:text-fg transition-colors"
           >
             ‹
           </button>
           <button
             type="button"
             onClick={goToday}
-            className="px-3 h-8 inline-flex items-center rounded-lg bg-bg-base border border-border-subtle hover:border-border-strong text-fg text-[10px] font-bold uppercase tracking-wider transition-colors"
+            className="px-3 h-8 inline-flex items-center bg-bg-base border border-border-subtle hover:border-border-strong text-fg text-[10px] font-bold uppercase tracking-wider transition-colors"
           >
             Today
           </button>
@@ -183,7 +183,7 @@ export default function BetCalendar({ bets, currency, selectedDate, onSelectDate
             type="button"
             onClick={next}
             aria-label="Next month"
-            className="w-8 h-8 inline-flex items-center justify-center rounded-lg bg-bg-base border border-border-subtle hover:border-border-strong text-fg-secondary hover:text-fg transition-colors"
+            className="w-8 h-8 inline-flex items-center justify-center bg-bg-base border border-border-subtle hover:border-border-strong text-fg-secondary hover:text-fg transition-colors"
           >
             ›
           </button>
@@ -228,7 +228,7 @@ export default function BetCalendar({ bets, currency, selectedDate, onSelectDate
 
           const clickable = list.length > 0
           const baseCell =
-            'relative aspect-square sm:aspect-[5/4] flex flex-col rounded-lg p-1.5 sm:p-2 transition-colors text-left border w-full'
+            'relative aspect-square sm:aspect-[5/4] flex flex-col p-1.5 sm:p-2 transition-colors text-left border w-full'
 
           const stateClass = isSelected
             ? 'bg-brand/15 border-brand text-fg'
@@ -266,7 +266,7 @@ export default function BetCalendar({ bets, currency, selectedDate, onSelectDate
                     {dotsToShow.map((b) => (
                       <span
                         key={b.id}
-                        className={`w-1.5 h-1.5 rounded-full ${dotClass(b.result)}`}
+                        className={`w-1.5 h-1.5 ${dotClass(b.result)}`}
                         aria-hidden
                       />
                     ))}
@@ -339,7 +339,7 @@ function DayTooltip({
       className="hidden sm:block absolute left-1/2 -translate-x-1/2 top-full mt-2 z-20 w-[220px] pointer-events-none opacity-0 transition-opacity duration-150 group-hover:opacity-100"
       aria-hidden
     >
-      <div className="bg-bg-elevated border border-border-strong rounded-lg shadow-xl p-3">
+      <div className="bg-bg-elevated border border-border-strong shadow-xl p-3">
         <p className="eyebrow mb-2">{date}</p>
         <ul className="space-y-1.5">
           {bets.slice(0, 6).map((b) => (
@@ -375,7 +375,7 @@ function DayTooltip({
 function LegendDot({ color, label }: { color: string; label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className={`w-1.5 h-1.5 rounded-full ${color}`} aria-hidden />
+      <span className={`w-1.5 h-1.5 ${color}`} aria-hidden />
       {label}
     </span>
   )

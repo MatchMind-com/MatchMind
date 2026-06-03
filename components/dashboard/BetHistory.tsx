@@ -32,7 +32,7 @@ function AutoDetectBadge({ bet }: { bet: BetSlip }) {
   if (bet.result !== 'pending') return null
   if (canAutoDetect(bet)) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded-full">
+      <span className="inline-flex items-center gap-1 text-xs text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z" strokeOpacity=".3"/>
           <path d="M12 6v6l4 2"/>
@@ -42,7 +42,7 @@ function AutoDetectBadge({ bet }: { bet: BetSlip }) {
     )
   }
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-slate-500 bg-slate-500/10 border border-slate-500/20 px-2 py-0.5 rounded-full">
+    <span className="inline-flex items-center gap-1 text-xs text-slate-500 bg-slate-500/10 border border-slate-500/20 px-2 py-0.5">
       Manual only
     </span>
   )
@@ -109,10 +109,10 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
   const pendingCount = bets.filter(b => b.result === 'pending').length
 
   return (
-    <div className="bg-[#13131F] border border-white/5 rounded-2xl p-6">
+    <div className="bg-[#13131F] border border-white/5 p-6">
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+          <div className="w-9 h-9 bg-indigo-500/10 flex items-center justify-center text-indigo-400">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           </div>
           <div>
@@ -125,7 +125,7 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
           <button
             onClick={refreshResults}
             disabled={refreshing}
-            className="flex items-center gap-1.5 text-xs bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
+            className="flex items-center gap-1.5 text-xs bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 px-3 py-1.5 transition-all disabled:opacity-50"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={refreshing ? 'animate-spin' : ''}>
               <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
@@ -133,7 +133,7 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
             {refreshing ? 'Checking...' : 'Refresh Results'}
           </button>
           {bets.length > 0 && (
-            <button onClick={() => exportToCSV(bets)} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg transition-all">
+            <button onClick={() => exportToCSV(bets)} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white border border-white/10 hover:border-white/20 px-3 py-1.5 transition-all">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Export CSV
             </button>
@@ -143,14 +143,14 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
 
       {/* Refresh status message */}
       {refreshMsg && (
-        <div className="mb-4 text-xs text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-lg px-3 py-2">
+        <div className="mb-4 text-xs text-sky-400 bg-sky-500/10 border border-sky-500/20 px-3 py-2">
           {refreshMsg}
         </div>
       )}
 
       {/* Auto-detect info banner (show when there are pending bets with fixture_id) */}
       {bets.some(b => b.result === 'pending' && canAutoDetect(b)) && (
-        <div className="mb-4 flex items-start gap-2 text-xs text-slate-400 bg-white/3 border border-white/5 rounded-lg px-3 py-2.5">
+        <div className="mb-4 flex items-start gap-2 text-xs text-slate-400 bg-white/3 border border-white/5 px-3 py-2.5">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-sky-400 shrink-0 mt-0.5">
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
           </svg>
@@ -158,9 +158,9 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
         </div>
       )}
 
-      <div className="flex gap-1 mb-4 bg-[#0B0B14] p-1 rounded-xl w-fit">
+      <div className="flex gap-1 mb-4 bg-[#0B0B14] p-1 w-fit">
         {(['all','pending','win','loss','void'] as const).map(f => (
-          <button key={f} onClick={() => setFilter(f)} className={`text-xs px-3 py-1.5 rounded-lg transition-all font-medium capitalize ${filter===f ? 'bg-violet-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
+          <button key={f} onClick={() => setFilter(f)} className={`text-xs px-3 py-1.5 transition-all font-medium capitalize ${filter===f ? 'bg-violet-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
             {f === 'win' ? 'Won' : f === 'loss' ? 'Lost' : f.charAt(0).toUpperCase()+f.slice(1)}
           </button>
         ))}
@@ -168,7 +168,7 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
 
       {filtered.length === 0 ? (
         <div className="text-center py-12">
-          <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-3">
+          <div className="w-12 h-12 bg-white/5 flex items-center justify-center mx-auto mb-3">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-500"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
           </div>
           <p className="text-slate-400 font-medium">No bets here</p>
@@ -188,13 +188,13 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
             }
 
             return (
-              <div key={bet.id} className={`bg-[#0B0B14] border rounded-xl p-4 transition-all ${updatingId===bet.id ? 'opacity-50' : 'border-white/5 hover:border-white/10'}`}>
+              <div key={bet.id} className={`bg-[#0B0B14] border p-4 transition-all ${updatingId===bet.id ? 'opacity-50' : 'border-white/5 hover:border-white/10'}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <span className="text-white font-medium text-sm">{bet.match_name}</span>
-                      {bet.league && <span className="text-xs text-slate-500 bg-white/5 px-2 py-0.5 rounded-full">{bet.league}</span>}
-                      {isAcca && <span className="text-xs text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-full">ACCA ×{accaLegs.length || '?'}</span>}
+                      {bet.league && <span className="text-xs text-slate-500 bg-white/5 px-2 py-0.5">{bet.league}</span>}
+                      {isAcca && <span className="text-xs text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5">ACCA ×{accaLegs.length || '?'}</span>}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
                       <span>{bet.bet_type}</span><span className="text-slate-700">•</span>
@@ -230,7 +230,7 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-xs font-medium px-2 py-1 rounded-lg border ${badge[bet.result]}`}>
+                    <span className={`text-xs font-medium px-2 py-1 border ${badge[bet.result]}`}>
                       {bet.result==='pending'?'⏳ Pending':bet.result==='win'?'✓ Won':bet.result==='loss'?'✗ Lost':'○ Void'}
                     </span>
                     {bet.result !== 'pending' && bet.result !== 'void' && (
@@ -260,9 +260,9 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
                     <>
                       <span className="text-slate-700 text-xs">•</span>
                       <span className="text-slate-600 text-xs">Mark as:</span>
-                      <button onClick={() => setResult(bet,'win')} className="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-lg transition-all">✓ Won</button>
-                      <button onClick={() => setResult(bet,'loss')} className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-2.5 py-0.5 rounded-lg transition-all">✗ Lost</button>
-                      <button onClick={() => setResult(bet,'void')} className="text-xs bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 border border-slate-500/20 px-2.5 py-0.5 rounded-lg transition-all">○ Void</button>
+                      <button onClick={() => setResult(bet,'win')} className="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 transition-all">✓ Won</button>
+                      <button onClick={() => setResult(bet,'loss')} className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-2.5 py-0.5 transition-all">✗ Lost</button>
+                      <button onClick={() => setResult(bet,'void')} className="text-xs bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 border border-slate-500/20 px-2.5 py-0.5 transition-all">○ Void</button>
                     </>
                   )}
 
@@ -273,12 +273,12 @@ export default function BetHistory({ bets, onUpdate }: { bets: BetSlip[]; onUpda
 
                 {/* Override panel */}
                 {isOverrideOpen && (
-                  <div className="mt-2 flex items-center gap-2 flex-wrap bg-white/3 rounded-lg px-3 py-2">
+                  <div className="mt-2 flex items-center gap-2 flex-wrap bg-white/3 px-3 py-2">
                     <span className="text-slate-500 text-xs">Manual override:</span>
-                    {bet.result !== 'win' && <button onClick={() => setResult(bet,'win')} className="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-lg transition-all">✓ Won</button>}
-                    {bet.result !== 'loss' && <button onClick={() => setResult(bet,'loss')} className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-3 py-1 rounded-lg transition-all">✗ Lost</button>}
-                    {bet.result !== 'pending' && <button onClick={() => setResult(bet,'pending')} className="text-xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 px-3 py-1 rounded-lg transition-all">⏳ Pending</button>}
-                    {bet.result !== 'void' && <button onClick={() => setResult(bet,'void')} className="text-xs bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 border border-slate-500/20 px-3 py-1 rounded-lg transition-all">○ Void</button>}
+                    {bet.result !== 'win' && <button onClick={() => setResult(bet,'win')} className="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-3 py-1 transition-all">✓ Won</button>}
+                    {bet.result !== 'loss' && <button onClick={() => setResult(bet,'loss')} className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-3 py-1 transition-all">✗ Lost</button>}
+                    {bet.result !== 'pending' && <button onClick={() => setResult(bet,'pending')} className="text-xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 px-3 py-1 transition-all">⏳ Pending</button>}
+                    {bet.result !== 'void' && <button onClick={() => setResult(bet,'void')} className="text-xs bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 border border-slate-500/20 px-3 py-1 transition-all">○ Void</button>}
                   </div>
                 )}
               </div>

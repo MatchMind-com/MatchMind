@@ -32,10 +32,10 @@ export default function ActivityStrip() {
 
   return (
     <div
-      className="inline-flex items-center gap-2 bg-white/[0.04] border border-white/10 rounded-full px-4 py-2 text-xs transition-opacity duration-400"
+      className="inline-flex items-center gap-2 bg-white/[0.04] border border-white/10 px-4 py-2 text-xs transition-opacity duration-400"
       style={{ opacity: visible ? 1 : 0 }}
     >
-      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+      <span className="w-1.5 h-1.5 bg-emerald-400 shrink-0" />
       <span className="text-white/50">
         Someone from <span className="text-white font-semibold">{msg.city}</span> {msg.action}
       </span>

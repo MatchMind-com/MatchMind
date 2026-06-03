@@ -7,9 +7,9 @@ import dynamic from 'next/dynamic'
 const AllMarketsPanel = dynamic(() => import('./AllMarketsPanel'), {
   ssr: false,
   loading: () => (
-    <div className="bg-bg-surface border border-border-subtle rounded-xl p-4 mt-3">
-      <div className="bg-bg-elevated rounded-lg h-12 animate-pulse mb-2" />
-      <div className="bg-bg-elevated rounded-lg h-12 animate-pulse" />
+    <div className="bg-bg-surface border border-border-subtle p-4 mt-3">
+      <div className="bg-bg-elevated h-12 animate-pulse mb-2" />
+      <div className="bg-bg-elevated h-12 animate-pulse" />
     </div>
   ),
 })
@@ -107,14 +107,14 @@ export default function LiveMatchCard({ match, onWatchWithAI }: Props) {
   }
 
   return (
-    <article className="bg-bg-surface border border-border-subtle rounded-2xl p-5 hover:border-border-strong transition-colors duration-200">
+    <article className="bg-bg-surface border border-border-subtle p-5 hover:border-border-strong transition-colors duration-200">
       {/* Eyebrow row — LIVE pulse + league + minute */}
       <div className="flex items-center justify-between mb-4 gap-3">
         <div className="flex items-center gap-2 min-w-0">
           {/* Pulsing red dot */}
           <span className="relative flex h-2 w-2 shrink-0">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-live opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-live" />
+            <span className="animate-ping absolute inline-flex h-full w-full bg-live opacity-75" />
+            <span className="relative inline-flex h-2 w-2 bg-live" />
           </span>
           <span className="text-live text-[10px] font-bold uppercase tracking-[0.18em]">LIVE</span>
           <span className="text-fg-muted text-[10px] font-bold uppercase tracking-[0.18em] truncate">
@@ -179,7 +179,7 @@ export default function LiveMatchCard({ match, onWatchWithAI }: Props) {
         <button
           type="button"
           onClick={() => onWatchWithAI(match)}
-          className="inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-hover text-bg-base font-bold py-2 px-4 rounded-lg text-sm transition-all duration-200"
+          className="inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-hover text-bg-base font-bold py-2 px-4 text-sm transition-all duration-200"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
@@ -191,7 +191,7 @@ export default function LiveMatchCard({ match, onWatchWithAI }: Props) {
         <button
           type="button"
           onClick={() => setMarketsOpen((v) => !v)}
-          className={`inline-flex items-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-lg border transition-all duration-200 ${
+          className={`inline-flex items-center gap-1.5 text-xs font-semibold py-2 px-3 border transition-all duration-200 ${
             marketsOpen
               ? 'bg-brand text-bg-base border-brand'
               : 'bg-bg-elevated hover:bg-bg-base hover:border-border-strong text-fg border-border-subtle'

@@ -44,7 +44,7 @@ function ProgressDots({ current, total }: { current: number; total: number }) {
       {Array.from({ length: total }).map((_, i) => (
         <div
           key={i}
-          className={`rounded-full transition-all duration-300 ${
+          className={`transition-all duration-300 ${
             i < current
               ? 'w-6 h-2 bg-violet-500'
               : i === current
@@ -86,7 +86,7 @@ function MultiSelect({
             key={opt.id}
             onClick={() => toggle(opt.id)}
             disabled={isDisabled}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-2 border text-sm font-medium transition-all ${
               isSelected
                 ? 'bg-violet-600/30 border-violet-500/60 text-white'
                 : isDisabled
@@ -155,7 +155,7 @@ export default function OnboardingModal({ isOpen, onComplete }: Props) {
   const steps = [
     // Step 0: Welcome
     <div key="welcome" className="flex flex-col items-center text-center py-4">
-      <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-4xl mb-5 shadow-xl shadow-violet-500/30">
+      <div className="w-20 h-20 bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-4xl mb-5 shadow-xl shadow-violet-500/30">
         🏆
       </div>
       <h2 className="text-2xl font-black text-white mb-3">Welcome to MatchMind</h2>
@@ -168,7 +168,7 @@ export default function OnboardingModal({ isOpen, onComplete }: Props) {
           { icon: '🤖', label: 'AI Coach knows your style' },
           { icon: '🔥', label: 'Value bets for your markets' },
         ].map(item => (
-          <div key={item.icon} className="bg-white/5 border border-white/8 rounded-2xl p-3 text-center">
+          <div key={item.icon} className="bg-white/5 border border-white/8 p-3 text-center">
             <p className="text-2xl mb-1">{item.icon}</p>
             <p className="text-white/50 text-[11px] leading-tight">{item.label}</p>
           </div>
@@ -198,7 +198,7 @@ export default function OnboardingModal({ isOpen, onComplete }: Props) {
           value={data.favourite_team}
           onChange={e => update('favourite_team', e.target.value)}
           placeholder="e.g. Manchester City, Real Madrid..."
-          className="w-full bg-white/5 border border-white/12 rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-violet-500/60 transition-colors"
+          className="w-full bg-white/5 border border-white/12 px-4 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-violet-500/60 transition-colors"
         />
       </div>
 
@@ -210,7 +210,7 @@ export default function OnboardingModal({ isOpen, onComplete }: Props) {
           value={data.lucky_charm_team}
           onChange={e => update('lucky_charm_team', e.target.value)}
           placeholder="e.g. Brentford always pays off for me..."
-          className="w-full bg-white/5 border border-white/12 rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-violet-500/60 transition-colors"
+          className="w-full bg-white/5 border border-white/12 px-4 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-violet-500/60 transition-colors"
         />
       </div>
     </div>,
@@ -231,7 +231,7 @@ export default function OnboardingModal({ isOpen, onComplete }: Props) {
             <button
               key={opt.id}
               onClick={() => update('betting_experience', opt.id)}
-              className={`p-4 rounded-2xl border text-left transition-all ${
+              className={`p-4 border text-left transition-all ${
                 data.betting_experience === opt.id
                   ? 'bg-violet-600/20 border-violet-500/60'
                   : 'bg-white/5 border-white/8 hover:border-violet-500/30'
@@ -274,7 +274,7 @@ export default function OnboardingModal({ isOpen, onComplete }: Props) {
             <button
               key={opt.id}
               onClick={() => update('monthly_pl_estimate', opt.id)}
-              className={`w-full flex items-center gap-4 p-4 rounded-2xl border text-left transition-all ${
+              className={`w-full flex items-center gap-4 p-4 border text-left transition-all ${
                 data.monthly_pl_estimate === opt.id
                   ? `bg-violet-600/15 border-violet-500/60`
                   : `bg-white/5 border-white/8 hover:border-white/20`
@@ -304,7 +304,7 @@ export default function OnboardingModal({ isOpen, onComplete }: Props) {
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(12px)' }}
     >
-      <div className="relative w-full max-w-lg bg-[#0D0D1A] border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+      <div className="relative w-full max-w-lg bg-[#0D0D1A] border border-white/10 overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-white/5">
           <div className="flex items-center justify-between mb-3">
@@ -324,7 +324,7 @@ export default function OnboardingModal({ isOpen, onComplete }: Props) {
           {step > 0 ? (
             <button
               onClick={() => setStep(s => s - 1)}
-              className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white/50 hover:text-white bg-white/5 hover:bg-white/8 transition-all border border-white/8"
+              className="px-4 py-2.5 text-sm font-semibold text-white/50 hover:text-white bg-white/5 hover:bg-white/8 transition-all border border-white/8"
             >
               ← Back
             </button>
@@ -336,7 +336,7 @@ export default function OnboardingModal({ isOpen, onComplete }: Props) {
             <button
               onClick={() => setStep(s => s + 1)}
               disabled={!canAdvance()}
-              className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-violet-500/20"
+              className="flex-1 py-3 text-sm font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-violet-500/20"
             >
               {step === 0 ? "Let's go →" : 'Continue →'}
             </button>
@@ -344,7 +344,7 @@ export default function OnboardingModal({ isOpen, onComplete }: Props) {
             <button
               onClick={handleFinish}
               disabled={!canAdvance() || saving}
-              className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/20"
+              className="flex-1 py-3 text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/20"
             >
               {saving ? 'Saving...' : '🚀 Finish Setup'}
             </button>

@@ -77,8 +77,8 @@ interface Prediction {
 function ConfidenceBar({ value, color }: { value: number; color: string }) {
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 bg-white/5 rounded-full h-1.5 overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${value}%`, background: color }} />
+      <div className="flex-1 bg-white/5 h-1.5 overflow-hidden">
+        <div className="h-full transition-all duration-700" style={{ width: `${value}%`, background: color }} />
       </div>
       <span className="text-xs text-slate-500 w-8 text-right">{value}%</span>
     </div>
@@ -92,7 +92,7 @@ function RiskBadge({ level }: { level: string }) {
     High: 'bg-red-500/15 text-red-400 border-red-500/30',
   }
   return (
-    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${colors[level] || colors.Medium}`}>
+    <span className={`text-[10px] font-semibold px-2 py-0.5 border ${colors[level] || colors.Medium}`}>
       {level} Risk
     </span>
   )
@@ -102,7 +102,7 @@ function ConfidenceDots({ score }: { score: number }) {
   return (
     <div className="flex gap-1">
       {Array.from({ length: 10 }).map((_, i) => (
-        <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < score ? 'bg-blue-400' : 'bg-white/10'}`} />
+        <div key={i} className={`w-1.5 h-1.5 ${i < score ? 'bg-blue-400' : 'bg-white/10'}`} />
       ))}
     </div>
   )
@@ -111,7 +111,7 @@ function ConfidenceDots({ score }: { score: number }) {
 function EVBadge({ ev }: { ev: number }) {
   const isPositive = ev > 0
   return (
-    <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+    <span className={`text-xs font-bold px-2 py-0.5 border ${
       isPositive
         ? ev >= 15 ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40'
         : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
@@ -126,7 +126,7 @@ function OddsChip({ label, odds, ev }: { label: string; odds: number | null; ev:
   if (!odds) return null
   const isValue = ev !== null && ev > 0
   return (
-    <div className={`flex flex-col items-center rounded-lg px-2 py-1.5 border ${
+    <div className={`flex flex-col items-center px-2 py-1.5 border ${
       isValue ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-white/[0.04] border-white/[0.07]'
     }`}>
       <span className="text-[10px] text-slate-500 mb-0.5">{label}</span>
@@ -205,8 +205,8 @@ function StatBar({ label, value, max, color }: { label: string; value: number; m
   return (
     <div className="flex items-center gap-2">
       <span className="text-slate-500 text-[10px] w-16 shrink-0">{label}</span>
-      <div className="flex-1 bg-white/[0.05] rounded-full h-1.5 overflow-hidden">
-        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+      <div className="flex-1 bg-white/[0.05] h-1.5 overflow-hidden">
+        <div className="h-full" style={{ width: `${pct}%`, background: color }} />
       </div>
       <span className="text-xs font-bold text-white w-8 text-right">{value}</span>
     </div>
@@ -276,12 +276,12 @@ function TrackBetModal({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
       <div
-        className="relative bg-[#161B26] border border-white/[0.10] rounded-2xl p-5 w-full max-w-sm shadow-2xl"
+        className="relative bg-[#161B26] border border-white/[0.10] p-5 w-full max-w-sm shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         {done ? (
           <div className="text-center py-4">
-            <div className="w-12 h-12 rounded-full bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center mx-auto mb-3">
               <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
@@ -303,7 +303,7 @@ function TrackBetModal({
               </button>
             </div>
 
-            <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 py-2.5 mb-4">
+            <div className="bg-white/[0.04] border border-white/[0.07] px-3 py-2.5 mb-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-wide">Selection</p>
@@ -323,7 +323,7 @@ function TrackBetModal({
                   <button
                     key={v}
                     onClick={() => setStake(String(v))}
-                    className={`flex-1 py-1 rounded-lg text-xs font-bold border transition-all ${
+                    className={`flex-1 py-1 text-xs font-bold border transition-all ${
                       stake === String(v)
                         ? 'bg-orange-500/20 border-orange-500/40 text-orange-400'
                         : 'bg-white/[0.04] border-white/[0.08] text-white/50 hover:text-white/80 hover:bg-white/[0.07]'
@@ -338,14 +338,14 @@ function TrackBetModal({
                 value={stake}
                 onChange={e => setStake(e.target.value)}
                 placeholder="Or enter amount…"
-                className="w-full bg-white/[0.04] border border-white/[0.10] rounded-xl px-3 py-2.5 text-white text-sm placeholder-white/20 outline-none focus:border-orange-500/50"
+                className="w-full bg-white/[0.04] border border-white/[0.10] px-3 py-2.5 text-white text-sm placeholder-white/20 outline-none focus:border-orange-500/50"
               />
             </div>
 
             <button
               onClick={submit}
               disabled={loading || !stake || parseFloat(stake) <= 0}
-              className="w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black py-2.5 rounded-xl text-sm transition-all"
+              className="w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black py-2.5 text-sm transition-all"
             >
               {loading ? 'Tracking…' : 'Track Bet'}
             </button>
@@ -518,7 +518,7 @@ export default function PredictionsPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+            <div className="w-8 h-8 bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
               <BrainIcon />
             </div>
             <h1 className="text-2xl font-black text-white tracking-tight">AI Predictions</h1>
@@ -531,7 +531,7 @@ export default function PredictionsPage() {
       {loading && (
         <div className="space-y-4">
           {[1,2,3].map(i => (
-            <div key={i} className="bg-[#0E1628] rounded-2xl h-44 animate-pulse border border-white/[0.07]" />
+            <div key={i} className="bg-[#0E1628] h-44 animate-pulse border border-white/[0.07]" />
           ))}
           <p className="text-center text-slate-600 text-sm">Fetching odds + running AI analysis…</p>
         </div>
@@ -539,13 +539,13 @@ export default function PredictionsPage() {
 
       {/* Error — cache miss (first deploy, cron hasn't run yet) */}
       {!loading && error === '__cache_miss__' && (
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-8 text-center space-y-3">
+        <div className="bg-blue-500/10 border border-blue-500/20 p-8 text-center space-y-3">
           <div className="text-3xl">⏳</div>
           <p className="text-blue-300 font-semibold">Predictions are warming up</p>
           <p className="text-slate-500 text-sm">Our AI is analysing today&apos;s fixtures right now.<br/>This only happens once — check back in a few minutes.</p>
           <button
             onClick={() => { setLoading(true); setError(''); fetch('/api/predictions').then(r => r.json()).then(d => { if (d.success) setPredictions(d.predictions || []); else if (d.cache_miss) setError('__cache_miss__'); else setError(d.error || 'Failed to load predictions') }).catch(() => setError('Failed to load predictions')).finally(() => setLoading(false)) }}
-            className="mt-2 px-4 py-2 text-sm bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-xl border border-blue-500/30 transition-colors"
+            className="mt-2 px-4 py-2 text-sm bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 transition-colors"
           >
             Try again
           </button>
@@ -554,14 +554,14 @@ export default function PredictionsPage() {
 
       {/* Error — generic */}
       {!loading && error && error !== '__cache_miss__' && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center">
+        <div className="bg-red-500/10 border border-red-500/20 p-6 text-center">
           <p className="text-red-400 text-sm">{error}</p>
         </div>
       )}
 
       {/* No fixtures */}
       {!loading && !error && predictions.length === 0 && (
-        <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-10 text-center">
+        <div className="bg-[#0E1628] border border-white/[0.07] p-10 text-center">
           <p className="text-slate-400 font-semibold mb-1">No upcoming fixtures</p>
           <p className="text-slate-600 text-sm">No matches in the next 3 days. Check back soon.</p>
         </div>
@@ -569,7 +569,7 @@ export default function PredictionsPage() {
 
       {/* TAB NAV — only when we have data to show */}
       {!loading && !error && predictions.length > 0 && (
-        <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.07] p-1 rounded-2xl overflow-x-auto">
+        <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.07] p-1 overflow-x-auto">
           {[
             { id: 'accas'   as const, label: 'Accumulators', icon: <TargetIcon /> },
             { id: 'bets'    as const, label: 'Value Bets',   icon: <FireIcon /> },
@@ -580,7 +580,7 @@ export default function PredictionsPage() {
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold transition-all ${
                   active
                     ? 'bg-orange-500/15 border border-orange-500/30 text-orange-300'
                     : 'border border-transparent text-slate-400 hover:text-white hover:bg-white/[0.03]'
@@ -614,14 +614,14 @@ export default function PredictionsPage() {
               ).join('\n') + `\n\n${tier.label} Acca · Combined @ ${combinedOdds.toFixed(2)} · Combined EV +${combinedEV}%\nBuilt by MatchMind`
 
               return (
-                <div key={tier.key} className={`bg-[#0E1628] border ${tier.border} rounded-2xl overflow-hidden`}>
+                <div key={tier.key} className={`bg-[#0E1628] border ${tier.border} overflow-hidden`}>
                   {/* Tier header */}
                   <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between flex-wrap gap-2"
                     style={{ background: `linear-gradient(90deg, ${tier.headerBg} 0%, transparent 100%)` }}>
                     <div className="flex items-center gap-2">
                       <span className={tier.textAccent}><TargetIcon /></span>
                       <span className="text-white font-bold text-sm">{tier.label} Accumulator</span>
-                      <span className={`text-[10px] font-black ${tier.textAccent} ${tier.badgeBg} border ${tier.badgeBorder} px-2 py-0.5 rounded-full uppercase tracking-wide`}>odds {tier.range}</span>
+                      <span className={`text-[10px] font-black ${tier.textAccent} ${tier.badgeBg} border ${tier.badgeBorder} px-2 py-0.5 uppercase tracking-wide`}>odds {tier.range}</span>
                     </div>
                     {legs.length > 0 ? (
                       <div className="text-right">
@@ -644,8 +644,8 @@ export default function PredictionsPage() {
                       {/* Legs */}
                       <div className="space-y-2 mb-4">
                         {legs.map((l, i) => (
-                          <div key={i} className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-xl p-3">
-                            <div className={`w-6 h-6 rounded-lg ${tier.badgeBg} border ${tier.badgeBorder} flex items-center justify-center text-xs ${tier.textAccent} font-black shrink-0`}>{i + 1}</div>
+                          <div key={i} className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] p-3">
+                            <div className={`w-6 h-6 ${tier.badgeBg} border ${tier.badgeBorder} flex items-center justify-center text-xs ${tier.textAccent} font-black shrink-0`}>{i + 1}</div>
                             <div className="flex-1 min-w-0">
                               <p className="text-white text-xs font-bold truncate">{l.pred.home_team} vs {l.pred.away_team}</p>
                               <p className="text-slate-500 text-[10px]">{l.pred.leagueFlag} {l.pred.league}</p>
@@ -659,7 +659,7 @@ export default function PredictionsPage() {
                       </div>
 
                       <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-2 text-sm flex-shrink-0">
+                        <div className="bg-white/[0.04] border border-white/[0.07] px-4 py-2 text-sm flex-shrink-0">
                           <span className="text-slate-500">£10 → </span>
                           <span className="text-white font-black">£{(10 * combinedOdds).toFixed(2)}</span>
                         </div>
@@ -671,7 +671,7 @@ export default function PredictionsPage() {
                                 setTimeout(() => setCopied(null), 2000)
                               })
                             }}
-                            className={`flex items-center gap-2 ${tier.badgeBg} hover:brightness-110 border ${tier.badgeBorder} ${tier.textAccent} font-bold px-3 py-2 rounded-xl text-sm transition-all`}
+                            className={`flex items-center gap-2 ${tier.badgeBg} hover:brightness-110 border ${tier.badgeBorder} ${tier.textAccent} font-bold px-3 py-2 text-sm transition-all`}
                           >
                             {copied === accaId ? <><CheckIcon /> Copied!</> : <><CopyIcon /> Copy</>}
                           </button>
@@ -685,7 +685,7 @@ export default function PredictionsPage() {
                                 bookmaker: PRIMARY_AFFILIATE.short,
                               })
                             }
-                            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-sm transition-all"
+                            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 text-sm transition-all"
                           >
                             Place on {PRIMARY_AFFILIATE.short}
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -706,9 +706,9 @@ export default function PredictionsPage() {
 
       {/* Acca teaser — Free users on the accas tab */}
       {tab === 'accas' && !loading && !error && predictions.length > 0 && !isPro && (
-        <div className="bg-[#0E1628] border border-orange-500/20 rounded-2xl p-5 flex items-center justify-between gap-4">
+        <div className="bg-[#0E1628] border border-orange-500/20 p-5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
+            <div className="w-9 h-9 bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
               <TargetIcon />
             </div>
             <div>
@@ -716,7 +716,7 @@ export default function PredictionsPage() {
               <p className="text-slate-500 text-xs">Three daily accas at different risk tiers — Pro only</p>
             </div>
           </div>
-          <a href="/dashboard/billing" className="shrink-0 bg-orange-500 hover:bg-orange-400 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors">
+          <a href="/dashboard/billing" className="shrink-0 bg-orange-500 hover:bg-orange-400 text-white font-bold px-4 py-2 text-xs transition-colors">
             Upgrade →
           </a>
         </div>
@@ -778,7 +778,7 @@ export default function PredictionsPage() {
                     .sort((a, b) => b.ev - a.ev)
                     .slice(0, 3)
                   return (
-                    <div key={tier.key} className={`bg-[#0E1628] border ${tier.border} rounded-2xl overflow-hidden`}>
+                    <div key={tier.key} className={`bg-[#0E1628] border ${tier.border} overflow-hidden`}>
                       <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between"
                         style={{ background: `linear-gradient(90deg, ${tier.headerBg} 0%, transparent 100%)` }}>
                         <div className="flex items-center gap-2">
@@ -833,9 +833,9 @@ export default function PredictionsPage() {
 
           {/* Value bet teaser — Free (only shown on Value Bets tab) */}
           {tab === 'bets' && !isPro && (
-            <div className="bg-[#0E1628] border border-orange-500/20 rounded-2xl p-5 flex items-center justify-between">
+            <div className="bg-[#0E1628] border border-orange-500/20 p-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
+                <div className="w-9 h-9 bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
                   <FireIcon />
                 </div>
                 <div>
@@ -843,7 +843,7 @@ export default function PredictionsPage() {
                   <p className="text-slate-500 text-xs">Real Bet365 odds vs AI probabilities — find +EV bets</p>
                 </div>
               </div>
-              <a href="/dashboard/billing" className="bg-orange-500 hover:bg-orange-400 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors whitespace-nowrap">
+              <a href="/dashboard/billing" className="bg-orange-500 hover:bg-orange-400 text-white font-bold px-4 py-2 text-xs transition-colors whitespace-nowrap">
                 Unlock Pro
               </a>
             </div>
@@ -861,7 +861,7 @@ export default function PredictionsPage() {
               return (
                 <div
                   key={pred.id || idx}
-                  className={`border rounded-2xl overflow-hidden transition-all ${
+                  className={`border overflow-hidden transition-all ${
                     pred.is_value_bet
                       ? 'bg-[#0E1628] border-emerald-500/25 hover:border-emerald-400/40'
                       : 'bg-[#0E1628] border-white/[0.07] hover:border-blue-500/25'
@@ -908,7 +908,7 @@ export default function PredictionsPage() {
                         {pred.home_logo ? (
                           <img src={pred.home_logo} alt={pred.home_team} className="w-10 h-10 object-contain flex-shrink-0" />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-white/10 flex-shrink-0" />
+                          <div className="w-10 h-10 bg-white/10 flex-shrink-0" />
                         )}
                         <div>
                           <p className="text-white font-bold text-sm leading-tight">{pred.home_team}</p>
@@ -941,7 +941,7 @@ export default function PredictionsPage() {
                         {pred.away_logo ? (
                           <img src={pred.away_logo} alt={pred.away_team} className="w-10 h-10 object-contain flex-shrink-0" />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-white/10 flex-shrink-0" />
+                          <div className="w-10 h-10 bg-white/10 flex-shrink-0" />
                         )}
                       </div>
                     </div>
@@ -962,7 +962,7 @@ export default function PredictionsPage() {
 
                     {/* Edge explanation */}
                     {pred.is_value_bet && pred.edge_explanation && (
-                      <div className="mb-3 bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3">
+                      <div className="mb-3 bg-white/[0.02] border border-white/[0.06] px-4 py-3">
                         <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide mb-1">Why this has edge</p>
                         <p className="text-slate-300 text-xs leading-relaxed">{pred.edge_explanation}</p>
                       </div>
@@ -981,7 +981,7 @@ export default function PredictionsPage() {
                         return pred.ev.home
                       })() : null
                       return (
-                        <div className={`border rounded-xl px-4 py-3 mb-3 flex items-center justify-between ${
+                        <div className={`border px-4 py-3 mb-3 flex items-center justify-between ${
                           pred.is_value_bet && isPro
                             ? 'bg-emerald-600/8 border-emerald-500/25'
                             : 'bg-blue-600/8 border-blue-500/20'
@@ -1022,7 +1022,7 @@ export default function PredictionsPage() {
                           bookmaker: pred.bookmaker_name || PRIMARY_AFFILIATE.short,
                         })
                       }}
-                      className={`flex items-center justify-between w-full rounded-xl px-4 py-2.5 mb-2 transition-all group ${
+                      className={`flex items-center justify-between w-full px-4 py-2.5 mb-2 transition-all group ${
                         pred.is_value_bet && isPro
                           ? 'bg-emerald-600 hover:bg-emerald-500'
                           : 'bg-blue-600 hover:bg-blue-500'
@@ -1063,7 +1063,7 @@ export default function PredictionsPage() {
                           match_date: pred.date,
                         })
                       }}
-                      className="flex items-center justify-center gap-2 w-full rounded-xl px-4 py-2 mb-3 text-sm font-semibold text-white/50 hover:text-white/80 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.07] transition-all"
+                      className="flex items-center justify-center gap-2 w-full px-4 py-2 mb-3 text-sm font-semibold text-white/50 hover:text-white/80 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.07] transition-all"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -1100,7 +1100,7 @@ export default function PredictionsPage() {
 
                           {/* League positions */}
                           {(pred.home_stats?.league_position || pred.away_stats?.league_position) && (
-                            <div className="flex items-center justify-between mb-2 bg-white/[0.03] border border-white/[0.05] rounded-xl px-4 py-2.5">
+                            <div className="flex items-center justify-between mb-2 bg-white/[0.03] border border-white/[0.05] px-4 py-2.5">
                               <div className="text-center">
                                 <p className="text-white font-black text-2xl leading-none">
                                   {pred.home_stats?.league_position ? `#${pred.home_stats.league_position}` : '—'}
@@ -1121,7 +1121,7 @@ export default function PredictionsPage() {
                           <div className="grid grid-cols-2 gap-2.5">
                             {/* Home stats */}
                             {pred.home_stats && (
-                              <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3">
+                              <div className="bg-white/[0.03] border border-white/[0.05] p-3">
                                 <p className="text-slate-400 text-[10px] font-bold mb-2 truncate">{pred.home_team}</p>
                                 <div className="space-y-1.5">
                                   <div className="flex justify-between text-[11px]">
@@ -1149,7 +1149,7 @@ export default function PredictionsPage() {
                             )}
                             {/* Away stats */}
                             {pred.away_stats && (
-                              <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3">
+                              <div className="bg-white/[0.03] border border-white/[0.05] p-3">
                                 <p className="text-slate-400 text-[10px] font-bold mb-2 truncate">{pred.away_team}</p>
                                 <div className="space-y-1.5">
                                   <div className="flex justify-between text-[11px]">
@@ -1179,7 +1179,7 @@ export default function PredictionsPage() {
 
                           {/* Visual bars comparison */}
                           {pred.home_stats && pred.away_stats && (
-                            <div className="mt-2.5 bg-white/[0.03] border border-white/[0.05] rounded-xl p-3 space-y-2">
+                            <div className="mt-2.5 bg-white/[0.03] border border-white/[0.05] p-3 space-y-2">
                               <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-wide mb-2">Head-to-Head Stats</p>
                               {/* Goals For bar */}
                               <div>
@@ -1188,7 +1188,7 @@ export default function PredictionsPage() {
                                   <span>Goals / Game</span>
                                   <span className="text-white font-bold">{pred.away_stats.goals_per_game}</span>
                                 </div>
-                                <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden">
+                                <div className="flex gap-0.5 h-1.5 overflow-hidden">
                                   <div className="bg-blue-500 rounded-l-full" style={{ width: `${(pred.home_stats.goals_per_game / (pred.home_stats.goals_per_game + pred.away_stats.goals_per_game + 0.001)) * 100}%` }} />
                                   <div className="bg-slate-700 flex-1 rounded-r-full" />
                                 </div>
@@ -1200,7 +1200,7 @@ export default function PredictionsPage() {
                                   <span>Conceded / Game</span>
                                   <span className="text-white font-bold">{pred.away_stats.conceded_per_game}</span>
                                 </div>
-                                <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden">
+                                <div className="flex gap-0.5 h-1.5 overflow-hidden">
                                   <div className="bg-red-500 rounded-l-full" style={{ width: `${(pred.home_stats.conceded_per_game / (pred.home_stats.conceded_per_game + pred.away_stats.conceded_per_game + 0.001)) * 100}%` }} />
                                   <div className="bg-slate-700 flex-1 rounded-r-full" />
                                 </div>
@@ -1212,7 +1212,7 @@ export default function PredictionsPage() {
                                   <span>Clean Sheet %</span>
                                   <span className="text-white font-bold">{pred.away_stats.clean_sheet_pct}%</span>
                                 </div>
-                                <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden">
+                                <div className="flex gap-0.5 h-1.5 overflow-hidden">
                                   <div className="bg-emerald-500 rounded-l-full" style={{ width: `${(pred.home_stats.clean_sheet_pct / (pred.home_stats.clean_sheet_pct + pred.away_stats.clean_sheet_pct + 0.001)) * 100}%` }} />
                                   <div className="bg-slate-700 flex-1 rounded-r-full" />
                                 </div>
@@ -1305,14 +1305,14 @@ export default function PredictionsPage() {
             {/* Locked overlay */}
             {lockedCount > 0 && (
               <div className="relative">
-                <div className="bg-[#0E1628] border border-white/[0.07] rounded-2xl p-8 text-center opacity-30 select-none">
+                <div className="bg-[#0E1628] border border-white/[0.07] p-8 text-center opacity-30 select-none">
                   <p className="text-slate-400">More predictions locked…</p>
                 </div>
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#060914]/85 rounded-2xl border border-orange-500/25">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#060914]/85 border border-orange-500/25">
                   <div className="text-orange-400 mb-3"><LockIcon /></div>
                   <p className="text-white font-bold mb-1">{lockedCount} more predictions + Value Bets</p>
                   <p className="text-slate-400 text-sm mb-4">Upgrade to Pro for all predictions, real odds & EV scores</p>
-                  <a href="/dashboard/billing" className="bg-orange-500 hover:bg-orange-400 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-colors">
+                  <a href="/dashboard/billing" className="bg-orange-500 hover:bg-orange-400 text-white font-bold px-6 py-2.5 text-sm transition-colors">
                     Unlock with Pro — £9.99/mo
                   </a>
                 </div>

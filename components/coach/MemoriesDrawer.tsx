@@ -127,7 +127,7 @@ export default function MemoriesDrawer({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.07] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-lg">
+            <div className="w-9 h-9 bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-lg">
               🧠
             </div>
             <div>
@@ -137,7 +137,7 @@ export default function MemoriesDrawer({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-white/[0.06] text-slate-400 hover:text-white flex items-center justify-center transition"
+            className="w-8 h-8 hover:bg-white/[0.06] text-slate-400 hover:text-white flex items-center justify-center transition"
             title="Close (Esc)"
           >
             ✕
@@ -147,7 +147,7 @@ export default function MemoriesDrawer({
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Stats card */}
-          <div className="rounded-2xl bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 p-4">
+          <div className="bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 p-4">
             <div className="text-lg font-black text-white leading-tight">
               Coach remembers {totalCount.toLocaleString()} {totalCount === 1 ? 'thing' : 'things'} about you
             </div>
@@ -162,12 +162,12 @@ export default function MemoriesDrawer({
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search by meaning…"
-              className="flex-1 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2.5 text-sm placeholder:text-white/30 focus:outline-none focus:border-orange-500/40 focus:bg-white/[0.06] transition"
+              className="flex-1 bg-white/[0.04] border border-white/10 px-3 py-2.5 text-sm placeholder:text-white/30 focus:outline-none focus:border-orange-500/40 focus:bg-white/[0.06] transition"
             />
             <button
               type="submit"
               disabled={searching}
-              className="rounded-xl bg-orange-500 hover:bg-orange-400 disabled:opacity-50 px-4 py-2.5 text-xs font-bold text-black transition"
+              className="bg-orange-500 hover:bg-orange-400 disabled:opacity-50 px-4 py-2.5 text-xs font-bold text-black transition"
             >
               {searching ? '…' : 'Recall'}
             </button>
@@ -175,7 +175,7 @@ export default function MemoriesDrawer({
               <button
                 type="button"
                 onClick={clearSearch}
-                className="rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 px-3 py-2.5 text-xs font-semibold text-white/70 transition"
+                className="bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 px-3 py-2.5 text-xs font-semibold text-white/70 transition"
               >
                 Clear
               </button>
@@ -194,14 +194,14 @@ export default function MemoriesDrawer({
           )}
 
           {!loading && notReady && (
-            <div className="rounded-2xl bg-amber-500/5 border border-amber-500/20 p-4 text-amber-200/80 text-xs">
+            <div className="bg-amber-500/5 border border-amber-500/20 p-4 text-amber-200/80 text-xs">
               <div className="font-bold text-amber-300 mb-1">Memory needs a one-time setup.</div>
               Run <code className="px-1.5 py-0.5 rounded bg-black/30 text-amber-200">supabase/memory-lane.sql</code> in your Supabase SQL editor.
             </div>
           )}
 
           {!loading && !notReady && memories.length === 0 && (
-            <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-8 text-center">
+            <div className="bg-white/[0.03] border border-white/10 p-8 text-center">
               <div className="text-3xl mb-2">💭</div>
               <div className="text-white/70 font-semibold mb-1 text-sm">No memories yet</div>
               <div className="text-white/40 text-xs">
@@ -253,12 +253,12 @@ function MemoryCard({
 }) {
   const isUser = memory.role === 'user'
   return (
-    <div className="group rounded-xl bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] hover:border-white/[0.12] p-3 transition-all">
+    <div className="group bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] hover:border-white/[0.12] p-3 transition-all">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
             <span
-              className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
+              className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 ${
                 isUser
                   ? 'bg-blue-500/15 text-blue-300 border border-blue-500/25'
                   : 'bg-orange-500/15 text-orange-300 border border-orange-500/25'

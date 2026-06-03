@@ -32,7 +32,7 @@ export default function QuickPrompts({ onPrompt, disabled, variant = 'row' }: Qu
             key={p.label}
             onClick={() => onPrompt(p.msg)}
             disabled={disabled}
-            className="text-left px-4 py-3 rounded-xl border border-border-subtle bg-bg-surface hover:border-brand hover:bg-bg-elevated text-sm text-fg-secondary hover:text-fg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="text-left px-4 py-3 border border-border-subtle bg-bg-surface hover:border-brand hover:bg-bg-elevated text-sm text-fg-secondary hover:text-fg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <span className="text-fg font-semibold">{p.label}</span>
           </button>
@@ -51,7 +51,7 @@ export default function QuickPrompts({ onPrompt, disabled, variant = 'row' }: Qu
           key={p.label}
           onClick={() => onPrompt(p.msg)}
           disabled={disabled}
-          className="shrink-0 border border-border-subtle rounded-full px-4 py-1.5 text-sm text-fg-secondary hover:border-brand hover:text-brand transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="shrink-0 border border-border-subtle px-4 py-1.5 text-sm text-fg-secondary hover:border-brand hover:text-brand transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {p.label}
         </button>

@@ -160,7 +160,7 @@ export default function AccumulatorCard({ tier, legs }: Props) {
   // Empty state for this tier — calm, useful, never red
   if (legs.length === 0) {
     return (
-      <article className="bg-bg-surface border border-border-subtle rounded-2xl overflow-hidden">
+      <article className="bg-bg-surface border border-border-subtle overflow-hidden">
         <div className={`px-5 py-3 border-b border-border-subtle flex items-center justify-between ${a.bg}`}>
           <div className="flex items-baseline gap-3 min-w-0">
             <span className="eyebrow">ACCUMULATOR</span>
@@ -184,7 +184,7 @@ export default function AccumulatorCard({ tier, legs }: Props) {
   }
 
   return (
-    <article className="bg-bg-surface border border-border-subtle rounded-2xl overflow-hidden">
+    <article className="bg-bg-surface border border-border-subtle overflow-hidden">
       {/* Header strip */}
       <div className={`px-5 py-3 border-b border-border-subtle flex items-center justify-between flex-wrap gap-2 ${a.bg}`}>
         <div className="flex items-baseline gap-3 min-w-0">
@@ -196,7 +196,7 @@ export default function AccumulatorCard({ tier, legs }: Props) {
           <span className={`font-stat text-xl font-black ${a.text}`}>
             @ {combinedOdds.toFixed(2)}
           </span>
-          <span className="font-stat text-[11px] font-bold text-value bg-value/10 border border-value/30 px-2 py-0.5 rounded-full">
+          <span className="font-stat text-[11px] font-bold text-value bg-value/10 border border-value/30 px-2 py-0.5">
             +{combinedEV}% EV
           </span>
         </div>
@@ -214,10 +214,10 @@ export default function AccumulatorCard({ tier, legs }: Props) {
           {legs.map((l, i) => (
             <div
               key={`${l.pred.id}-${l.market}`}
-              className="flex items-center gap-3 bg-bg-elevated border border-border-subtle rounded-xl px-3 py-2.5"
+              className="flex items-center gap-3 bg-bg-elevated border border-border-subtle px-3 py-2.5"
             >
               <div
-                className={`w-6 h-6 rounded-md ${a.bg} ${a.text} font-stat font-black text-xs flex items-center justify-center shrink-0 border ${a.border}`}
+                className={`w-6 h-6 ${a.bg} ${a.text} font-stat font-black text-xs flex items-center justify-center shrink-0 border ${a.border}`}
               >
                 {i + 1}
               </div>
@@ -243,7 +243,7 @@ export default function AccumulatorCard({ tier, legs }: Props) {
 
         {/* Footer — return calc + actions */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="bg-bg-elevated border border-border-subtle rounded-lg px-3 py-2 text-sm">
+          <div className="bg-bg-elevated border border-border-subtle px-3 py-2 text-sm">
             <span className="text-fg-muted">£10 → </span>
             <span className="font-stat text-fg font-bold">
               £{(10 * combinedOdds).toFixed(2)}
@@ -253,7 +253,7 @@ export default function AccumulatorCard({ tier, legs }: Props) {
             <button
               type="button"
               onClick={copyText}
-              className="text-xs font-semibold py-2 px-3 rounded-lg border border-border-subtle bg-bg-elevated hover:bg-bg-base text-fg transition-all duration-200"
+              className="text-xs font-semibold py-2 px-3 border border-border-subtle bg-bg-elevated hover:bg-bg-base text-fg transition-all duration-200"
             >
               {copied ? '✓ Copied' : 'Copy'}
             </button>
@@ -261,7 +261,7 @@ export default function AccumulatorCard({ tier, legs }: Props) {
               href={PRIMARY_AFFILIATE.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs font-bold py-2 px-3 rounded-lg bg-brand hover:bg-brand-hover text-bg-base transition-all duration-200 inline-flex items-center gap-1.5"
+              className="text-xs font-bold py-2 px-3 bg-brand hover:bg-brand-hover text-bg-base transition-all duration-200 inline-flex items-center gap-1.5"
             >
               Place on {PRIMARY_AFFILIATE.short}
               <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">

@@ -33,10 +33,10 @@ function StatCard({ label, value, sub, color='default', icon }: { label:string;v
   const bg: Record<string,string> = { default:'bg-white/[0.06]', green:'bg-emerald-500/10', red:'bg-red-500/10', orange:'bg-orange-500/10', amber:'bg-amber-500/10' }
   const border: Record<string,string> = { default:'border-white/[0.07]', green:'border-white/[0.07]', red:'border-white/[0.07]', orange:'border-orange-500/20', amber:'border-white/[0.07]' }
   return (
-    <div className={`bg-[#161B26] border ${border[color] || 'border-white/[0.07]'} rounded-2xl p-5 hover:border-white/[0.12] transition-all`}>
+    <div className={`bg-[#161B26] border ${border[color] || 'border-white/[0.07]'} p-5 hover:border-white/[0.12] transition-all`}>
       <div className="flex items-start justify-between mb-3">
         <span className="text-slate-500 text-[10px] font-semibold uppercase tracking-wider">{label}</span>
-        <div className={`w-7 h-7 rounded-lg ${bg[color]} flex items-center justify-center ${c[color]}`}>{icon}</div>
+        <div className={`w-7 h-7 ${bg[color]} flex items-center justify-center ${c[color]}`}>{icon}</div>
       </div>
       <div className={`text-2xl font-black ${c[color]} mb-1`}>{value}</div>
       {sub && <div className="text-xs text-slate-600">{sub}</div>}
@@ -69,7 +69,7 @@ export default function StatsOverview({ bets }: { bets: BetSlip[] }) {
         <StatCard label="Avg Stake" value={s.avgStake.toFixed(2)} sub="Per bet"
           icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>}/>
         <StatCard label="Current Streak" color={s.currentStreakType === 'win' ? 'green' : s.currentStreakType === 'loss' ? 'red' : 'default'}
-          value={s.currentStreak > 0 ? `${s.currentStreak} ${s.currentStreakType === 'win' ? '🔥' : '❄️'}` : '—'}
+          value={s.currentStreak > 0 ? `${s.currentStreak}` : '—'}
           sub={s.currentStreakType ? `${s.currentStreakType === 'win' ? 'Winning' : 'Losing'} run` : 'No bets yet'}
           icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>}/>
         <StatCard label="Best Win Streak" value={s.bestWinStreak > 0 ? `${s.bestWinStreak} wins` : '—'} sub="All time record" color="amber"

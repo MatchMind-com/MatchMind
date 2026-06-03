@@ -84,7 +84,7 @@ export default function ExitIntentPopup({ subscriptionTier }: ExitIntentPopupPro
       style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)' }}
     >
       <div
-        className="relative w-full max-w-md bg-[#0F0F1A] border rounded-3xl overflow-hidden shadow-2xl"
+        className="relative w-full max-w-md bg-[#0F0F1A] border overflow-hidden shadow-2xl"
         style={{ borderColor: 'rgba(99,102,241,0.4)' }}
       >
         {/* Purple glow top */}
@@ -93,7 +93,7 @@ export default function ExitIntentPopup({ subscriptionTier }: ExitIntentPopupPro
         {/* Close */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all z-10 text-sm"
+          className="absolute top-4 right-4 w-8 h-8 bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all z-10 text-sm"
         >
           ✕
         </button>
@@ -102,8 +102,8 @@ export default function ExitIntentPopup({ subscriptionTier }: ExitIntentPopupPro
           {/* Emoji */}
           <div className="text-5xl mb-4">⚡</div>
 
-          <div className="inline-flex items-center gap-1.5 bg-red-500/15 border border-red-500/30 px-3 py-1 rounded-full mb-4">
-            <div className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />
+          <div className="inline-flex items-center gap-1.5 bg-red-500/15 border border-red-500/30 px-3 py-1 mb-4">
+            <div className="w-1.5 h-1.5 bg-red-400 animate-pulse" />
             <span className="text-red-400 text-xs font-bold uppercase tracking-wide">Limited Time Offer</span>
           </div>
 
@@ -121,7 +121,7 @@ export default function ExitIntentPopup({ subscriptionTier }: ExitIntentPopupPro
               <div key={i} className="flex items-center gap-2">
                 {i > 0 && <span className="text-slate-500 font-bold text-lg mb-4">:</span>}
                 <div className="text-center">
-                  <div className="w-14 h-14 bg-[#1A1A2E] border border-white/10 rounded-xl flex items-center justify-center">
+                  <div className="w-14 h-14 bg-[#1A1A2E] border border-white/10 flex items-center justify-center">
                     <span className="text-2xl font-black text-white font-mono">{val}</span>
                   </div>
                   <span className="text-slate-600 text-[10px] font-bold mt-1 block">{label}</span>
@@ -132,14 +132,14 @@ export default function ExitIntentPopup({ subscriptionTier }: ExitIntentPopupPro
 
           {/* Coupon code */}
           <div
-            className="flex items-center justify-between bg-[#1A1A2E] border border-dashed border-violet-500/40 rounded-2xl px-4 py-3 mb-5 cursor-pointer group"
+            className="flex items-center justify-between bg-[#1A1A2E] border border-dashed border-violet-500/40 px-4 py-3 mb-5 cursor-pointer group"
             onClick={handleCopyCode}
           >
             <div className="text-left">
               <div className="text-xs text-slate-500 mb-0.5">Your discount code</div>
               <div className="text-xl font-black text-violet-400 tracking-widest font-mono">MATCHMIND20</div>
             </div>
-            <button className="bg-violet-600/20 hover:bg-violet-600/40 border border-violet-500/30 text-violet-400 text-xs font-bold px-3 py-2 rounded-xl transition-all">
+            <button className="bg-violet-600/20 hover:bg-violet-600/40 border border-violet-500/30 text-violet-400 text-xs font-bold px-3 py-2 transition-all">
               {copied ? '✓ Copied!' : 'Copy'}
             </button>
           </div>
@@ -147,7 +147,7 @@ export default function ExitIntentPopup({ subscriptionTier }: ExitIntentPopupPro
           {/* CTA */}
           <a
             href="/api/stripe/create-checkout?plan=pro&coupon=MATCHMIND20"
-            className="block w-full text-center bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-violet-500/25 mb-3"
+            className="block w-full text-center bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold py-3.5 transition-all shadow-lg shadow-violet-500/25 mb-3"
           >
             Claim 20% Off → Start Free Trial
           </a>

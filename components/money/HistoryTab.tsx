@@ -392,9 +392,9 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-12 bg-bg-surface border border-border-subtle rounded-2xl animate-pulse" />
-        <div className="h-64 bg-bg-surface border border-border-subtle rounded-2xl animate-pulse" />
-        <div className="h-64 bg-bg-surface border border-border-subtle rounded-2xl animate-pulse" />
+        <div className="h-12 bg-bg-surface border border-border-subtle animate-pulse" />
+        <div className="h-64 bg-bg-surface border border-border-subtle animate-pulse" />
+        <div className="h-64 bg-bg-surface border border-border-subtle animate-pulse" />
       </div>
     )
   }
@@ -412,7 +412,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
     <section className="space-y-5">
       {/* Error banner (transient) */}
       {error && (
-        <div className="bg-loss/10 border border-loss/30 text-loss text-sm rounded-2xl p-3 flex items-center justify-between gap-3">
+        <div className="bg-loss/10 border border-loss/30 text-loss text-sm p-3 flex items-center justify-between gap-3">
           <span>{error}</span>
           <button
             type="button"
@@ -425,7 +425,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
       )}
 
       {/* FILTERS + ADD */}
-      <div className="bg-bg-surface border border-border-subtle rounded-2xl p-4 lg:p-5">
+      <div className="bg-bg-surface border border-border-subtle p-4 lg:p-5">
         <div className="flex flex-wrap items-end gap-3 lg:gap-4">
           {/* League */}
           <div className="min-w-[160px]">
@@ -435,7 +435,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
             <select
               value={league}
               onChange={(e) => setLeague(e.target.value)}
-              className="w-full bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
+              className="w-full bg-bg-base border border-border-subtle px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
             >
               <option value="all">All leagues</option>
               {/* Cross-link: ensure the value renders even if it's not in
@@ -459,7 +459,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
             <select
               value={betType}
               onChange={(e) => setBetType(e.target.value)}
-              className="w-full bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
+              className="w-full bg-bg-base border border-border-subtle px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
             >
               <option value="all">All markets</option>
               {betType !== 'all' && !betTypes.includes(betType) && (
@@ -492,7 +492,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
                   key={key}
                   type="button"
                   onClick={() => setResult(key)}
-                  className={`px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors border ${
+                  className={`px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors border ${
                     result === key
                       ? 'bg-brand text-white border-brand'
                       : 'bg-bg-base text-fg-secondary border-border-subtle hover:border-border-strong'
@@ -513,7 +513,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
               type="date"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
-              className="bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
+              className="bg-bg-base border border-border-subtle px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
             />
           </div>
           <div>
@@ -524,7 +524,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
               type="date"
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              className="bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
+              className="bg-bg-base border border-border-subtle px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
             />
           </div>
 
@@ -534,7 +534,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
             type="button"
             onClick={exportCSV}
             disabled={filtered.length === 0}
-            className="px-4 py-2 bg-bg-base hover:bg-bg-elevated border border-border-subtle hover:border-border-strong text-fg text-xs font-bold uppercase tracking-wider rounded-lg transition-colors disabled:opacity-40"
+            className="px-4 py-2 bg-bg-base hover:bg-bg-elevated border border-border-subtle hover:border-border-strong text-fg text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-40"
           >
             Export CSV
           </button>
@@ -542,7 +542,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
           <button
             type="button"
             onClick={() => setShowScanModal(true)}
-            className="px-4 py-2 bg-bg-base hover:bg-bg-elevated border border-brand/40 hover:border-brand text-brand text-xs font-bold uppercase tracking-wider rounded-lg transition-colors inline-flex items-center gap-1.5"
+            className="px-4 py-2 bg-bg-base hover:bg-bg-elevated border border-brand/40 hover:border-brand text-brand text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-1.5"
             title="Photograph a betting-shop slip and add it to your tracked history"
           >
             <span aria-hidden>📷</span> Scan slip
@@ -551,7 +551,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
           <button
             type="button"
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors"
+            className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider transition-colors"
           >
             + Add manual bet
           </button>
@@ -580,7 +580,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
 
       {/* BULK BAR */}
       {selected.size > 0 && (
-        <div className="bg-brand/10 border border-brand/40 rounded-2xl p-3 px-4 flex items-center justify-between gap-3">
+        <div className="bg-brand/10 border border-brand/40 p-3 px-4 flex items-center justify-between gap-3">
           <span className="text-fg text-sm font-semibold">
             <span className="font-stat">{selected.size}</span> selected
           </span>
@@ -595,7 +595,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
             <button
               type="button"
               onClick={deleteSelected}
-              className="px-3 py-1.5 bg-loss hover:opacity-90 text-white text-[11px] font-bold uppercase tracking-wider rounded-lg transition-opacity"
+              className="px-3 py-1.5 bg-loss hover:opacity-90 text-white text-[11px] font-bold uppercase tracking-wider transition-opacity"
             >
               Delete selected
             </button>
@@ -604,7 +604,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
       )}
 
       {/* TABLE */}
-      <div className="bg-bg-surface border border-border-subtle rounded-2xl overflow-hidden">
+      <div className="bg-bg-surface border border-border-subtle overflow-hidden">
         {isEmpty ? (
           <div className="p-10 text-center">
             <p className="text-fg font-bold text-base mb-2">No bets yet</p>
@@ -619,14 +619,14 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
               <button
                 type="button"
                 onClick={() => setShowScanModal(true)}
-                className="px-4 py-2 bg-bg-base hover:bg-bg-elevated border border-brand/40 hover:border-brand text-brand text-xs font-bold uppercase tracking-wider rounded-lg transition-colors inline-flex items-center gap-1.5"
+                className="px-4 py-2 bg-bg-base hover:bg-bg-elevated border border-brand/40 hover:border-brand text-brand text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-1.5"
               >
                 <span aria-hidden>📷</span> Scan slip
               </button>
               <button
                 type="button"
                 onClick={() => setShowAddModal(true)}
-                className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors"
+                className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider transition-colors"
               >
                 + Add manual bet
               </button>
@@ -725,7 +725,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
                                 ▶
                               </span>
                               <span>{r.match_name}</span>
-                              <span className="font-stat text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border border-brand/40 bg-brand/10 text-brand">
+                              <span className="font-stat text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 border border-brand/40 bg-brand/10 text-brand">
                                 {accaLegs!.length} legs
                               </span>
                             </button>
@@ -860,7 +860,7 @@ export default function HistoryTab({ currency, initialLeague, initialBetType }: 
           <button
             type="button"
             onClick={() => setShown((n) => n + PAGE_SIZE)}
-            className="px-5 py-2.5 bg-bg-surface hover:bg-bg-elevated border border-border-subtle hover:border-border-strong text-fg text-xs font-bold uppercase tracking-wider rounded-lg transition-colors"
+            className="px-5 py-2.5 bg-bg-surface hover:bg-bg-elevated border border-border-subtle hover:border-border-strong text-fg text-xs font-bold uppercase tracking-wider transition-colors"
           >
             Load more ({filtered.length - visible.length} remaining)
           </button>
@@ -955,7 +955,7 @@ function EditRowForm({
         <select
           value={result}
           onChange={(e) => setResult(e.target.value as BetRow['result'])}
-          className="w-full bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
+          className="w-full bg-bg-base border border-border-subtle px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
         >
           <option value="pending">Pending</option>
           <option value="win">Won</option>
@@ -973,7 +973,7 @@ function EditRowForm({
           min="1.01"
           value={odds}
           onChange={(e) => setOdds(e.target.value)}
-          className="w-full font-stat bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
+          className="w-full font-stat bg-bg-base border border-border-subtle px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
         />
       </div>
       <div>
@@ -986,7 +986,7 @@ function EditRowForm({
           min="0.01"
           value={stake}
           onChange={(e) => setStake(e.target.value)}
-          className="w-full font-stat bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
+          className="w-full font-stat bg-bg-base border border-border-subtle px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
         />
       </div>
       <div>
@@ -1008,7 +1008,7 @@ function EditRowForm({
           value={pl}
           onChange={(e) => setPl(e.target.value)}
           disabled={autoPL}
-          className="w-full font-stat bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand disabled:opacity-50"
+          className="w-full font-stat bg-bg-base border border-border-subtle px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand disabled:opacity-50"
         />
       </div>
       <div>
@@ -1019,7 +1019,7 @@ function EditRowForm({
           type="text"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="w-full bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
+          className="w-full bg-bg-base border border-border-subtle px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
           placeholder="optional"
         />
       </div>
@@ -1028,7 +1028,7 @@ function EditRowForm({
           type="button"
           onClick={onCancel}
           disabled={busy}
-          className="px-3 py-2 bg-bg-base border border-border-subtle hover:border-border-strong text-fg-secondary text-xs font-bold uppercase tracking-wider rounded-lg transition-colors"
+          className="px-3 py-2 bg-bg-base border border-border-subtle hover:border-border-strong text-fg-secondary text-xs font-bold uppercase tracking-wider transition-colors"
         >
           Cancel
         </button>
@@ -1036,7 +1036,7 @@ function EditRowForm({
           type="button"
           onClick={submit}
           disabled={busy}
-          className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors disabled:opacity-50"
+          className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
         >
           {busy ? 'Saving…' : 'Save changes'}
         </button>
@@ -1108,7 +1108,7 @@ function AddBetModal({
     >
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
       <div
-        className="relative bg-bg-surface border border-border-strong rounded-2xl p-5 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto"
+        className="relative bg-bg-surface border border-border-strong p-5 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
@@ -1237,7 +1237,7 @@ function AddBetModal({
         </div>
 
         {err && (
-          <p className="mt-3 text-loss text-xs bg-loss/10 border border-loss/30 rounded-lg p-2">
+          <p className="mt-3 text-loss text-xs bg-loss/10 border border-loss/30 p-2">
             {err}
           </p>
         )}
@@ -1247,7 +1247,7 @@ function AddBetModal({
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="px-4 py-2 bg-bg-base border border-border-subtle hover:border-border-strong text-fg-secondary text-xs font-bold uppercase tracking-wider rounded-lg transition-colors"
+            className="px-4 py-2 bg-bg-base border border-border-subtle hover:border-border-strong text-fg-secondary text-xs font-bold uppercase tracking-wider transition-colors"
           >
             Cancel
           </button>
@@ -1255,7 +1255,7 @@ function AddBetModal({
             type="button"
             onClick={submit}
             disabled={saving}
-            className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Add bet'}
           </button>
@@ -1266,7 +1266,7 @@ function AddBetModal({
 }
 
 const inputCls =
-  'w-full bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand'
+  'w-full bg-bg-base border border-border-subtle px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand'
 
 function Field({
   label,
@@ -1302,7 +1302,7 @@ function SummaryCard({
   const color =
     accent === 'success' ? 'text-success' : accent === 'loss' ? 'text-loss' : 'text-fg'
   return (
-    <div className="bg-bg-surface border border-border-subtle rounded-2xl p-4 lg:p-5">
+    <div className="bg-bg-surface border border-border-subtle p-4 lg:p-5">
       <p className="eyebrow mb-2">{label}</p>
       <p className={`font-stat text-2xl lg:text-3xl font-bold leading-none ${color}`}>
         {value}
@@ -1360,14 +1360,14 @@ function Td({
 function ResultPill({ result }: { result: BetRow['result'] }) {
   if (result === 'pending') {
     return (
-      <span className="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-border-subtle text-fg-muted">
+      <span className="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border border-border-subtle text-fg-muted">
         Pending
       </span>
     )
   }
   if (result === 'void') {
     return (
-      <span className="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-border-subtle text-fg-muted">
+      <span className="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border border-border-subtle text-fg-muted">
         Void
       </span>
     )
@@ -1378,7 +1378,7 @@ function ResultPill({ result }: { result: BetRow['result'] }) {
     : 'bg-loss/15 border-loss/30 text-loss'
   return (
     <span
-      className={`inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${cls}`}
+      className={`inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border ${cls}`}
     >
       {isWin ? 'Won' : 'Lost'}
     </span>
@@ -1412,7 +1412,7 @@ function ActionButton({
       onClick={onClick}
       title={title}
       disabled={disabled}
-      className={`inline-flex items-center justify-center w-7 h-7 rounded-lg border text-xs font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${cls}`}
+      className={`inline-flex items-center justify-center w-7 h-7 border text-xs font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${cls}`}
     >
       {children}
     </button>

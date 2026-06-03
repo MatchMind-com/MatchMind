@@ -51,7 +51,7 @@ interface Prediction { winner: string; advice: string; homeWinPercent: string; d
 function FormDot({ result }: { result: 'W' | 'L' | 'D' }) {
   const colors = { W: 'bg-emerald-500', L: 'bg-red-500', D: 'bg-slate-500' }
   return (
-    <div className={`w-6 h-6 rounded-full ${colors[result]} flex items-center justify-center`}>
+    <div className={`w-6 h-6 ${colors[result]} flex items-center justify-center`}>
       <span className="text-[10px] font-black text-white">{result}</span>
     </div>
   )
@@ -95,7 +95,7 @@ function StatRow({
       </div>
 
       {/* Bar */}
-      <div className="flex h-1.5 rounded-full overflow-hidden bg-white/[0.06]">
+      <div className="flex h-1.5 overflow-hidden bg-white/[0.06]">
         <div
           className={`h-full rounded-l-full transition-all duration-500 ${homeWins ? 'bg-blue-500' : awayWins ? 'bg-white/20' : 'bg-white/20'}`}
           style={{ width: `${isPercent ? h : homePct}%` }}
@@ -150,13 +150,13 @@ export default function MatchDetailModal({ fixtureId, onClose }: { fixtureId: nu
       style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="w-full sm:max-w-2xl bg-[#060914] border border-white/10 rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+      <div className="w-full sm:max-w-2xl bg-[#060914] border border-white/10 rounded-t-3xl sm:overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
 
         {/* Header */}
         <div className="relative px-6 pt-6 pb-4 border-b border-white/8 flex-shrink-0"
           style={{ background: 'linear-gradient(180deg, #0e1628 0%, #060914 100%)' }}>
           <button onClick={onClose}
-            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all">
+            className="absolute top-4 right-4 w-8 h-8 bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all">
             ✕
           </button>
 
@@ -192,7 +192,7 @@ export default function MatchDetailModal({ fixtureId, onClose }: { fixtureId: nu
                   )}
                   {isLive ? (
                     <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="w-1.5 h-1.5 bg-emerald-400 animate-pulse" />
                       {data.fixture.status === 'HT' ? 'Half Time' : `${data.fixture.elapsed}'`}
                     </span>
                   ) : (
@@ -234,7 +234,7 @@ export default function MatchDetailModal({ fixtureId, onClose }: { fixtureId: nu
         <div className="overflow-y-auto flex-1 p-5">
           {loading && (
             <div className="space-y-3">
-              {[...Array(4)].map((_, i) => <div key={i} className="h-12 rounded-lg bg-white/5 animate-pulse" />)}
+              {[...Array(4)].map((_, i) => <div key={i} className="h-12 bg-white/5 animate-pulse" />)}
             </div>
           )}
 
@@ -243,7 +243,7 @@ export default function MatchDetailModal({ fixtureId, onClose }: { fixtureId: nu
             <div className="space-y-4">
               {/* AI Prediction */}
               {data.prediction && (
-                <div className="rounded-xl border border-blue-500/20 bg-blue-950/20 p-4">
+                <div className="border border-blue-500/20 bg-blue-950/20 p-4">
                   <div className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">AI Prediction</div>
                   <div className="flex justify-between mb-3">
                     {[
@@ -269,7 +269,7 @@ export default function MatchDetailModal({ fixtureId, onClose }: { fixtureId: nu
                   { team: data.home, label: 'Home Injuries' },
                   { team: data.away, label: 'Away Injuries' },
                 ].map(({ team, label }) => (
-                  <div key={label} className="rounded-xl border border-white/8 bg-white/3 p-3">
+                  <div key={label} className="border border-white/8 bg-white/3 p-3">
                     <div className="text-[10px] text-slate-500 mb-1">{label}</div>
                     <div className="flex items-center gap-2">
                       <img src={team.logo} alt={team.name} className="w-5 h-5 object-contain" />
@@ -284,7 +284,7 @@ export default function MatchDetailModal({ fixtureId, onClose }: { fixtureId: nu
 
               {/* Venue info */}
               {data.fixture.venue && (
-                <div className="rounded-xl border border-white/8 bg-white/3 p-4">
+                <div className="border border-white/8 bg-white/3 p-4">
                   <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Venue</div>
                   <div className="text-sm font-semibold text-white">{data.fixture.venue}</div>
                   {data.fixture.city && <div className="text-xs text-slate-400">{data.fixture.city}</div>}
@@ -366,7 +366,7 @@ export default function MatchDetailModal({ fixtureId, onClose }: { fixtureId: nu
                         </div>
 
                         {/* Season record */}
-                        <div className="flex items-center justify-between bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3">
+                        <div className="flex items-center justify-between bg-white/[0.03] border border-white/[0.06] px-4 py-3">
                           <div className="text-center">
                             <p className="text-white font-black text-lg leading-none">{hs.wins}W {hs.draws}D {hs.losses}L</p>
                             <p className="text-slate-500 text-[10px] mt-0.5">{hs.played} played</p>
@@ -379,7 +379,7 @@ export default function MatchDetailModal({ fixtureId, onClose }: { fixtureId: nu
                         </div>
 
                         {/* Stat rows */}
-                        <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 divide-y divide-white/[0.04]">
+                        <div className="bg-white/[0.02] border border-white/[0.05] px-4 divide-y divide-white/[0.04]">
                           <StatRow label="Win Rate" home={hs.win_rate} away={as_.win_rate} isPercent />
                           <StatRow label="Goals Scored / Game" home={hs.goals_for_avg} away={as_.goals_for_avg} highlight />
                           <StatRow label="Goals Conceded / Game" home={hs.goals_against_avg} away={as_.goals_against_avg} />
@@ -393,7 +393,7 @@ export default function MatchDetailModal({ fixtureId, onClose }: { fixtureId: nu
                         {/* Home/Away splits */}
                         <div className="grid grid-cols-2 gap-3">
                           {/* Home record */}
-                          <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3">
+                          <div className="bg-white/[0.03] border border-white/[0.06] p-3">
                             <div className="flex items-center gap-1.5 mb-2">
                               <img src={data.home.logo} alt="" className="w-4 h-4 object-contain" />
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Home Record</p>
@@ -402,7 +402,7 @@ export default function MatchDetailModal({ fixtureId, onClose }: { fixtureId: nu
                             <p className="text-emerald-400 text-xs mt-1">{hs.home.goals_for} scored · {hs.home.goals_against} conceded</p>
                           </div>
                           {/* Away record */}
-                          <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3">
+                          <div className="bg-white/[0.03] border border-white/[0.06] p-3">
                             <div className="flex items-center gap-1.5 mb-2">
                               <img src={data.away.logo} alt="" className="w-4 h-4 object-contain" />
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Away Record</p>
@@ -415,11 +415,11 @@ export default function MatchDetailModal({ fixtureId, onClose }: { fixtureId: nu
                         {/* Biggest results */}
                         {(hs.biggest_win || as_.biggest_win) && (
                           <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3 text-center">
+                            <div className="bg-white/[0.03] border border-white/[0.06] p-3 text-center">
                               <p className="text-[10px] text-slate-500 mb-1">Biggest Win</p>
                               <p className="text-emerald-400 font-black text-lg">{hs.biggest_win || '—'}</p>
                             </div>
-                            <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3 text-center">
+                            <div className="bg-white/[0.03] border border-white/[0.06] p-3 text-center">
                               <p className="text-[10px] text-slate-500 mb-1">Biggest Win</p>
                               <p className="text-emerald-400 font-black text-lg">{as_.biggest_win || '—'}</p>
                             </div>
@@ -444,7 +444,7 @@ export default function MatchDetailModal({ fixtureId, onClose }: { fixtureId: nu
                   <div className="flex items-center gap-2 mb-3">
                     <img src={team.logo} alt={team.name} className="w-5 h-5 object-contain" />
                     <span className="text-sm font-bold text-white">{team.name}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                    <span className={`text-xs px-2 py-0.5 font-medium
                       ${injuries.length === 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
                       {injuries.length === 0 ? 'All fit' : `${injuries.length} out`}
                     </span>
@@ -454,13 +454,13 @@ export default function MatchDetailModal({ fixtureId, onClose }: { fixtureId: nu
                   ) : (
                     <div className="space-y-2">
                       {injuries.map((inj, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-white/3 border border-white/5">
-                          {inj.photo && <img src={inj.photo} alt={inj.player} className="w-8 h-8 rounded-full object-cover bg-slate-800" />}
+                        <div key={i} className="flex items-center gap-3 p-3 bg-white/3 border border-white/5">
+                          {inj.photo && <img src={inj.photo} alt={inj.player} className="w-8 h-8 object-cover bg-slate-800" />}
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-semibold text-white truncate">{inj.player}</div>
                             <div className="text-xs text-slate-400">{inj.reason || 'Injury'}</div>
                           </div>
-                          <span className={`text-[10px] px-2 py-1 rounded-full font-medium flex-shrink-0
+                          <span className={`text-[10px] px-2 py-1 font-medium flex-shrink-0
                             ${inj.type === 'Questionable' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}`}>
                             {inj.type === 'Questionable' ? 'Doubt' : 'Out'}
                           </span>
@@ -484,7 +484,7 @@ export default function MatchDetailModal({ fixtureId, onClose }: { fixtureId: nu
                 const homeWon = match.winner === match.homeTeam
                 const awayWon = match.winner === match.awayTeam
                 return (
-                  <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-white/3 border border-white/5">
+                  <div key={i} className="flex items-center gap-3 p-3 bg-white/3 border border-white/5">
                     <span className="text-[10px] text-slate-600 w-20 flex-shrink-0">{date}</span>
                     <div className="flex-1 flex items-center justify-between gap-2">
                       <span className={`text-xs font-semibold truncate ${homeWon ? 'text-white' : 'text-slate-500'}`}>
@@ -522,7 +522,7 @@ export default function MatchDetailModal({ fixtureId, onClose }: { fixtureId: nu
                       {form.map((m, i) => {
                         const date = new Date(m.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
                         return (
-                          <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/3 border border-white/5">
+                          <div key={i} className="flex items-center gap-3 p-2.5 bg-white/3 border border-white/5">
                             <FormDot result={m.result} />
                             <span className="text-xs text-slate-400 w-14 flex-shrink-0">{date}</span>
                             <span className="text-xs text-slate-300 flex-1 truncate">

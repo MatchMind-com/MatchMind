@@ -235,7 +235,7 @@ export default function BankrollTab({
           const hasPending = exposure != null && exposure.in_play_stake > 0
           const headlineValue = hasPending ? exposure!.available : currentBankroll
           return (
-            <div className="bg-bg-surface border border-border-subtle rounded-2xl p-5 lg:p-7">
+            <div className="bg-bg-surface border border-border-subtle p-5 lg:p-7">
               <p className="eyebrow mb-3">{hasPending ? 'WALLET (FREE TO STAKE)' : 'CURRENT BANKROLL'}</p>
               <p className="font-stat text-fg text-5xl md:text-6xl leading-none tracking-tight">
                 {currency}
@@ -257,7 +257,7 @@ export default function BankrollTab({
                   pending bets. Headline above is wallet; this row reveals
                   the locked stake + total + max payout. */}
               {hasPending && (
-                <div className="mt-5 grid grid-cols-3 gap-3 p-3 rounded-xl bg-bg-base/50 border border-border-subtle">
+                <div className="mt-5 grid grid-cols-3 gap-3 p-3 bg-bg-base/50 border border-border-subtle">
                   <div>
                     <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">In play</p>
                     <p className="font-stat text-loss text-base font-bold tabular-nums leading-tight">
@@ -290,7 +290,7 @@ export default function BankrollTab({
         })()}
 
         {/* TRAJECTORY CHART */}
-        <div className="bg-bg-surface border border-border-subtle rounded-2xl p-5">
+        <div className="bg-bg-surface border border-border-subtle p-5">
           <div className="flex items-baseline justify-between mb-4">
             <h3 className="eyebrow">30-DAY TRAJECTORY</h3>
             <span className="text-fg-muted text-[11px] font-stat">
@@ -305,7 +305,7 @@ export default function BankrollTab({
         </div>
 
         {/* RECENT SNAPSHOTS — tiny mono table */}
-        <div className="bg-bg-surface border border-border-subtle rounded-2xl p-5">
+        <div className="bg-bg-surface border border-border-subtle p-5">
           <h3 className="eyebrow mb-4">LAST 5 SNAPSHOTS</h3>
           {recent.length === 0 ? (
             <p className="text-fg-muted text-sm py-3">
@@ -356,13 +356,13 @@ export default function BankrollTab({
       {/* ───── Right column — settings + quick deposit ───── */}
       <div className="lg:col-span-2 space-y-4 lg:space-y-6">
         {error && (
-          <div className="bg-loss/10 border border-loss/30 text-loss text-xs rounded-xl px-4 py-3">
+          <div className="bg-loss/10 border border-loss/30 text-loss text-xs px-4 py-3">
             {error}
           </div>
         )}
 
         {/* SETTINGS */}
-        <div className="bg-bg-surface border border-border-subtle rounded-2xl p-5 space-y-5">
+        <div className="bg-bg-surface border border-border-subtle p-5 space-y-5">
           <h3 className="eyebrow">SETTINGS</h3>
 
           {/* Starting bankroll */}
@@ -371,7 +371,7 @@ export default function BankrollTab({
               Starting bankroll
             </label>
             <div className="flex gap-2">
-              <div className="flex-1 flex items-center bg-bg-base border border-border-subtle rounded-lg focus-within:border-brand transition-colors">
+              <div className="flex-1 flex items-center bg-bg-base border border-border-subtle focus-within:border-brand transition-colors">
                 <span className="pl-3 text-fg-muted font-stat">{currency}</span>
                 <input
                   type="number"
@@ -386,7 +386,7 @@ export default function BankrollTab({
                 type="button"
                 onClick={saveStartingBankroll}
                 disabled={savingStarting || !startingDraft}
-                className="px-3 py-2 bg-brand hover:opacity-90 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-opacity disabled:opacity-40"
+                className="px-3 py-2 bg-brand hover:opacity-90 text-white text-xs font-bold uppercase tracking-wider transition-opacity disabled:opacity-40"
               >
                 {savingStarting ? '...' : 'Save'}
               </button>
@@ -404,7 +404,7 @@ export default function BankrollTab({
                   key={c}
                   type="button"
                   onClick={() => onCurrencyChange(c)}
-                  className={`flex-1 py-2 rounded-lg text-base font-stat font-bold transition-colors border ${
+                  className={`flex-1 py-2 text-base font-stat font-bold transition-colors border ${
                     currency === c
                       ? 'bg-brand text-white border-brand'
                       : 'bg-bg-base text-fg-secondary border-border-subtle hover:border-border-strong'
@@ -425,7 +425,7 @@ export default function BankrollTab({
               Loss limit
             </label>
             <div className="flex gap-2">
-              <div className="flex-1 flex items-center bg-bg-base border border-border-subtle rounded-lg focus-within:border-brand transition-colors">
+              <div className="flex-1 flex items-center bg-bg-base border border-border-subtle focus-within:border-brand transition-colors">
                 <span className="pl-3 text-fg-muted font-stat">{currency}</span>
                 <input
                   type="number"
@@ -440,7 +440,7 @@ export default function BankrollTab({
                 type="button"
                 onClick={saveLossLimit}
                 disabled={savingLossLimit}
-                className="px-3 py-2 bg-bg-elevated hover:bg-border-subtle text-fg text-xs font-bold uppercase tracking-wider rounded-lg border border-border-subtle transition-colors disabled:opacity-40"
+                className="px-3 py-2 bg-bg-elevated hover:bg-border-subtle text-fg text-xs font-bold uppercase tracking-wider border border-border-subtle transition-colors disabled:opacity-40"
               >
                 {savingLossLimit ? '...' : 'Save'}
               </button>
@@ -456,7 +456,7 @@ export default function BankrollTab({
               type="button"
               onClick={resetBankroll}
               disabled={resetting}
-              className="w-full py-2.5 bg-loss/10 hover:bg-loss/20 text-loss text-xs font-bold uppercase tracking-wider rounded-lg border border-loss/25 transition-colors disabled:opacity-40"
+              className="w-full py-2.5 bg-loss/10 hover:bg-loss/20 text-loss text-xs font-bold uppercase tracking-wider border border-loss/25 transition-colors disabled:opacity-40"
             >
               {resetting ? 'Resetting…' : 'Reset bankroll'}
             </button>
@@ -467,10 +467,10 @@ export default function BankrollTab({
         </div>
 
         {/* QUICK DEPOSIT */}
-        <div className="bg-bg-surface border border-border-subtle rounded-2xl p-5">
+        <div className="bg-bg-surface border border-border-subtle p-5">
           <h3 className="eyebrow mb-4">QUICK DEPOSIT</h3>
           <div className="flex gap-2">
-            <div className="flex-1 flex items-center bg-bg-base border border-border-subtle rounded-lg focus-within:border-brand transition-colors">
+            <div className="flex-1 flex items-center bg-bg-base border border-border-subtle focus-within:border-brand transition-colors">
               <span className="pl-3 text-fg-muted font-stat">{currency}</span>
               <input
                 type="number"
@@ -488,7 +488,7 @@ export default function BankrollTab({
               type="button"
               onClick={quickDeposit}
               disabled={depositing || !depositAmount}
-              className="px-4 py-2 bg-brand hover:opacity-90 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-opacity disabled:opacity-40"
+              className="px-4 py-2 bg-brand hover:opacity-90 text-white text-xs font-bold uppercase tracking-wider transition-opacity disabled:opacity-40"
             >
               {depositing ? '…' : '+ Add'}
             </button>
@@ -553,7 +553,7 @@ function TrajectoryChart({
   if (!loaded) {
     return (
       <div className="h-[240px] flex items-center justify-center">
-        <div className="w-full h-full bg-bg-base rounded-lg animate-pulse" />
+        <div className="w-full h-full bg-bg-base animate-pulse" />
       </div>
     )
   }

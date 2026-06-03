@@ -77,10 +77,10 @@ export default function SuggestionsPanel({ userId, bets }: { userId: string; bet
 
   function SuggestionCard({ s, blurred }: { s: Suggestion; blurred?: boolean }) {
     return (
-      <div className={`border rounded-2xl p-6 relative ${colors[s.type]} ${blurred ? 'select-none' : ''}`}>
-        {blurred && <div className="absolute inset-0 backdrop-blur-[5px] bg-[#0B0B14]/40 rounded-2xl z-10" />}
+      <div className={`border p-6 relative ${colors[s.type]} ${blurred ? 'select-none' : ''}`}>
+        {blurred && <div className="absolute inset-0 backdrop-blur-[5px] bg-[#0B0B14]/40 z-10" />}
         <div className="flex items-start gap-4">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${iconColors[s.type]}`}>{icons[s.type]}</div>
+          <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${iconColors[s.type]}`}>{icons[s.type]}</div>
           <div>
             <h3 className="text-white font-semibold mb-2">{s.title}</h3>
             <p className="text-slate-300 text-sm leading-relaxed mb-3">{s.insight}</p>
@@ -103,9 +103,9 @@ export default function SuggestionsPanel({ userId, bets }: { userId: string; bet
         </div>
         {!showDemo && (
           <button onClick={generateSuggestions} disabled={loading || bets.length === 0}
-            className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-violet-500/20">
+            className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 transition-all shadow-lg shadow-violet-500/20">
             {loading ? (
-              <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Analysing...</>
+              <><div className="w-4 h-4 border-2 border-white/30 border-t-white animate-spin"/>Analysing...</>
             ) : (
               <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/></svg>{generated ? 'Refresh Analysis' : 'Analyse My Bets'}</>
             )}
@@ -118,7 +118,7 @@ export default function SuggestionsPanel({ userId, bets }: { userId: string; bet
         <div className="relative">
           {/* Preview label */}
           <div className="flex items-center gap-2 mb-4">
-            <span className="bg-violet-500/15 border border-violet-500/25 text-violet-300 text-xs font-semibold px-3 py-1 rounded-full">
+            <span className="bg-violet-500/15 border border-violet-500/25 text-violet-300 text-xs font-semibold px-3 py-1">
               👀 Preview — Example Analysis
             </span>
             <span className="text-white/30 text-xs">This is what your AI coaching report looks like</span>
@@ -143,8 +143,8 @@ export default function SuggestionsPanel({ userId, bets }: { userId: string; bet
 
             {/* Unlock overlay */}
             <div className="absolute inset-0 flex items-center justify-center z-20">
-              <div className="bg-[#13131F]/95 border border-violet-500/30 rounded-2xl p-8 text-center max-w-sm mx-4 shadow-2xl shadow-violet-900/30">
-                <div className="w-14 h-14 bg-violet-600/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <div className="bg-[#13131F]/95 border border-violet-500/30 p-8 text-center max-w-sm mx-4 shadow-2xl shadow-violet-900/30">
+                <div className="w-14 h-14 bg-violet-600/20 flex items-center justify-center mx-auto mb-4">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 </div>
                 <h3 className="text-white font-bold text-lg mb-2">Unlock your real analysis</h3>
@@ -152,7 +152,7 @@ export default function SuggestionsPanel({ userId, bets }: { userId: string; bet
                   Log your first bet, mark it won or lost, and the AI will analyse your actual patterns — not this example.
                 </p>
                 <Link href="/dashboard"
-                  className="block bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold text-sm px-6 py-3 rounded-xl transition-all shadow-lg shadow-violet-500/20">
+                  className="block bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold text-sm px-6 py-3 transition-all shadow-lg shadow-violet-500/20">
                   Add My First Bet →
                 </Link>
               </div>
@@ -163,20 +163,20 @@ export default function SuggestionsPanel({ userId, bets }: { userId: string; bet
 
       {/* Normal state — bets exist, not yet generated */}
       {!showDemo && bets.length > 0 && !generated && !loading && (
-        <div className="bg-gradient-to-br from-violet-600/10 to-indigo-600/10 border border-violet-500/20 rounded-2xl p-8 text-center">
-          <div className="w-14 h-14 bg-violet-600/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <div className="bg-gradient-to-br from-violet-600/10 to-indigo-600/10 border border-violet-500/20 p-8 text-center">
+          <div className="w-14 h-14 bg-violet-600/20 flex items-center justify-center mx-auto mb-4">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           </div>
           <h3 className="text-white font-semibold mb-2">Ready to analyse {settled.length} settled bet{settled.length !== 1 ? 's' : ''}</h3>
           <p className="text-slate-400 text-sm mb-6">The AI will examine your win rates by league and bet type, bankroll trends, streak patterns, and give you specific actionable recommendations.</p>
           <button onClick={generateSuggestions}
-            className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-sm font-semibold px-8 py-3 rounded-xl transition-all shadow-lg shadow-violet-500/20">
+            className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-sm font-semibold px-8 py-3 transition-all shadow-lg shadow-violet-500/20">
             Generate My Insights
           </button>
         </div>
       )}
 
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-sm mt-4">{error}</div>}
+      {error && <div className="bg-red-500/10 border border-red-500/20 p-4 text-red-400 text-sm mt-4">{error}</div>}
 
       {suggestions.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

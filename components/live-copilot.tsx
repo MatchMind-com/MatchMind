@@ -205,8 +205,8 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex h-2 w-2 bg-emerald-500"></span>
               </span>
               <span className="text-[11px] font-semibold uppercase tracking-widest text-emerald-400">
                 AI is watching
@@ -224,7 +224,7 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
           </div>
           <button
             onClick={onClose}
-            className="ml-3 text-white/40 hover:text-white p-1 rounded-lg hover:bg-white/5 transition"
+            className="ml-3 text-white/40 hover:text-white p-1 hover:bg-white/5 transition"
             aria-label="Close"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -275,7 +275,7 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
                   />
                 )}
                 {hasOdds && (
-                  <div className="rounded-lg bg-white/[0.03] border border-white/5 p-2">
+                  <div className="bg-white/[0.03] border border-white/5 p-2">
                     <div className="text-white/40 uppercase tracking-wider mb-1 text-center">Odds</div>
                     <div className="text-center text-white/80 font-semibold">
                       {state.odds.home ?? '–'} / {state.odds.draw ?? '–'} / {state.odds.away ?? '–'}
@@ -290,7 +290,7 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
         {/* Feed */}
         <div ref={feedRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
           {error && (
-            <div className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3">
+            <div className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/20 p-3">
               {error}
             </div>
           )}
@@ -306,7 +306,7 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
             if (m.kind === 'user') {
               return (
                 <div key={m.id} className="flex justify-end">
-                  <div className="max-w-[85%] rounded-2xl bg-blue-500/80 text-white px-3.5 py-2 text-sm leading-snug">
+                  <div className="max-w-[85%] bg-blue-500/80 text-white px-3.5 py-2 text-sm leading-snug">
                     {m.text}
                   </div>
                 </div>
@@ -315,7 +315,7 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
             if (m.kind === 'reply') {
               return (
                 <div key={m.id} className="flex justify-start flex-col items-start gap-2">
-                  <div className="max-w-[85%] rounded-2xl bg-white/[0.06] border border-white/10 px-3.5 py-2 text-sm text-white/90 leading-snug">
+                  <div className="max-w-[85%] bg-white/[0.06] border border-white/10 px-3.5 py-2 text-sm text-white/90 leading-snug">
                     {m.text}
                   </div>
                   {m.betRec && <BetRecButton bet={m.betRec} />}
@@ -326,7 +326,7 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
             return (
               <div
                 key={m.id}
-                className="rounded-2xl bg-blue-500/5 border border-blue-500/20 p-3 text-sm text-white/90 leading-snug"
+                className="bg-blue-500/5 border border-blue-500/20 p-3 text-sm text-white/90 leading-snug"
               >
                 <div className="text-[10px] uppercase tracking-widest text-blue-300/80 mb-1.5 flex items-center justify-between">
                   <span>Co-Pilot</span>
@@ -342,7 +342,7 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
           })}
           {sending && (
             <div className="flex justify-start">
-              <div className="rounded-2xl bg-white/[0.04] border border-white/10 px-3.5 py-2 text-xs text-white/40 italic">
+              <div className="bg-white/[0.04] border border-white/10 px-3.5 py-2 text-xs text-white/40 italic">
                 Co-Pilot is thinking…
               </div>
             </div>
@@ -360,12 +360,12 @@ export default function LiveCoPilot({ fixtureId, open, onClose, initialTeams }: 
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask the Co-Pilot…"
             disabled={sending}
-            className="flex-1 bg-white/[0.05] border border-white/10 rounded-xl px-3.5 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/40 disabled:opacity-50"
+            className="flex-1 bg-white/[0.05] border border-white/10 px-3.5 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/40 disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={sending || !input.trim()}
-            className="rounded-xl bg-blue-500 hover:bg-blue-400 disabled:bg-white/10 disabled:text-white/30 text-white text-sm font-semibold px-4 py-2 transition"
+            className="bg-blue-500 hover:bg-blue-400 disabled:bg-white/10 disabled:text-white/30 text-white text-sm font-semibold px-4 py-2 transition"
           >
             Send
           </button>
@@ -391,7 +391,7 @@ function Stat({
   fmt: (v: number | null) => string
 }) {
   return (
-    <div className="rounded-lg bg-white/[0.03] border border-white/5 p-2">
+    <div className="bg-white/[0.03] border border-white/5 p-2">
       <div className="text-white/40 uppercase tracking-wider mb-1 text-center">{label}</div>
       <div className="text-center text-white/80 font-semibold">
         {fmt(home)} <span className="text-white/30">·</span> {fmt(away)}
@@ -430,7 +430,7 @@ function BetRecButton({ bet }: { bet: NonNullable<BetRec> }) {
 
   if (done) {
     return (
-      <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 text-xs text-emerald-300 flex items-center gap-2">
+      <div className="bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 text-xs text-emerald-300 flex items-center gap-2">
         <span>✓</span>
         <span>Added to your bet tracker</span>
       </div>
@@ -443,7 +443,7 @@ function BetRecButton({ bet }: { bet: NonNullable<BetRec> }) {
   const stake = bet.stake ? ` · £${bet.stake}` : ""
 
   return (
-    <div className="rounded-xl bg-blue-500/10 border border-blue-500/30 p-3 space-y-2 max-w-[85%]">
+    <div className="bg-blue-500/10 border border-blue-500/30 p-3 space-y-2 max-w-[85%]">
       <div className="text-[10px] uppercase tracking-widest text-blue-300/80">AI Bet Suggestion</div>
       {homeAway && <div className="text-sm text-white/90 font-semibold">{homeAway}</div>}
       <div className="text-xs text-white/70">
@@ -452,7 +452,7 @@ function BetRecButton({ bet }: { bet: NonNullable<BetRec> }) {
       <button
         onClick={add}
         disabled={adding}
-        className="w-full rounded-lg bg-blue-500 hover:bg-blue-400 disabled:opacity-50 text-white text-xs font-semibold py-2 transition-colors"
+        className="w-full bg-blue-500 hover:bg-blue-400 disabled:opacity-50 text-white text-xs font-semibold py-2 transition-colors"
       >
         {adding ? "Adding…" : "✚ Add to my bets"}
       </button>

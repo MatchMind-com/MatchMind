@@ -171,7 +171,7 @@ export default function NewsPanel() {
   }, [news, filter, languageFilter])
 
   return (
-    <div className="flex flex-col h-full bg-[#0E1628] rounded-2xl border border-white/10 overflow-hidden">
+    <div className="flex flex-col h-full bg-[#0E1628] border border-white/10 overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-white/10 shrink-0">
         <div className="flex items-center justify-between mb-3">
@@ -194,12 +194,12 @@ export default function NewsPanel() {
             value={filter}
             onChange={e => setFilter(e.target.value)}
             placeholder="Filter: Galatasaray, Real Madrid, Champions League..."
-            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+            className="flex-1 bg-white/5 border border-white/10 px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
           />
           <button
             onClick={fetchNews}
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+            className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium px-4 py-2 transition-colors disabled:opacity-50 whitespace-nowrap"
           >
             {loading ? '...' : 'Refresh'}
           </button>
@@ -210,7 +210,7 @@ export default function NewsPanel() {
           <div className="mt-3 flex flex-wrap gap-1.5">
             <button
               onClick={() => setLanguageFilter('All')}
-              className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
+              className={`text-[10px] px-2 py-1 border transition-colors ${
                 languageFilter === 'All'
                   ? 'bg-blue-500/30 text-blue-100 border-blue-400/60'
                   : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'
@@ -224,7 +224,7 @@ export default function NewsPanel() {
                 <button
                   key={lang}
                   onClick={() => setLanguageFilter(lang)}
-                  className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
+                  className={`text-[10px] px-2 py-1 border transition-colors ${
                     active
                       ? 'bg-blue-500/30 text-blue-100 border-blue-400/60'
                       : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'
@@ -255,7 +255,7 @@ export default function NewsPanel() {
               {[0, 1, 2].map(i => (
                 <div
                   key={i}
-                  className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+                  className="w-2 h-2 bg-blue-400 animate-bounce"
                   style={{ animationDelay: `${i * 0.15}s` }}
                 />
               ))}
@@ -291,7 +291,7 @@ export default function NewsPanel() {
                         src={item.thumbnail}
                         alt=""
                         loading="lazy"
-                        className="w-16 h-16 rounded-lg object-cover shrink-0 bg-white/5"
+                        className="w-16 h-16 object-cover shrink-0 bg-white/5"
                         onError={e => {
                           e.currentTarget.style.display = 'none'
                         }}
@@ -300,7 +300,7 @@ export default function NewsPanel() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                         <span
-                          className={`text-[10px] font-medium px-2 py-0.5 rounded-full border inline-flex items-center gap-1 ${
+                          className={`text-[10px] font-medium px-2 py-0.5 border inline-flex items-center gap-1 ${
                             SOURCE_BADGE[item.source] || SOURCE_BADGE.fallback
                           }`}
                         >

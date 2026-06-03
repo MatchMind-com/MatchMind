@@ -88,7 +88,7 @@ function FormBadge({ result }: { result: 'W' | 'D' | 'L' }) {
     result === 'D' ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' :
     'bg-rose-500/15 text-rose-300 border-rose-500/30'
   return (
-    <span className={`inline-flex items-center justify-center w-5 h-5 rounded-md text-[10px] font-bold border ${colour}`}>
+    <span className={`inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold border ${colour}`}>
       {result}
     </span>
   )
@@ -117,7 +117,7 @@ function StatBar({
         <span className="uppercase tracking-wider">{label}</span>
         <span className="font-mono text-orange-300">{away ?? '—'}{unit}</span>
       </div>
-      <div className="flex h-1.5 rounded-full overflow-hidden bg-white/[0.04]">
+      <div className="flex h-1.5 overflow-hidden bg-white/[0.04]">
         <div className="bg-blue-500/60" style={{ width: `${homePct}%` }} />
         <div className="bg-orange-500/60" style={{ width: `${100 - homePct}%` }} />
       </div>
@@ -167,7 +167,7 @@ export default function BetRecSidebar({ rec, addState, onAdd, onDismiss }: BetRe
   // Empty state — no rec yet
   if (!rec) {
     return (
-      <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-5 text-center">
+      <div className="border border-dashed border-white/10 bg-white/[0.02] p-5 text-center">
         <div className="text-2xl mb-2 opacity-60">💡</div>
         <p className="text-xs text-slate-500 leading-relaxed">
           When the AI suggests a bet, it'll appear here.
@@ -196,7 +196,7 @@ export default function BetRecSidebar({ rec, addState, onAdd, onDismiss }: BetRe
   const addDisabled = addState === 'adding' || addState === 'added'
 
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-[#0E1628] overflow-hidden">
+    <div className="border border-white/[0.07] bg-[#0E1628] overflow-hidden">
       {/* Header */}
       <div className="px-4 pt-4 pb-3 border-b border-white/[0.05]">
         <div className="flex items-center gap-1.5 mb-2">
@@ -233,7 +233,7 @@ export default function BetRecSidebar({ rec, addState, onAdd, onDismiss }: BetRe
         </div>
 
         {stakeStr && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+          <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.03] border border-white/[0.05]">
             <span className="text-[10px] uppercase tracking-wider text-slate-500">Suggested stake</span>
             <span className="ml-auto text-sm font-semibold text-emerald-300">{stakeStr}</span>
             {stakePctStr && (
@@ -267,7 +267,7 @@ export default function BetRecSidebar({ rec, addState, onAdd, onDismiss }: BetRe
           onClick={toggleStats}
           disabled={!rec.fixtureId}
           title={!rec.fixtureId ? 'Stats unavailable for this match' : undefined}
-          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
+          className={`w-full flex items-center justify-between px-3 py-2 border text-xs font-medium transition-all ${
             !rec.fixtureId
               ? 'bg-white/[0.02] border-white/[0.05] text-slate-600 cursor-not-allowed'
               : statsOpen
@@ -301,7 +301,7 @@ export default function BetRecSidebar({ rec, addState, onAdd, onDismiss }: BetRe
             )}
 
             {statsError && (
-              <div className="text-[11px] text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-2">
+              <div className="text-[11px] text-rose-300 bg-rose-500/10 border border-rose-500/20 px-3 py-2">
                 Couldn't load stats: {statsError}
               </div>
             )}
@@ -310,7 +310,7 @@ export default function BetRecSidebar({ rec, addState, onAdd, onDismiss }: BetRe
               <>
                 {/* Live / finished match stats — bar comparisons */}
                 {stats.statistics && (
-                  <div className="space-y-2 px-3 py-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+                  <div className="space-y-2 px-3 py-3 bg-white/[0.02] border border-white/[0.05]">
                     <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Match stats</div>
                     <StatBar label="Shots" home={stats.statistics.home.shots_total} away={stats.statistics.away.shots_total} />
                     <StatBar label="On target" home={stats.statistics.home.shots_on_goal} away={stats.statistics.away.shots_on_goal} />
@@ -322,7 +322,7 @@ export default function BetRecSidebar({ rec, addState, onAdd, onDismiss }: BetRe
 
                 {/* Form */}
                 {(stats.home?.form?.length || stats.away?.form?.length) ? (
-                  <div className="px-3 py-3 rounded-lg bg-white/[0.02] border border-white/[0.05] space-y-2">
+                  <div className="px-3 py-3 bg-white/[0.02] border border-white/[0.05] space-y-2">
                     <div className="text-[10px] uppercase tracking-wider text-slate-500">Recent form (last 5)</div>
                     {stats.home?.form && stats.home.form.length > 0 && (
                       <div className="flex items-center gap-2">
@@ -349,7 +349,7 @@ export default function BetRecSidebar({ rec, addState, onAdd, onDismiss }: BetRe
 
                 {/* H2H */}
                 {stats.h2h && stats.h2h.length > 0 && (
-                  <div className="px-3 py-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+                  <div className="px-3 py-3 bg-white/[0.02] border border-white/[0.05]">
                     <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-2">Head-to-head (last {stats.h2h.length})</div>
                     <div className="space-y-1">
                       {stats.h2h.slice(0, 5).map((m, i) => (
@@ -381,7 +381,7 @@ export default function BetRecSidebar({ rec, addState, onAdd, onDismiss }: BetRe
         <button
           onClick={onAdd}
           disabled={addDisabled}
-          className={`w-full px-4 py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+          className={`w-full px-4 py-3 font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
             addState === 'added'
               ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-200 cursor-default'
               : addState === 'error'
@@ -464,7 +464,7 @@ function InlineStatBar({
           {unit}
         </span>
       </div>
-      <div className="flex h-1.5 rounded-full overflow-hidden bg-bg-elevated">
+      <div className="flex h-1.5 overflow-hidden bg-bg-elevated">
         <div className="bg-fg/40" style={{ width: `${homePct}%` }} />
         <div className="bg-brand/70" style={{ width: `${100 - homePct}%` }} />
       </div>
@@ -537,7 +537,7 @@ export function BetRecInline({ rec, addState, onAdd, onDismiss }: BetRecInlinePr
   const addDisabled = addState === 'adding' || addState === 'added'
 
   return (
-    <div className="mt-3 rounded-2xl border border-border-subtle bg-bg-surface overflow-hidden">
+    <div className="mt-3 border border-border-subtle bg-bg-surface overflow-hidden">
       {/* Header */}
       <div className="px-5 pt-4 pb-3 border-b border-border-subtle">
         <p className="eyebrow mb-2">AI Bet Suggestion</p>
@@ -551,7 +551,7 @@ export function BetRecInline({ rec, addState, onAdd, onDismiss }: BetRecInlinePr
 
       {/* Pick row */}
       <div className="px-5 py-4">
-        <div className="rounded-xl bg-bg-elevated border border-border-subtle px-4 py-3.5 flex items-center gap-4">
+        <div className="bg-bg-elevated border border-border-subtle px-4 py-3.5 flex items-center gap-4">
           <div className="min-w-0 flex-1">
             <p className="eyebrow mb-1">Pick</p>
             <div className="text-sm font-semibold text-fg truncate">
@@ -560,12 +560,12 @@ export function BetRecInline({ rec, addState, onAdd, onDismiss }: BetRecInlinePr
             </div>
             <div className="flex items-center gap-2 mt-1.5">
               {impliedPct !== null && (
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-value/15 text-value border border-value/30">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-value/15 text-value border border-value/30">
                   {impliedPct}% implied
                 </span>
               )}
               {stakeStr && (
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-success/15 text-success border border-success/30">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-success/15 text-success border border-success/30">
                   Stake {stakeStr}
                   {stakePctStr ? ` (${stakePctStr})` : ''}
                 </span>
@@ -609,7 +609,7 @@ export function BetRecInline({ rec, addState, onAdd, onDismiss }: BetRecInlinePr
           onClick={toggleStats}
           disabled={!rec.fixtureId}
           title={!rec.fixtureId ? 'Stats unavailable for this match' : undefined}
-          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg border text-xs font-semibold transition-all ${
+          className={`w-full flex items-center justify-between px-3.5 py-2.5 border text-xs font-semibold transition-all ${
             !rec.fixtureId
               ? 'bg-bg-elevated/60 border-border-subtle text-fg-muted cursor-not-allowed'
               : statsOpen
@@ -642,7 +642,7 @@ export function BetRecInline({ rec, addState, onAdd, onDismiss }: BetRecInlinePr
             )}
 
             {statsError && (
-              <div className="text-[11px] text-loss bg-loss/10 border border-loss/20 rounded-lg px-3 py-2">
+              <div className="text-[11px] text-loss bg-loss/10 border border-loss/20 px-3 py-2">
                 Couldn&rsquo;t load stats: {statsError}
               </div>
             )}
@@ -650,7 +650,7 @@ export function BetRecInline({ rec, addState, onAdd, onDismiss }: BetRecInlinePr
             {stats && !statsLoading && (
               <>
                 {stats.statistics && (
-                  <div className="space-y-2 px-3.5 py-3 rounded-lg bg-bg-elevated border border-border-subtle">
+                  <div className="space-y-2 px-3.5 py-3 bg-bg-elevated border border-border-subtle">
                     <p className="eyebrow mb-1">Match stats</p>
                     <InlineStatBar label="Shots" home={stats.statistics.home.shots_total} away={stats.statistics.away.shots_total} />
                     <InlineStatBar label="On target" home={stats.statistics.home.shots_on_goal} away={stats.statistics.away.shots_on_goal} />
@@ -661,7 +661,7 @@ export function BetRecInline({ rec, addState, onAdd, onDismiss }: BetRecInlinePr
                 )}
 
                 {(stats.home?.form?.length || stats.away?.form?.length) ? (
-                  <div className="px-3.5 py-3 rounded-lg bg-bg-elevated border border-border-subtle space-y-2">
+                  <div className="px-3.5 py-3 bg-bg-elevated border border-border-subtle space-y-2">
                     <p className="eyebrow">Recent form (last 5)</p>
                     {stats.home?.form && stats.home.form.length > 0 && (
                       <div className="flex items-center gap-2">
@@ -687,7 +687,7 @@ export function BetRecInline({ rec, addState, onAdd, onDismiss }: BetRecInlinePr
                 ) : null}
 
                 {stats.h2h && stats.h2h.length > 0 && (
-                  <div className="px-3.5 py-3 rounded-lg bg-bg-elevated border border-border-subtle">
+                  <div className="px-3.5 py-3 bg-bg-elevated border border-border-subtle">
                     <p className="eyebrow mb-2">Head-to-head (last {stats.h2h.length})</p>
                     <div className="space-y-1">
                       {stats.h2h.slice(0, 5).map((m, i) => (
@@ -719,7 +719,7 @@ export function BetRecInline({ rec, addState, onAdd, onDismiss }: BetRecInlinePr
         <button
           onClick={onAdd}
           disabled={addDisabled}
-          className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 px-4 py-3 font-bold text-sm transition-all flex items-center justify-center gap-2 ${
             addState === 'added'
               ? 'bg-success/15 border border-success/40 text-success cursor-default'
               : addState === 'error'
@@ -734,7 +734,7 @@ export function BetRecInline({ rec, addState, onAdd, onDismiss }: BetRecInlinePr
         </button>
         <button
           onClick={onDismiss}
-          className="px-4 py-3 rounded-xl text-xs font-semibold text-fg-muted hover:text-fg border border-border-subtle hover:border-border-strong transition-colors"
+          className="px-4 py-3 text-xs font-semibold text-fg-muted hover:text-fg border border-border-subtle hover:border-border-strong transition-colors"
         >
           Dismiss
         </button>

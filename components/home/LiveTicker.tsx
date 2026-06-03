@@ -49,7 +49,7 @@ function MatchRow({ m, onClick }: { m: LiveMatch; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-bg-elevated/60 transition-colors text-left rounded-lg group"
+      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-bg-elevated/60 transition-colors text-left group"
     >
       {/* Live dot */}
       <span className="live-dot shrink-0" />
@@ -188,7 +188,7 @@ export default function LiveTicker({ onLiveCount }: Props) {
       {loading && (
         <div className="space-y-2 animate-pulse">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-10 bg-bg-elevated rounded" />
+            <div key={i} className="h-10 bg-bg-elevated" />
           ))}
         </div>
       )}

@@ -182,21 +182,21 @@ export default function StatsTab({ currency }: Props) {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-20 bg-bg-surface border border-border-subtle rounded-2xl animate-pulse" />
+        <div className="h-20 bg-bg-surface border border-border-subtle animate-pulse" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-28 bg-bg-surface border border-border-subtle rounded-2xl animate-pulse" />
+            <div key={i} className="h-28 bg-bg-surface border border-border-subtle animate-pulse" />
           ))}
         </div>
-        <div className="h-64 bg-bg-surface border border-border-subtle rounded-2xl animate-pulse" />
-        <div className="h-64 bg-bg-surface border border-border-subtle rounded-2xl animate-pulse" />
+        <div className="h-64 bg-bg-surface border border-border-subtle animate-pulse" />
+        <div className="h-64 bg-bg-surface border border-border-subtle animate-pulse" />
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="bg-loss/10 border border-loss/30 text-loss text-sm rounded-2xl p-4">
+      <div className="bg-loss/10 border border-loss/30 text-loss text-sm p-4">
         {error}
       </div>
     )
@@ -205,14 +205,14 @@ export default function StatsTab({ currency }: Props) {
   // Empty state — no bets logged at all
   if (records.length === 0) {
     return (
-      <div className="bg-bg-surface border border-border-subtle rounded-2xl p-10 text-center">
+      <div className="bg-bg-surface border border-border-subtle p-10 text-center">
         <p className="text-fg font-bold text-base mb-2">No bets tracked yet</p>
         <p className="text-fg-muted text-sm mb-5">
           Place a bet, then see your stats here.
         </p>
         <a
           href="/dashboard/picks"
-          className="inline-block px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors"
+          className="inline-block px-4 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wider transition-colors"
         >
           Browse picks →
         </a>
@@ -223,7 +223,7 @@ export default function StatsTab({ currency }: Props) {
   return (
     <section className="space-y-5 lg:space-y-6">
       {/* FILTERS */}
-      <div className="bg-bg-surface border border-border-subtle rounded-2xl p-4 lg:p-5">
+      <div className="bg-bg-surface border border-border-subtle p-4 lg:p-5">
         <div className="flex flex-wrap items-end gap-3 lg:gap-4">
           {/* League */}
           <div className="min-w-[160px]">
@@ -233,7 +233,7 @@ export default function StatsTab({ currency }: Props) {
             <select
               value={league}
               onChange={(e) => setLeague(e.target.value)}
-              className="w-full bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
+              className="w-full bg-bg-base border border-border-subtle px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
             >
               <option value="all">All leagues</option>
               {leagues.map((l) => (
@@ -261,7 +261,7 @@ export default function StatsTab({ currency }: Props) {
                   key={key}
                   type="button"
                   onClick={() => setResult(key)}
-                  className={`px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors border ${
+                  className={`px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors border ${
                     result === key
                       ? 'bg-brand text-white border-brand'
                       : 'bg-bg-base text-fg-secondary border-border-subtle hover:border-border-strong'
@@ -291,7 +291,7 @@ export default function StatsTab({ currency }: Props) {
                   key={key}
                   type="button"
                   onClick={() => applyRange(key)}
-                  className={`px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors border ${
+                  className={`px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors border ${
                     rangeKey === key
                       ? 'bg-brand text-white border-brand'
                       : 'bg-bg-base text-fg-secondary border-border-subtle hover:border-border-strong'
@@ -315,7 +315,7 @@ export default function StatsTab({ currency }: Props) {
                 setFrom(e.target.value)
                 setRangeKey('custom')
               }}
-              className="bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
+              className="bg-bg-base border border-border-subtle px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
             />
           </div>
           <div>
@@ -329,7 +329,7 @@ export default function StatsTab({ currency }: Props) {
                 setTo(e.target.value)
                 setRangeKey('custom')
               }}
-              className="bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
+              className="bg-bg-base border border-border-subtle px-3 py-2 text-fg text-sm focus:outline-none focus:border-brand"
             />
           </div>
         </div>
@@ -366,7 +366,7 @@ export default function StatsTab({ currency }: Props) {
 
       {/* If filters wipe the set, stop here with a friendly nudge */}
       {filtered.length === 0 ? (
-        <div className="bg-bg-surface border border-border-subtle rounded-2xl p-8 text-center">
+        <div className="bg-bg-surface border border-border-subtle p-8 text-center">
           <p className="text-fg-muted text-sm">No bets match these filters.</p>
         </div>
       ) : (
@@ -692,7 +692,7 @@ function RoiBarChart({
             onClick={interactive ? () => onRowClick!(r.key) : undefined}
             className={`w-full text-left grid grid-cols-[140px_1fr_64px] items-center gap-3 lg:gap-4 ${
               interactive
-                ? 'cursor-pointer hover:bg-bg-elevated/40 -mx-2 px-2 py-1 rounded-lg transition-colors'
+                ? 'cursor-pointer hover:bg-bg-elevated/40 -mx-2 px-2 py-1 transition-colors'
                 : ''
             }`}
             title={interactive ? `View ${r.key} bets in History` : undefined}
@@ -703,14 +703,14 @@ function RoiBarChart({
                 {r.bets} bets · {r.wins}W·{r.losses}L
               </p>
             </div>
-            <div className="relative h-6 bg-bg-base rounded-md border border-border-subtle overflow-hidden">
+            <div className="relative h-6 bg-bg-base border border-border-subtle overflow-hidden">
               <span
                 className="absolute top-0 bottom-0 w-px bg-border-strong"
                 style={{ left: `${zeroPct}%` }}
                 aria-hidden
               />
               <span
-                className={`absolute top-0 bottom-0 ${positive ? 'bg-success/70' : 'bg-loss/70'} rounded-sm`}
+                className={`absolute top-0 bottom-0 ${positive ? 'bg-success/70' : 'bg-loss/70'}`}
                 style={{ left: `${left}%`, width: `${width}%` }}
                 aria-hidden
               />
@@ -929,7 +929,7 @@ function DayOfWeekGrid({ days }: { days: DayBucket[] }) {
         return (
           <div
             key={d.label}
-            className="bg-bg-base border border-border-subtle rounded-xl p-3 text-center"
+            className="bg-bg-base border border-border-subtle p-3 text-center"
           >
             <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-1">
               {d.label}
@@ -958,7 +958,7 @@ function ExtremeCard({
 }) {
   const accentText = kind === 'win' ? 'text-success' : 'text-loss'
   return (
-    <div className="bg-bg-surface border border-border-subtle rounded-2xl p-5">
+    <div className="bg-bg-surface border border-border-subtle p-5">
       <p className="eyebrow mb-3">{title}</p>
       {!bet ? (
         <p className="text-fg-muted text-sm">No {kind === 'win' ? 'wins' : 'losses'} yet.</p>
@@ -1003,7 +1003,7 @@ function Panel({
   children: React.ReactNode
 }) {
   return (
-    <div className="bg-bg-surface border border-border-subtle rounded-2xl p-5 lg:p-6">
+    <div className="bg-bg-surface border border-border-subtle p-5 lg:p-6">
       <div className="mb-4 lg:mb-5">
         <h3 className="text-fg font-bold text-base">{title}</h3>
         {subtitle && <p className="text-fg-muted text-xs mt-0.5">{subtitle}</p>}
@@ -1025,7 +1025,7 @@ function BigStat({
   const color =
     accent === 'success' ? 'text-success' : accent === 'loss' ? 'text-loss' : 'text-fg'
   return (
-    <div className="bg-bg-surface border border-border-subtle rounded-2xl p-4 lg:p-5">
+    <div className="bg-bg-surface border border-border-subtle p-4 lg:p-5">
       <p className="eyebrow mb-2">{label}</p>
       <p className={`font-stat font-bold leading-none text-3xl lg:text-5xl ${color}`}>{value}</p>
     </div>
@@ -1044,7 +1044,7 @@ function StreakCard({
   const color = kind === 'win' ? 'text-success' : kind === 'loss' ? 'text-loss' : 'text-fg-muted'
   const suffix = kind === 'win' ? 'wins' : kind === 'loss' ? 'losses' : ''
   return (
-    <div className="bg-bg-surface border border-border-subtle rounded-2xl p-4 lg:p-5">
+    <div className="bg-bg-surface border border-border-subtle p-4 lg:p-5">
       <p className="eyebrow mb-2">{label}</p>
       <div className="flex items-baseline gap-2">
         <p className={`font-stat font-bold text-3xl lg:text-4xl leading-none ${color}`}>{count}</p>

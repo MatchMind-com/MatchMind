@@ -125,7 +125,7 @@ function MessageRow({
   if (isUser) {
     return (
       <div className="flex justify-end">
-        <div className="bg-brand text-bg-base rounded-2xl rounded-tr-sm px-4 py-3 max-w-[75%] text-[15px] leading-relaxed font-medium">
+        <div className="bg-brand text-bg-base rounded-tr-sm px-4 py-3 max-w-[75%] text-[15px] leading-relaxed font-medium">
           {message.content}
         </div>
       </div>
@@ -136,11 +136,11 @@ function MessageRow({
 
   return (
     <div className="flex gap-3">
-      <div className="shrink-0 w-7 h-7 rounded-full bg-brand/10 border border-brand/30 text-brand flex items-center justify-center mt-0.5">
+      <div className="shrink-0 w-7 h-7 bg-brand/10 border border-brand/30 text-brand flex items-center justify-center mt-0.5">
         <BotIcon />
       </div>
       <div className="flex-1 min-w-0 max-w-[85%]">
-        <div className="bg-bg-surface border border-border-subtle text-fg rounded-2xl rounded-tl-sm px-4 py-3 text-[15px] leading-relaxed whitespace-pre-wrap">
+        <div className="bg-bg-surface border border-border-subtle text-fg rounded-tl-sm px-4 py-3 text-[15px] leading-relaxed whitespace-pre-wrap">
           {message.content}
         </div>
 
@@ -157,7 +157,7 @@ function MessageRow({
           <button
             onClick={onSpeak}
             title={playingIndex === index ? 'Stop playback' : 'Read aloud'}
-            className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all ${
+            className={`flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold transition-all ${
               playingIndex === index
                 ? 'text-brand'
                 : 'text-fg-muted hover:text-fg-secondary'
@@ -172,7 +172,7 @@ function MessageRow({
               title={`Used ${message.memoriesUsed} memor${
                 message.memoriesUsed === 1 ? 'y' : 'ies'
               } from past chats — click to view`}
-              className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold text-brand/80 hover:text-brand hover:bg-brand/10 border border-brand/30 transition-all"
+              className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold text-brand/80 hover:text-brand hover:bg-brand/10 border border-brand/30 transition-all"
             >
               <span>💭</span>
               remembered {message.memoriesUsed}
@@ -450,7 +450,7 @@ export default function CoachPageWithData({
 
         {/* Browser warning */}
         {unsupportedBrowser && (
-          <div className="mt-4 px-4 py-2.5 rounded-xl bg-value/10 border border-value/30 text-value text-xs flex items-center justify-between">
+          <div className="mt-4 px-4 py-2.5 bg-value/10 border border-value/30 text-value text-xs flex items-center justify-between">
             <span>Voice input requires Chrome or Edge. Switch browser to use the mic.</span>
             <button
               onClick={() => setUnsupportedBrowser(false)}
@@ -507,21 +507,21 @@ export default function CoachPageWithData({
               ))}
               {loading && (
                 <div className="flex gap-3">
-                  <div className="w-7 h-7 rounded-full bg-brand/10 border border-brand/30 flex items-center justify-center text-brand">
+                  <div className="w-7 h-7 bg-brand/10 border border-brand/30 flex items-center justify-center text-brand">
                     <BotIcon />
                   </div>
-                  <div className="bg-bg-surface border border-border-subtle px-4 py-3 rounded-2xl rounded-tl-sm">
+                  <div className="bg-bg-surface border border-border-subtle px-4 py-3 rounded-tl-sm">
                     <div className="flex gap-1.5">
                       <span
-                        className="w-1.5 h-1.5 rounded-full bg-brand animate-bounce"
+                        className="w-1.5 h-1.5 bg-brand animate-bounce"
                         style={{ animationDelay: '0ms' }}
                       />
                       <span
-                        className="w-1.5 h-1.5 rounded-full bg-brand animate-bounce"
+                        className="w-1.5 h-1.5 bg-brand animate-bounce"
                         style={{ animationDelay: '150ms' }}
                       />
                       <span
-                        className="w-1.5 h-1.5 rounded-full bg-brand animate-bounce"
+                        className="w-1.5 h-1.5 bg-brand animate-bounce"
                         style={{ animationDelay: '300ms' }}
                       />
                     </div>
@@ -540,13 +540,13 @@ export default function CoachPageWithData({
               e.preventDefault()
               sendMessage()
             }}
-            className="flex items-center gap-2 bg-bg-surface border border-border-subtle rounded-2xl px-2 py-2 focus-within:border-brand transition-colors"
+            className="flex items-center gap-2 bg-bg-surface border border-border-subtle px-2 py-2 focus-within:border-brand transition-colors"
           >
             <button
               type="button"
               onClick={toggleRecording}
               title={recording ? 'Stop recording' : 'Speak your question'}
-              className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all relative ${
+              className={`shrink-0 w-10 h-10 flex items-center justify-center transition-all relative ${
                 recording
                   ? 'bg-loss/15 text-loss animate-pulse'
                   : 'text-fg-muted hover:text-fg hover:bg-bg-elevated'
@@ -554,7 +554,7 @@ export default function CoachPageWithData({
             >
               <MicIcon recording={recording} />
               {recording && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-loss animate-ping" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-loss animate-ping" />
               )}
             </button>
 
@@ -572,7 +572,7 @@ export default function CoachPageWithData({
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="shrink-0 w-10 h-10 rounded-xl bg-brand hover:bg-brand-hover disabled:opacity-30 disabled:hover:bg-brand text-bg-base flex items-center justify-center transition-colors"
+              className="shrink-0 w-10 h-10 bg-brand hover:bg-brand-hover disabled:opacity-30 disabled:hover:bg-brand text-bg-base flex items-center justify-center transition-colors"
               title="Send"
             >
               <SendIcon />
@@ -598,7 +598,7 @@ export default function CoachPageWithData({
 
       {/* Toast */}
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl bg-success/15 border border-success/40 text-success text-sm font-semibold shadow-lg backdrop-blur">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 bg-success/15 border border-success/40 text-success text-sm font-semibold shadow-lg backdrop-blur">
           {toast}
         </div>
       )}

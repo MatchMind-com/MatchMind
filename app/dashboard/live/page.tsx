@@ -53,8 +53,8 @@ export default function LiveMatchesPage() {
           </div>
           <div className="flex items-center gap-2 text-[11px] text-emerald-400 font-semibold uppercase tracking-widest">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex h-2 w-2 bg-emerald-500"></span>
             </span>
             Live
           </div>
@@ -65,13 +65,13 @@ export default function LiveMatchesPage() {
         )}
 
         {error && !loading && (
-          <div className="rounded-2xl bg-rose-500/10 border border-rose-500/20 p-4 text-sm text-rose-200">
+          <div className="bg-rose-500/10 border border-rose-500/20 p-4 text-sm text-rose-200">
             {error}
           </div>
         )}
 
         {!loading && !error && matches.length === 0 && (
-          <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-8 text-center">
+          <div className="bg-white/[0.03] border border-white/10 p-8 text-center">
             <div className="text-white/60 text-sm font-semibold mb-1">No matches in play right now.</div>
             <div className="text-white/30 text-xs">Check back later — the Co-Pilot only works on live games.</div>
           </div>
@@ -81,7 +81,7 @@ export default function LiveMatchesPage() {
           {matches.map((m) => (
             <div
               key={m.id}
-              className="rounded-2xl bg-white/[0.03] border border-white/10 p-4 hover:bg-white/[0.05] transition"
+              className="bg-white/[0.03] border border-white/10 p-4 hover:bg-white/[0.05] transition"
             >
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2 min-w-0">
@@ -93,8 +93,8 @@ export default function LiveMatchesPage() {
                 </div>
                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
                   <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex h-1.5 w-1.5 bg-emerald-500"></span>
                   </span>
                   {m.status} {m.minute !== null ? `${m.minute}'` : ''}
                 </div>
@@ -123,7 +123,7 @@ export default function LiveMatchesPage() {
               <div className="mt-3 flex justify-end">
                 <button
                   onClick={() => setOpenFixture(m)}
-                  className="px-3 py-1.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-200 text-xs font-bold transition flex items-center gap-1.5"
+                  className="px-3 py-1.5 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-200 text-xs font-bold transition flex items-center gap-1.5"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />

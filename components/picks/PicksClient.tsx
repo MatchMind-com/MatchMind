@@ -359,7 +359,7 @@ function PicksGrid({
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="bg-bg-surface border border-border-subtle rounded-2xl h-48 animate-pulse"
+            className="bg-bg-surface border border-border-subtle h-48 animate-pulse"
           />
         ))}
       </div>
@@ -368,7 +368,7 @@ function PicksGrid({
 
   if (error === '__cache_miss__') {
     return (
-      <div className="bg-bg-surface border border-border-subtle rounded-2xl p-8 text-center space-y-2">
+      <div className="bg-bg-surface border border-border-subtle p-8 text-center space-y-2">
         <p className="text-fg font-semibold">Picks are warming up</p>
         <p className="text-fg-secondary text-sm">
           The AI is analysing today&apos;s fixtures right now. This only happens once a day —
@@ -380,7 +380,7 @@ function PicksGrid({
 
   if (error) {
     return (
-      <div className="bg-bg-surface border border-border-subtle rounded-2xl p-6 text-center">
+      <div className="bg-bg-surface border border-border-subtle p-6 text-center">
         <p className="text-fg-secondary text-sm">{error}</p>
       </div>
     )
@@ -394,7 +394,7 @@ function PicksGrid({
         ? 'No picks for tomorrow yet — try Weekend or check back later today.'
         : 'No fixtures in this window yet. Check back when the schedule fills out.'
     return (
-      <div className="bg-bg-surface border border-border-subtle rounded-2xl p-8 text-center">
+      <div className="bg-bg-surface border border-border-subtle p-8 text-center">
         <p className="text-fg-secondary text-sm">{message}</p>
       </div>
     )
@@ -426,7 +426,7 @@ function LiveTab({
         {[1, 2].map((i) => (
           <div
             key={i}
-            className="bg-bg-surface border border-border-subtle rounded-2xl h-44 animate-pulse"
+            className="bg-bg-surface border border-border-subtle h-44 animate-pulse"
           />
         ))}
       </div>
@@ -435,7 +435,7 @@ function LiveTab({
 
   if (matches.length === 0) {
     return (
-      <div className="bg-bg-surface border border-border-subtle rounded-2xl p-8 space-y-4">
+      <div className="bg-bg-surface border border-border-subtle p-8 space-y-4">
         <div className="text-center">
           <p className="text-fg font-semibold">No live matches right now</p>
           <p className="text-fg-secondary text-sm mt-1">Next up:</p>
@@ -457,7 +457,7 @@ function LiveTab({
               return (
                 <li
                   key={p.id}
-                  className="flex items-center justify-between text-sm bg-bg-elevated rounded-lg px-3 py-2 border border-border-subtle"
+                  className="flex items-center justify-between text-sm bg-bg-elevated px-3 py-2 border border-border-subtle"
                 >
                   <span className="text-fg-secondary truncate">
                     {p.home_team} <span className="text-fg-muted px-1">vs</span> {p.away_team}
@@ -496,7 +496,7 @@ function AccumulatorsTab({
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="bg-bg-surface border border-border-subtle rounded-2xl h-56 animate-pulse"
+            className="bg-bg-surface border border-border-subtle h-56 animate-pulse"
           />
         ))}
       </div>
@@ -505,7 +505,7 @@ function AccumulatorsTab({
 
   if (error === '__cache_miss__') {
     return (
-      <div className="bg-bg-surface border border-border-subtle rounded-2xl p-8 text-center space-y-2">
+      <div className="bg-bg-surface border border-border-subtle p-8 text-center space-y-2">
         <p className="text-fg font-semibold">Accumulators warming up</p>
         <p className="text-fg-secondary text-sm">
           The AI is still analysing today&apos;s fixtures — accumulators will appear once
@@ -517,7 +517,7 @@ function AccumulatorsTab({
 
   if (error) {
     return (
-      <div className="bg-bg-surface border border-border-subtle rounded-2xl p-6 text-center">
+      <div className="bg-bg-surface border border-border-subtle p-6 text-center">
         <p className="text-fg-secondary text-sm">{error}</p>
       </div>
     )

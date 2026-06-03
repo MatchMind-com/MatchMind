@@ -174,7 +174,7 @@ export default function AccaLegsBreakdown({ betId, fallbackLegs, foldLabel }: Pr
       <p className="eyebrow mb-3">{foldLabel ?? 'Accumulator legs'}</p>
 
       {error && (
-        <div className="bg-loss/10 border border-loss/30 text-loss text-[11px] rounded-lg p-2 mb-3">
+        <div className="bg-loss/10 border border-loss/30 text-loss text-[11px] p-2 mb-3">
           Live update failed — {error}. Showing last known state.
         </div>
       )}
@@ -263,7 +263,7 @@ function LegCard({ index, leg, onOpen }: { index: number; leg: LiveLeg; onOpen?:
       tabIndex={canOpen ? 0 : undefined}
       onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen!() } } : undefined}
       title={canOpen ? 'Click for full match detail — lineups, stats, events, injuries' : undefined}
-      className={`bg-bg-base/60 border rounded-xl p-4 transition-all ${
+      className={`bg-bg-base/60 border p-4 transition-all ${
         live.state === 'cashing' || live.state === 'won' ? 'border-success/30 hover:border-success/50'
         : live.state === 'losing' || live.state === 'lost' ? 'border-loss/30 hover:border-loss/50'
         : 'border-border-subtle hover:border-border-strong'
@@ -292,17 +292,16 @@ function LegCard({ index, leg, onOpen }: { index: number; leg: LiveLeg; onOpen?:
           </p>
         </div>
         <span
-          className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${style.bg} ${style.text} ${style.border}`}
+          className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 border text-[10px] font-bold uppercase tracking-wider ${style.bg} ${style.text} ${style.border}`}
           title={live.context ?? style.label}
         >
-          <span aria-hidden>{style.emoji}</span>
           <span>{live.label}</span>
         </span>
       </div>
 
       {/* MAIN GRID — pick / odds / live status / score in 4 columns
            on desktop, stacking nicely on mobile ─────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] sm:items-center gap-3 sm:gap-4 py-2.5 px-3 rounded-lg bg-bg-elevated/40">
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] sm:items-center gap-3 sm:gap-4 py-2.5 px-3 bg-bg-elevated/40">
         <div className="min-w-0">
           <p className="text-fg-muted text-[10px] font-bold uppercase tracking-wider mb-0.5">Your pick</p>
           <p className="text-fg text-[13px] font-semibold leading-tight">
@@ -364,10 +363,10 @@ function LegCard({ index, leg, onOpen }: { index: number; leg: LiveLeg; onOpen?:
 
 function StatusDot({ status, state }: { status: string; state: LegState }) {
   const isLive = ['1H', '2H', 'HT', 'ET', 'BT', 'P', 'INT', 'LIVE'].includes(status)
-  if (isLive) return <span className="h-1.5 w-1.5 rounded-full bg-loss animate-pulse" />
-  if (state === 'won') return <span className="h-1.5 w-1.5 rounded-full bg-success" />
-  if (state === 'lost') return <span className="h-1.5 w-1.5 rounded-full bg-loss" />
-  return <span className="h-1.5 w-1.5 rounded-full bg-fg-muted/40" />
+  if (isLive) return <span className="h-1.5 w-1.5 bg-loss animate-pulse" />
+  if (state === 'won') return <span className="h-1.5 w-1.5 bg-success" />
+  if (state === 'lost') return <span className="h-1.5 w-1.5 bg-loss" />
+  return <span className="h-1.5 w-1.5 bg-fg-muted/40" />
 }
 
 function CountsSummary({
