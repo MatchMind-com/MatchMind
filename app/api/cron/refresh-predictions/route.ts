@@ -312,13 +312,13 @@ async function refreshLeagues(
       const withOdds = allFixturesForLeague.filter((f: any) => oddsMap[f.fixture?.id]).sort(byDateAsc)
       const withoutOdds = allFixturesForLeague.filter((f: any) => !oddsMap[f.fixture?.id]).sort(byDateAsc)
       // Cap is per-league. For Friendlies (id=10) during pre-WC week
-      // there are ~100 fixtures across 7 days. We want to surface every
-      // WC-team tune-up: that's USA v Germany, Belgium v Tunisia,
-      // Portugal v Chile, Argentina v Honduras, Morocco v Norway etc
-      // through to WC kickoff. 40 picks lets the full weekend +
-      // mid-week slate fit without dropping anyone material. No extra
-      // API calls — same fixtures pull, just bigger slice.
-      const perLeagueCap = league.id === 10 ? 40 : 4
+      // there are ~100 fixtures across 7 days. Earlier attempt at cap=40
+      // saturated on Wed+Thu+Fri (9+11+20=40) and cut every Saturday
+      // tune-up (USA v Germany, Belgium v Tunisia, Portugal v Chile,
+      // Panama v Bosnia) plus all Sunday matches. Bumping to 70 leaves
+      // room for the entire Wed→Mon window. Trade-off: more GPT calls
+      // per cron run but acceptable during this 9-day pre-WC window.
+      const perLeagueCap = league.id === 10 ? 70 : 4
       const orderedFixtures = [...withOdds, ...withoutOdds].slice(0, perLeagueCap)
 
       return orderedFixtures.map((f: any) => ({
@@ -356,13 +356,11 @@ async function refreshLeagues(
     return picked
   }
 
-  // Cap proportional to tier size: keep ~3 per league as headroom. Bumped
-  // from ×2 → ×3 so during pre-WC week the friendlies cap of 40 actually
-  // gets used rather than being cut by the cross-league round-robin.
-  // Extra GPT calls cost some money — acceptable for the pre-WC content
-  // surge. Can drop back to ×2 once the tournament starts and the WC
-  // league itself becomes the focus.
-  const cap = Math.max(8, leagues.length * 3)
+  // Cap proportional to tier size, with a generous floor for pre-WC week
+  // when one league (Friendlies) is doing most of the heavy lifting.
+  // leagues.length * 5 for tier 3 (18 leagues) = 90 — high enough that
+  // the friendlies per-league cap of 70 isn't trimmed by the round-robin.
+  const cap = Math.max(8, leagues.length * 5)
   const allFixtures = roundRobinPick(leagueResults, cap)
 
   if (allFixtures.length === 0) {
