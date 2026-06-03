@@ -44,7 +44,13 @@ async function getTrackRecord() {
       next: { revalidate: 600 },
     })
     if (!res.ok) throw new Error()
-    return (await res.json()).stats as { total: number; wins: number; winRate: number; roi: number; valueBets: { total: number; winRate: number } }
+    return (await res.json()).stats as {
+      total: number
+      wins: number
+      winRate: number
+      roi: number
+      valueBets: { total: number; winRate: number }
+    }
   } catch {
     return null
   }
@@ -61,13 +67,14 @@ export default async function LandingPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (user) redirect('/dashboard')
 
-  const [stats, livePreds, track] = await Promise.all([getLiveStats(), getPublicPredictions(), getTrackRecord()])
+  const [stats, livePreds, track] = await Promise.all([
+    getLiveStats(),
+    getPublicPredictions(),
+    getTrackRecord(),
+  ])
   const predictions = livePreds.length > 0 ? livePreds : SAMPLE_PREDS
   const isLiveData = livePreds.length > 0
 
-  // Days until 2026 World Cup kickoff (Mexico v South Africa, June 11).
-  // When this hits 0 we'll let the WC banner auto-expire — for now it's
-  // a high-contrast attention magnet pointing to /world-cup.
   const WC_KICKOFF_MS = new Date('2026-06-11T19:00:00+00:00').getTime()
   const daysToWC = Math.max(0, Math.ceil((WC_KICKOFF_MS - Date.now()) / 86_400_000))
 
@@ -85,280 +92,517 @@ export default async function LandingPage() {
     ],
   }
 
+  const tickerItems = [...predictions, ...predictions, ...predictions]
+
   return (
-    <div className="min-h-screen bg-[#0B0B14] text-white overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden" style={{ background: '#09090C', color: '#EDE9DF', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />
 
-      {/* ── WORLD CUP BANNER (top of page, above the nav) ── */}
-      {/* Highest-attention placement so anyone landing immediately sees
-          the WC content surface. Auto-hides after WC kickoff (June 11). */}
+      {/* ── LIVE TICKER ── */}
+      <div className="overflow-hidden" style={{ background: '#F97316', height: '36px', display: 'flex', alignItems: 'center' }}>
+        <div className="ticker-track">
+          {tickerItems.map((p, i) => (
+            <span key={i} className="font-mono text-xs font-bold text-white whitespace-nowrap" style={{ padding: '0 2rem' }}>
+              {p.home_team.toUpperCase()} vs {p.away_team.toUpperCase()}
+              <span className="mx-2" style={{ opacity: 0.5 }}>·</span>
+              {p.bet_type}
+              <span className="mx-2" style={{ opacity: 0.5 }}>·</span>
+              <span style={{ opacity: 0.75 }}>@{Number(p.odds).toFixed(2)}</span>
+              <span className="mx-2" style={{ opacity: 0.5 }}>·</span>
+              <span style={{ color: '#fff', background: 'rgba(0,0,0,0.2)', padding: '1px 6px' }}>+{Number(p.ev_percent).toFixed(0)}% EV</span>
+              <span className="ml-8" style={{ opacity: 0.3 }}>///</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* ── WORLD CUP BANNER ── */}
       {daysToWC > 0 && (
         <Link
           href="/world-cup"
-          className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-orange-500 to-orange-600 text-white text-center py-2 px-5 text-sm font-semibold hover:from-orange-400 hover:to-orange-500 transition-colors group"
+          className="flex items-center justify-center gap-3 text-xs font-bold hover:opacity-90 transition-opacity"
+          style={{ background: '#1A0800', color: '#FB923C', borderBottom: '1px solid #2A1500', padding: '8px 20px' }}
         >
-          <span className="inline-flex items-center gap-2">
-            <span className="hidden sm:inline">🏆</span>
-            <span>
-              <strong>{daysToWC} day{daysToWC === 1 ? '' : 's'}</strong> until World Cup —
-              free daily AI predictions for every match
-            </span>
-            <span className="opacity-80 group-hover:translate-x-0.5 transition-transform">→</span>
-          </span>
+          <span className="font-mono uppercase tracking-widest" style={{ opacity: 0.5, fontSize: '10px' }}>World Cup 2026</span>
+          <span style={{ opacity: 0.3 }}>|</span>
+          <span><strong>{daysToWC} days</strong> until kickoff — free AI predictions for every match</span>
+          <span style={{ opacity: 0.5 }}>→</span>
         </Link>
       )}
 
       {/* ── NAV ── */}
-      {/* Pushed down by banner height when banner is showing (h-9). */}
-      <nav className={`fixed left-0 right-0 z-50 bg-[#0B0B14]/85 backdrop-blur-xl border-b border-white/5 ${daysToWC > 0 ? 'top-9' : 'top-0'}`}>
-        <div className="max-w-6xl mx-auto px-5 flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#F97316] to-[#EA580C] flex items-center justify-center text-white font-black text-lg shadow-lg shadow-orange-500/30">M</div>
-            <span className="text-white font-bold text-xl tracking-tight">Match<span className="text-orange-400">Mind</span></span>
+      <nav className="sticky z-50" style={{
+        top: 0,
+        borderBottom: '1px solid #1A1A22',
+        background: 'rgba(9,9,12,0.97)',
+        backdropFilter: 'blur(8px)',
+      }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '52px' }}>
+          <Link href="/" style={{ textDecoration: 'none' }}>
+            <span className="font-black text-xl" style={{ color: '#EDE9DF', letterSpacing: '-0.04em' }}>
+              MATCH<span style={{ color: '#F97316' }}>MIND</span>
+            </span>
           </Link>
-          <div className="hidden md:flex items-center gap-7 text-sm text-white/55">
-            <a href="#picks" className="hover:text-white transition-colors">Today&apos;s picks</a>
-            <Link href="/world-cup" className="text-orange-300 hover:text-orange-200 transition-colors font-semibold">
-              World Cup
-            </Link>
-            <a href="#how" className="hover:text-white transition-colors">How it works</a>
-            <Link href="/track-record" className="hover:text-white transition-colors">Track record</Link>
-            <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
+
+          <div className="hidden md:flex items-center gap-8" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+            {[
+              { label: 'Picks', href: '#picks' },
+              { label: 'World Cup', href: '/world-cup', color: '#F97316' },
+              { label: 'How it works', href: '#how' },
+              { label: 'Track record', href: '/track-record' },
+              { label: 'Pricing', href: '#pricing' },
+            ].map(l => (
+              l.href.startsWith('#')
+                ? <a key={l.label} href={l.href} style={{ color: l.color ?? '#6B6860', textDecoration: 'none', transition: 'color 0.15s' }}
+                    onMouseEnter={e => (e.currentTarget.style.color = '#EDE9DF')}
+                    onMouseLeave={e => (e.currentTarget.style.color = l.color ?? '#6B6860')}>
+                    {l.label}
+                  </a>
+                : <Link key={l.label} href={l.href} style={{ color: l.color ?? '#6B6860', textDecoration: 'none', transition: 'color 0.15s' }}
+                    onMouseEnter={e => (e.currentTarget.style.color = '#EDE9DF')}
+                    onMouseLeave={e => (e.currentTarget.style.color = l.color ?? '#6B6860')}>
+                    {l.label}
+                  </Link>
+            ))}
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/login" className="text-white/60 hover:text-white text-sm font-medium transition-colors px-3 py-2">Sign in</Link>
-            <Link href="/signup" className="bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-orange-500/30">
-              Start free
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Link href="/login" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6B6860', textDecoration: 'none' }}>
+              Sign in
+            </Link>
+            <Link href="/signup" style={{
+              fontSize: '11px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase',
+              background: '#F97316', color: '#fff', padding: '8px 16px', textDecoration: 'none',
+            }}>
+              Start free →
             </Link>
           </div>
         </div>
       </nav>
 
       {/* ── HERO ── */}
-      <section className="pt-36 pb-24 px-5 relative">
-        {/* Orange glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-orange-500/15 rounded-full blur-[160px] pointer-events-none" />
-        <div className="absolute top-32 right-1/4 w-[300px] h-[300px] bg-orange-600/10 rounded-full blur-[100px] pointer-events-none" />
+      <section style={{ maxWidth: '1280px', margin: '0 auto', padding: '60px 24px 0' }}>
 
-        <div className="max-w-5xl mx-auto relative grid md:grid-cols-[1.3fr_1fr] gap-12 items-center">
-          {/* Left: headline */}
+        {/* Eyebrow */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
+          <span className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#F97316' }}>
+            {isLiveData ? '● Live analysis' : '○ AI analysis'}
+          </span>
+          <span style={{ height: '1px', width: '48px', background: '#1A1A22' }} />
+          <span className="font-mono" style={{ fontSize: '10px', color: '#6B6860' }}>
+            {stats.leagues_covered} leagues · updated every hour
+          </span>
+        </div>
+
+        {/* Main layout: headline left, scoreboard right */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '64px', alignItems: 'end', paddingBottom: '48px', borderBottom: '2px solid #1A1A22' }}>
           <div>
-            <div className="inline-flex items-center gap-2 bg-orange-500/10 border border-orange-500/25 rounded-full px-3 py-1 mb-6">
-              <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
-              <span className="text-orange-300 text-xs font-semibold tracking-wide uppercase">{stats.value_bets_today} value bets live today</span>
-            </div>
-            <h1 className="text-5xl sm:text-6xl font-black leading-[1.02] tracking-tight mb-6">
-              See the edge{' '}
-              <span className="bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">before kickoff.</span>
+            <h1 style={{
+              fontSize: 'clamp(4rem, 10vw, 9rem)',
+              fontWeight: 900,
+              lineHeight: 0.92,
+              letterSpacing: '-0.05em',
+              color: '#EDE9DF',
+              marginBottom: '32px',
+            }}>
+              Find<br />
+              the<br />
+              <span style={{ color: '#F97316' }}>edge.</span>
             </h1>
-            <p className="text-white/55 text-lg leading-relaxed mb-8 max-w-lg">
-              AI analyses every match across 25 leagues. Each pick is logged before kick-off with full reasoning, then auto-verified against the result.
+
+            <p style={{ fontSize: '16px', lineHeight: 1.65, color: '#6B6860', maxWidth: '440px', marginBottom: '32px' }}>
+              AI analyses every match across {stats.leagues_covered} leagues. Each pick is logged before kick-off with full reasoning — then auto-verified against the result.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 mb-6">
-              <Link href="/signup" className="bg-orange-500 hover:bg-orange-400 text-white font-bold px-7 py-4 rounded-2xl text-base transition-all shadow-xl shadow-orange-500/30 hover:-translate-y-0.5 text-center">
-                Start free → no card needed
+
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <Link href="/signup" style={{
+                fontSize: '12px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase',
+                background: '#F97316', color: '#fff', padding: '14px 28px', textDecoration: 'none',
+                display: 'inline-block',
+              }}>
+                Start free — no card needed →
               </Link>
-              <a href="#picks" className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold px-7 py-4 rounded-2xl text-base transition-all text-center">
+              <a href="#picks" style={{
+                fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+                border: '1px solid #2A2A35', color: '#6B6860', padding: '14px 28px', textDecoration: 'none',
+                display: 'inline-block',
+              }}>
                 See today&apos;s picks
               </a>
             </div>
-            <p className="text-white/30 text-xs">
-              <span className="text-white/50">{stats.users.toLocaleString()}</span> signed up · <span className="text-white/50">5,534</span> on TikTok · every pick publicly tracked
+
+            <p className="font-mono" style={{ fontSize: '11px', color: '#3A3A48', marginTop: '20px' }}>
+              {stats.users > 0 ? stats.users.toLocaleString() : '2,000+'} members · 5,534 on TikTok · every pick tracked publicly
             </p>
           </div>
 
-          {/* Right: floating pick card */}
-          <div className="hidden md:block relative">
-            <div className="absolute -inset-10 bg-orange-500/20 rounded-full blur-[80px] pointer-events-none" />
-            <div className="relative bg-[#13131F] border border-orange-500/30 rounded-2xl p-5 shadow-2xl shadow-orange-500/10 rotate-1 hover:rotate-0 transition-transform">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold uppercase tracking-widest text-orange-400">Value bet</span>
-                <span className="text-xs text-white/30">{predictions[0].league}</span>
-              </div>
-              <p className="text-white font-bold text-lg mb-1">{predictions[0].home_team}</p>
-              <p className="text-white/40 text-sm mb-1">vs</p>
-              <p className="text-white font-bold text-lg mb-4">{predictions[0].away_team}</p>
-              <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-4">
-                <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1">AI pick</p>
-                <p className="text-white font-semibold mb-3">{predictions[0].bet_type} @ {Number(predictions[0].odds).toFixed(2)}</p>
-                <div className="flex gap-4">
-                  <div>
-                    <p className="text-emerald-400 font-black text-xl leading-none">+{Number(predictions[0].ev_percent).toFixed(0)}%</p>
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mt-1">EV edge</p>
-                  </div>
-                  <div className="h-8 w-px bg-white/10 mx-1" />
-                  <div>
-                    <p className="text-white font-black text-xl leading-none">{predictions[0].ai_probability}%</p>
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mt-1">AI prob.</p>
-                  </div>
-                </div>
-              </div>
-              <p className="text-[11px] text-white/35">Locked in before kick-off · verified after the whistle</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── LIVE STATS STRIP ── */}
-      <section className="px-5 pb-16">
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { val: stats.value_bets_today, lbl: 'Value bets today', color: 'text-orange-400' },
-            { val: stats.leagues_covered, lbl: 'Leagues covered', color: 'text-white' },
-            { val: track?.total ?? 48, lbl: 'Picks tracked', color: 'text-white' },
-            { val: (track?.valueBets?.winRate ?? 39) + '%', lbl: 'Value-bet win rate', color: 'text-emerald-400' },
-          ].map(s => (
-            <div key={s.lbl} className="bg-white/[0.03] border border-white/8 rounded-2xl p-5 text-center">
-              <p className={`text-3xl font-black ${s.color} mb-1`}>{s.val}</p>
-              <p className="text-white/40 text-xs uppercase tracking-wider">{s.lbl}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── TODAY'S PICKS ── */}
-      <section id="picks" className="px-5 py-20 border-y border-white/5 bg-white/[0.015]">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 bg-orange-500/10 border border-orange-500/25 rounded-full px-3 py-1 mb-4">
-              <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
-              <span className="text-orange-300 text-xs font-semibold uppercase tracking-wide">
-                {isLiveData ? 'Live from the AI right now' : 'Sample picks'}
-              </span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-black mb-3">Today&apos;s top value bets</h2>
-            <p className="text-white/45 text-lg">Free preview — sign up to see all {stats.value_bets_today}+ picks and set alerts.</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-4 mb-10">
-            {predictions.slice(0, 3).map(p => (
-              <div key={p.id} className="bg-[#13131F] border border-white/8 hover:border-orange-500/30 rounded-2xl p-5 transition-all">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[10px] text-white/40 bg-white/5 px-2 py-0.5 rounded-full uppercase tracking-wider">{p.league}</span>
-                  <span className="text-emerald-400 font-black text-sm">+{Number(p.ev_percent).toFixed(0)}% EV</span>
-                </div>
-                <p className="text-white font-bold mb-1">{p.home_team}</p>
-                <p className="text-white/40 text-xs mb-1">vs</p>
-                <p className="text-white font-bold mb-4">{p.away_team}</p>
-                <div className="border-t border-white/5 pt-3">
-                  <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1">AI pick</p>
-                  <p className="text-white font-semibold text-sm">{p.bet_type} @ {Number(p.odds).toFixed(2)}</p>
-                </div>
+          {/* Scoreboard: 2×2 grid of key stats */}
+          <div className="hidden md:grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0', border: '1px solid #1A1A22' }}>
+            {[
+              { val: stats.value_bets_today, lbl: 'Value bets\ntoday', color: '#F97316' },
+              { val: `${track?.valueBets?.winRate ?? 39}%`, lbl: 'Value-bet\nwin rate', color: '#00C853' },
+              { val: stats.leagues_covered, lbl: 'Leagues\ncovered', color: '#EDE9DF' },
+              { val: track?.total ?? 48, lbl: 'Picks\ntracked', color: '#EDE9DF' },
+            ].map((s, i) => (
+              <div key={s.lbl} style={{
+                padding: '28px 32px',
+                borderRight: i % 2 === 0 ? '1px solid #1A1A22' : 'none',
+                borderBottom: i < 2 ? '1px solid #1A1A22' : 'none',
+                minWidth: '140px',
+              }}>
+                <p className="font-mono" style={{ fontSize: '3rem', fontWeight: 900, color: s.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                  {s.val}
+                </p>
+                <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6B6860', marginTop: '8px', whiteSpace: 'pre-line', lineHeight: 1.4 }}>
+                  {s.lbl}
+                </p>
               </div>
             ))}
           </div>
+        </div>
+      </section>
 
-          <div className="text-center">
-            <Link href="/predictions" className="inline-flex items-center gap-2 text-orange-400 hover:text-orange-300 font-semibold">
-              See all of today&apos;s picks <span aria-hidden>→</span>
+      {/* ── PICKS BOARD ── */}
+      <section id="picks" style={{ maxWidth: '1280px', margin: '0 auto', padding: '48px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <span className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#F97316' }}>
+              {isLiveData ? '● Live' : '○ Sample'}
+            </span>
+            <h2 style={{ fontSize: '20px', fontWeight: 900, letterSpacing: '-0.02em', color: '#EDE9DF', margin: 0 }}>
+              Today&apos;s Value Bets
+            </h2>
+          </div>
+          <Link href="/predictions" className="font-mono hidden sm:block" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#F97316', textDecoration: 'none' }}>
+            All {stats.value_bets_today}+ picks →
+          </Link>
+        </div>
+
+        {/* Odds board table */}
+        <div style={{ border: '1px solid #1A1A22' }}>
+          {/* Column headers */}
+          <div className="font-mono hidden sm:grid" style={{
+            gridTemplateColumns: '2fr 1.5fr 80px 80px 80px',
+            gap: '16px', padding: '10px 20px',
+            fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6B6860',
+            background: '#0E0E12', borderBottom: '1px solid #1A1A22',
+          }}>
+            <span>Match</span>
+            <span>Bet type</span>
+            <span style={{ textAlign: 'right' }}>Odds</span>
+            <span style={{ textAlign: 'right' }}>EV edge</span>
+            <span style={{ textAlign: 'right' }}>AI prob.</span>
+          </div>
+
+          {predictions.slice(0, 3).map((p, i) => (
+            <div key={p.id} style={{
+              display: 'grid',
+              gridTemplateColumns: '2fr 1.5fr 80px 80px 80px',
+              gap: '16px',
+              padding: '18px 20px',
+              alignItems: 'center',
+              borderBottom: i < 2 ? '1px solid #1A1A22' : 'none',
+              borderLeft: '3px solid #F97316',
+              transition: 'background 0.1s',
+            }}
+              className="hover:bg-white/[0.02]"
+            >
+              <div>
+                <p style={{ fontWeight: 700, fontSize: '14px', color: '#EDE9DF', margin: 0 }}>
+                  {p.home_team} <span style={{ color: '#3A3A48' }}>vs</span> {p.away_team}
+                </p>
+                <p className="font-mono" style={{ fontSize: '10px', color: '#6B6860', marginTop: '3px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  {p.league}
+                </p>
+              </div>
+              <p style={{ fontSize: '13px', color: '#9E9B8E', margin: 0 }}>{p.bet_type}</p>
+              <p className="font-mono" style={{ fontWeight: 700, fontSize: '14px', color: '#EDE9DF', textAlign: 'right', margin: 0 }}>
+                {Number(p.odds).toFixed(2)}
+              </p>
+              <p className="font-mono" style={{ fontWeight: 900, fontSize: '15px', color: '#00C853', textAlign: 'right', margin: 0 }}>
+                +{Number(p.ev_percent).toFixed(0)}%
+              </p>
+              <p className="font-mono" style={{ fontSize: '13px', color: '#9E9B8E', textAlign: 'right', margin: 0 }}>
+                {p.ai_probability}%
+              </p>
+            </div>
+          ))}
+
+          {/* Gate row */}
+          <div style={{ padding: '14px 20px', textAlign: 'center', background: '#0E0E12', borderTop: '1px solid #1A1A22' }}>
+            <Link href="/signup" className="font-mono" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#F97316', textDecoration: 'none' }}>
+              + {Math.max(0, stats.value_bets_today - 3)} more picks hidden — sign up free to unlock →
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
-      <section id="how" className="px-5 py-24">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-black text-center mb-14">How it works</h2>
-          <div className="grid md:grid-cols-3 gap-6">
+      {/* ── STATS STRIP (league-table style) ── */}
+      <div style={{ borderTop: '1px solid #1A1A22', borderBottom: '1px solid #1A1A22', background: '#0E0E12' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          {/* Header row */}
+          <div className="font-mono" style={{ display: 'flex', padding: '8px 24px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#3A3A48', borderBottom: '1px solid #1A1A22' }}>
+            <span>Performance stats</span>
+          </div>
+          {/* Data row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)' }}>
             {[
-              { n: 1, t: 'AI scans every match', d: 'GPT-4o analyses form, injuries, xG, and head-to-head across 25 leagues — then prices every outcome.' },
-              { n: 2, t: 'We compare to the bookies', d: 'Each pick shows where the AI probability beats the bookmaker\u2019s odds. Positive EV = mathematical edge.' },
-              { n: 3, t: 'Track every bet', d: 'Log your slips, auto-verify results, monitor your ROI. Full transparency — every pick logged before kick-off.' },
-            ].map(step => (
-              <div key={step.n} className="relative bg-[#13131F] border border-white/8 rounded-2xl p-6">
-                <div className="absolute -top-4 left-6 w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-orange-500/30">{step.n}</div>
-                <h3 className="text-white font-bold text-lg mt-3 mb-2">{step.t}</h3>
-                <p className="text-white/50 text-sm leading-relaxed">{step.d}</p>
+              { val: stats.value_bets_today, lbl: 'Value bets today', color: '#F97316' },
+              { val: stats.leagues_covered, lbl: 'Leagues', color: '#EDE9DF' },
+              { val: track?.total ?? 48, lbl: 'Picks tracked', color: '#EDE9DF' },
+              { val: `${track?.valueBets?.winRate ?? 39}%`, lbl: 'Win rate', color: '#00C853' },
+              {
+                val: track?.roi !== undefined
+                  ? `${track.roi > 0 ? '+' : ''}${track.roi.toFixed(1)}%`
+                  : '—',
+                lbl: 'ROI', color: '#00C853',
+              },
+            ].map((s, i) => (
+              <div key={s.lbl} style={{
+                padding: '24px',
+                borderRight: i < 4 ? '1px solid #1A1A22' : 'none',
+              }}>
+                <p className="font-mono" style={{ fontSize: '2.5rem', fontWeight: 900, color: s.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums', margin: 0 }}>
+                  {s.val}
+                </p>
+                <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6B6860', marginTop: '8px', margin: '8px 0 0' }}>
+                  {s.lbl}
+                </p>
               </div>
             ))}
           </div>
         </div>
+      </div>
+
+      {/* ── HOW IT WORKS ── */}
+      <section id="how" style={{ maxWidth: '1280px', margin: '0 auto', padding: '80px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '48px' }}>
+          <span className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#F97316' }}>
+            How it works
+          </span>
+          <span style={{ height: '1px', flex: 1, background: '#1A1A22' }} />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderTop: '2px solid #EDE9DF' }}>
+          {[
+            {
+              n: '01',
+              t: 'AI scans every match',
+              d: 'GPT-4o analyses form, injuries, xG, and head-to-head across 25 leagues — then prices every outcome with a real probability.',
+            },
+            {
+              n: '02',
+              t: 'We find the bookmaker errors',
+              d: 'Where the AI probability exceeds the bookmaker\'s implied odds, that\'s a value bet. Positive EV = mathematical edge, compounding over time.',
+            },
+            {
+              n: '03',
+              t: 'Track every bet publicly',
+              d: 'Every pick locked in before kick-off. Results auto-verified. Your ROI is calculated in real time. No hidden picks, no cherry-picked results.',
+            },
+          ].map((step, i) => (
+            <div key={step.n} style={{
+              padding: '40px 32px',
+              borderRight: i < 2 ? '1px solid #1A1A22' : 'none',
+              borderBottom: '1px solid #1A1A22',
+            }}>
+              <p className="font-mono" style={{ fontSize: '5rem', fontWeight: 900, color: '#1A1A22', lineHeight: 1, marginBottom: '24px' }}>
+                {step.n}
+              </p>
+              <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#EDE9DF', marginBottom: '12px', letterSpacing: '-0.02em' }}>
+                {step.t}
+              </h3>
+              <p style={{ fontSize: '14px', lineHeight: 1.65, color: '#6B6860', margin: 0 }}>
+                {step.d}
+              </p>
+            </div>
+          ))}
+        </div>
       </section>
 
-      {/* ── TRACK RECORD STRIP ── */}
-      <section className="px-5 py-16 border-y border-white/5 bg-white/[0.015]">
-        <div className="max-w-4xl mx-auto text-center">
-          <p className="text-white/35 text-xs font-semibold uppercase tracking-widest mb-3">Transparency over hype</p>
-          <h2 className="text-2xl sm:text-3xl font-black mb-5">Every pick logged before kick-off. Every result public.</h2>
-          <p className="text-white/50 mb-8 max-w-xl mx-auto">
-            We don&apos;t claim 70% win rates. We publish every single pick the moment it&apos;s made and let the tape speak.
-          </p>
-          <Link href="/track-record" className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold px-6 py-3 rounded-xl transition-all">
-            See the full track record <span aria-hidden>→</span>
-          </Link>
+      {/* ── TRACK RECORD ── */}
+      <section style={{ borderTop: '1px solid #1A1A22', borderBottom: '1px solid #1A1A22', background: '#0E0E12' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '80px 24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '80px', alignItems: 'center' }}>
+            <div>
+              <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#6B6860', marginBottom: '20px' }}>
+                Transparency over hype
+              </p>
+              <h2 style={{
+                fontSize: 'clamp(2.5rem, 6vw, 5rem)',
+                fontWeight: 900, lineHeight: 1.0,
+                letterSpacing: '-0.04em', color: '#EDE9DF', marginBottom: '24px',
+              }}>
+                Every pick logged<br />before kick-off.<br />
+                <span style={{ color: '#3A3A48' }}>Every result public.</span>
+              </h2>
+              <p style={{ fontSize: '15px', lineHeight: 1.65, color: '#6B6860', maxWidth: '480px', marginBottom: '32px' }}>
+                We don&apos;t claim 70% win rates. We publish every single pick the moment it&apos;s made and let the tape speak for itself.
+              </p>
+              <Link href="/track-record" style={{
+                fontSize: '11px', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase',
+                border: '1px solid #F97316', color: '#F97316', padding: '12px 24px', textDecoration: 'none', display: 'inline-block',
+              }}>
+                See full track record →
+              </Link>
+            </div>
+
+            {/* Win/loss scoreboard */}
+            <div className="hidden md:block" style={{ border: '1px solid #1A1A22', minWidth: '240px' }}>
+              <div className="font-mono" style={{
+                padding: '10px 20px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em',
+                textTransform: 'uppercase', color: '#6B6860', borderBottom: '1px solid #1A1A22', background: '#141418',
+              }}>
+                All-time record
+              </div>
+              <div style={{ padding: '32px 28px', textAlign: 'center' }}>
+                <p className="font-mono" style={{ fontSize: '4rem', fontWeight: 900, color: '#EDE9DF', lineHeight: 1, margin: 0, fontVariantNumeric: 'tabular-nums' }}>
+                  <span style={{ color: '#00C853' }}>{track?.wins ?? '—'}</span>
+                  <span style={{ color: '#2A2A35' }}>W</span>
+                  <span style={{ color: '#2A2A35', fontSize: '2.5rem', margin: '0 4px' }}>/</span>
+                  <span>{track?.total ?? '—'}</span>
+                </p>
+                <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6B6860', marginTop: '12px' }}>
+                  picks won
+                </p>
+                {track?.roi !== undefined && (
+                  <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #1A1A22' }}>
+                    <p className="font-mono" style={{ fontSize: '2.5rem', fontWeight: 900, color: track.roi >= 0 ? '#00C853' : '#FF3355', margin: 0 }}>
+                      {track.roi > 0 ? '+' : ''}{track.roi.toFixed(1)}%
+                    </p>
+                    <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6B6860', marginTop: '6px' }}>
+                      ROI
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ── PRICING ── */}
-      <section id="pricing" className="px-5 py-24">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl sm:text-4xl font-black mb-3">Simple pricing</h2>
-            <p className="text-white/45">Start free. Upgrade when you want the full edge.</p>
+      <section id="pricing" style={{ maxWidth: '1280px', margin: '0 auto', padding: '80px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '48px' }}>
+          <span className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#F97316' }}>
+            Pricing
+          </span>
+          <span style={{ height: '1px', flex: 1, background: '#1A1A22' }} />
+          <span className="font-mono" style={{ fontSize: '10px', color: '#6B6860' }}>
+            Start free. Upgrade when you want the full edge.
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0', border: '1px solid #1A1A22' }}>
+          {/* Free */}
+          <div style={{ padding: '40px', borderRight: '1px solid #1A1A22' }}>
+            <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6B6860', marginBottom: '16px' }}>
+              Free plan
+            </p>
+            <p style={{ fontSize: '3.5rem', fontWeight: 900, color: '#EDE9DF', lineHeight: 1, marginBottom: '4px', letterSpacing: '-0.03em' }}>
+              £0
+            </p>
+            <p style={{ fontSize: '13px', color: '#6B6860', marginBottom: '32px' }}>Forever. No card needed.</p>
+
+            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {['3 AI picks per day', 'Bet slip tracker', 'Public track record', 'Basic bankroll tool'].map(f => (
+                <li key={f} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: '#9E9B8E' }}>
+                  <span className="font-mono" style={{ color: '#2A2A35' }}>—</span>
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            <Link href="/signup" className="font-mono" style={{
+              display: 'block', textAlign: 'center', fontSize: '11px', fontWeight: 700,
+              letterSpacing: '0.12em', textTransform: 'uppercase',
+              border: '1px solid #2A2A35', color: '#6B6860', padding: '14px', textDecoration: 'none',
+            }}>
+              Start free
+            </Link>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            {/* Free */}
-            <div className="bg-[#13131F] border border-white/8 rounded-2xl p-7">
-              <div className="flex items-baseline gap-2 mb-1">
-                <span className="text-2xl font-bold">Free</span>
-                <span className="text-white/40 text-sm">forever</span>
-              </div>
-              <p className="text-white/40 text-sm mb-6">Kick the tires. No card needed.</p>
-              <ul className="space-y-2.5 text-sm text-white/70 mb-6">
-                <li>• 3 AI picks per day</li>
-                <li>• Bet slip tracker</li>
-                <li>• Public track record</li>
-                <li>• Basic bankroll tool</li>
-              </ul>
-              <Link href="/signup" className="block text-center bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold py-3 rounded-xl transition-all">
-                Start free
-              </Link>
+          {/* Pro */}
+          <div style={{ padding: '40px', borderTop: '4px solid #F97316' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#F97316', margin: 0 }}>
+                Pro plan
+              </p>
+              <span className="font-mono" style={{
+                fontSize: '9px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase',
+                padding: '4px 8px', background: 'rgba(249,115,22,0.1)', color: '#F97316', border: '1px solid rgba(249,115,22,0.3)',
+              }}>
+                Most popular
+              </span>
             </div>
 
-            {/* Pro */}
-            <div className="relative bg-gradient-to-br from-orange-500/10 to-orange-600/5 border border-orange-500/40 rounded-2xl p-7">
-              <span className="absolute -top-3 right-6 bg-orange-500 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-lg shadow-orange-500/40">Most popular</span>
-              <div className="flex items-baseline gap-2 mb-1">
-                <span className="text-4xl font-black text-orange-400">£9.99</span>
-                <span className="text-white/50 text-sm">/month</span>
-              </div>
-              <p className="text-white/60 text-sm mb-6">Full edge, all features, cancel anytime.</p>
-              <ul className="space-y-2.5 text-sm text-white/80 mb-6">
-                <li><span className="text-orange-400">✓</span> Unlimited AI picks + value bets</li>
-                <li><span className="text-orange-400">✓</span> Pinnacle edge detection</li>
-                <li><span className="text-orange-400">✓</span> Daily value-bet email alerts</li>
-                <li><span className="text-orange-400">✓</span> AI betting coach (GPT-4o)</li>
-                <li><span className="text-orange-400">✓</span> Full bankroll tracker + Kelly staking</li>
-                <li><span className="text-orange-400">✓</span> Weekly performance reports</li>
-              </ul>
-              <Link href="/signup" className="block text-center bg-orange-500 hover:bg-orange-400 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-orange-500/30">
-                Start Pro free →
-              </Link>
+            <div style={{ marginBottom: '4px' }}>
+              <span style={{ fontSize: '3.5rem', fontWeight: 900, color: '#F97316', lineHeight: 1, letterSpacing: '-0.03em' }}>£9.99</span>
+              <span style={{ fontSize: '14px', color: '#6B6860', marginLeft: '8px' }}>/month</span>
             </div>
+            <p style={{ fontSize: '13px', color: '#6B6860', marginBottom: '32px' }}>Full edge. Cancel anytime.</p>
+
+            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {[
+                'Unlimited AI picks + value bets',
+                'Pinnacle edge detection',
+                'Daily value-bet email alerts',
+                'AI betting coach (GPT-4o)',
+                'Full bankroll tracker + Kelly staking',
+                'Weekly performance reports',
+              ].map(f => (
+                <li key={f} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: '#EDE9DF' }}>
+                  <span className="font-mono" style={{ color: '#F97316', fontWeight: 700 }}>✓</span>
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            <Link href="/signup" className="font-mono" style={{
+              display: 'block', textAlign: 'center', fontSize: '11px', fontWeight: 900,
+              letterSpacing: '0.12em', textTransform: 'uppercase',
+              background: '#F97316', color: '#fff', padding: '14px', textDecoration: 'none',
+            }}>
+              Start Pro free →
+            </Link>
           </div>
         </div>
+
+        <p className="font-mono" style={{ fontSize: '11px', textAlign: 'center', color: '#3A3A48', marginTop: '16px' }}>
+          Grandfathered price for life. £9.99 will rise as the product grows — lock it in now.
+        </p>
       </section>
 
       {/* ── FAQ ── */}
-      <section className="px-5 py-20 border-t border-white/5">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl font-black text-center mb-10">Questions</h2>
-          <div className="space-y-3">
+      <section style={{ borderTop: '1px solid #1A1A22', background: '#0E0E12' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '80px 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '48px' }}>
+            <span className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#6B6860' }}>
+              FAQ
+            </span>
+            <span style={{ height: '1px', flex: 1, background: '#1A1A22' }} />
+          </div>
+
+          <div style={{ maxWidth: '800px' }}>
             {[
-              { q: 'Is MatchMind a betting site?', a: 'No — we don\u2019t take bets. We analyse matches and show you where the bookmakers have mispriced outcomes. Placing bets is your choice, on whatever site you use.' },
+              { q: 'Is MatchMind a betting site?', a: 'No — we don\'t take bets. We analyse matches and show you where the bookmakers have mispriced outcomes. Placing bets is your choice, on whatever site you use.' },
               { q: 'Do you guarantee wins?', a: 'No one can. Positive expected value guarantees profitability over hundreds of bets, not any single one. We publish every pick before kick-off so you can judge the edge yourself.' },
-              { q: 'Why £9.99 and not £29?', a: 'Because we\u2019re in launch mode and the math works: 1 value bet per day at +10% EV covers the sub and more. Grandfathered for life if you join early.' },
+              { q: 'Why £9.99 and not £29?', a: 'Because we\'re in launch mode and the math works: 1 value bet per day at +10% EV covers the sub and more. Grandfathered for life if you join early.' },
               { q: 'Can I cancel anytime?', a: 'One click in your settings. Full Stripe-backed billing, no hidden fees, no annual lock-in.' },
               { q: 'Is this legal in the UK?', a: 'Yes. MatchMind is analytics software, not a bookmaker. Using betting analytics tools is legal. Always gamble responsibly. 18+.' },
-            ].map(f => (
-              <details key={f.q} className="group bg-[#13131F] border border-white/8 rounded-xl p-5 open:border-orange-500/30 transition-colors">
-                <summary className="flex items-center justify-between cursor-pointer list-none font-semibold text-white">
+            ].map((f, i, arr) => (
+              <details key={f.q} style={{ borderTop: '1px solid #1A1A22', borderBottom: i === arr.length - 1 ? '1px solid #1A1A22' : 'none' }}>
+                <summary style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  cursor: 'pointer', listStyle: 'none', padding: '20px 0',
+                  fontWeight: 700, fontSize: '15px', color: '#EDE9DF',
+                }}>
                   <span>{f.q}</span>
-                  <span className="text-orange-400 text-xl leading-none group-open:rotate-45 transition-transform">+</span>
+                  <span className="font-mono" style={{ color: '#F97316', fontSize: '20px', lineHeight: 1, marginLeft: '16px', flexShrink: 0 }}>+</span>
                 </summary>
-                <p className="text-white/55 text-sm leading-relaxed mt-3">{f.a}</p>
+                <p style={{ fontSize: '14px', lineHeight: 1.7, color: '#6B6860', paddingBottom: '20px', margin: 0, paddingRight: '48px' }}>
+                  {f.a}
+                </p>
               </details>
             ))}
           </div>
@@ -366,22 +610,45 @@ export default async function LandingPage() {
       </section>
 
       {/* ── FINAL CTA ── */}
-      <section className="px-5 py-24 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-orange-500/5 to-transparent pointer-events-none" />
-        <div className="relative max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-5xl font-black mb-5 leading-tight">
-            Start finding the edge{' '}
-            <span className="bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">today.</span>
-          </h2>
-          <p className="text-white/50 text-lg mb-8 max-w-xl mx-auto">
-            Free forever plan. No credit card. 30 seconds to sign up — {stats.value_bets_today} value bets waiting.
+      <section style={{ borderTop: '2px solid #EDE9DF' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '80px 24px' }}>
+          <p className="font-mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#F97316', marginBottom: '24px' }}>
+            Get started
           </p>
-          <Link href="/signup" className="inline-block bg-orange-500 hover:bg-orange-400 text-white font-bold px-10 py-4 rounded-2xl text-lg transition-all shadow-xl shadow-orange-500/40 hover:-translate-y-0.5">
-            Start free →
-          </Link>
-          <p className="text-white/25 text-xs mt-5">
-            <span className="inline-block bg-red-500/15 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded mr-1.5 font-semibold">18+</span>
-            Bet responsibly. <a href="https://www.begambleaware.org" className="underline hover:text-white/50" target="_blank" rel="noopener noreferrer">BeGambleAware.org</a>
+          <h2 style={{
+            fontSize: 'clamp(3rem, 9vw, 8rem)',
+            fontWeight: 900, lineHeight: 0.95,
+            letterSpacing: '-0.05em', color: '#EDE9DF',
+            marginBottom: '40px',
+          }}>
+            Start finding<br />the edge today.
+          </h2>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap', marginBottom: '32px' }}>
+            <Link href="/signup" style={{
+              fontSize: '13px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase',
+              background: '#F97316', color: '#fff', padding: '16px 36px', textDecoration: 'none', display: 'inline-block',
+            }}>
+              Start free — no card →
+            </Link>
+            <div className="font-mono" style={{ display: 'flex', gap: '20px', fontSize: '11px', color: '#3A3A48', flexWrap: 'wrap' }}>
+              <span>{stats.users > 0 ? stats.users.toLocaleString() : '2,000+'} members</span>
+              <span>·</span>
+              <span>5,534 on TikTok</span>
+              <span>·</span>
+              <span>{stats.value_bets_today} value bets today</span>
+            </div>
+          </div>
+
+          <p className="font-mono" style={{ fontSize: '11px', color: '#3A3A48' }}>
+            <span style={{
+              display: 'inline-block', fontWeight: 900, padding: '2px 6px', marginRight: '8px',
+              border: '1px solid rgba(255,51,85,0.4)', color: '#FF3355', background: 'rgba(255,51,85,0.08)',
+            }}>18+</span>
+            Bet responsibly.{' '}
+            <a href="https://www.begambleaware.org" style={{ color: '#3A3A48', textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer">
+              BeGambleAware.org
+            </a>
           </p>
         </div>
       </section>
