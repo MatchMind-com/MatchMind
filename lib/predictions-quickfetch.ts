@@ -19,7 +19,7 @@
  *     without surprises.
  */
 import OpenAI from 'openai'
-import { leaguesByTier, type TrackedLeague } from './leagues'
+import { leaguesByTier, getSeasonForLeague, type TrackedLeague } from './leagues'
 import { getUnderstatFixtureStats, isUnderstatLeague, type UnderstatTeamStats } from './understat-scraper'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
@@ -112,7 +112,6 @@ export async function quickFetchPredictions(
   maxPicks = 12
 ): Promise<Prediction[]> {
   const diag: FetchDiag[] = []
-  const season = getCurrentSeason()
   const today = new Date().toISOString().split('T')[0]
   const in3days = getDatePlusDays(3)
   const tomorrow = getDatePlusDays(1)
@@ -131,6 +130,9 @@ export async function quickFetchPredictions(
     const batchResults = await Promise.all(
       batch.map(async (meta) => {
         const leagueId = meta.id
+        // Per-league season — calendar leagues (Friendlies/WC/MLS/Brasileirão)
+        // use current year; European leagues use start-year of Aug-May season.
+        const season = getSeasonForLeague(meta)
 
         const [fixtures, oddsToday, oddsTomorrow] = await Promise.all([
           apiFetch(`/fixtures?league=${leagueId}&season=${season}&from=${today}&to=${in3days}&status=NS`, diag),

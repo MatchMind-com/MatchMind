@@ -20,7 +20,7 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient as createAdmin } from '@supabase/supabase-js'
-import { allLeagues, leaguesByTier, type TrackedLeague } from '@/lib/leagues'
+import { allLeagues, leaguesByTier, getSeasonForLeague, findLeague, type TrackedLeague } from '@/lib/leagues'
 
 export const maxDuration = 60
 
@@ -213,7 +213,6 @@ async function refreshLeagues(
   leagues: League[],
   diag: FetchDiag[]
 ): Promise<{ predictionsByLeague: Record<number, any[]>; totalFixtures: number; allPredictions: any[] }> {
-  const season = getCurrentSeason()
   const today = new Date().toISOString().split('T')[0]
   // Look 7 days out (was 4) so off-peak leagues like Saudi/J1/MLS surface
   // upcoming weekend matches even when the cron runs early in the week.
@@ -224,6 +223,12 @@ async function refreshLeagues(
     leagues,
     3,
     async (league) => {
+      // Per-league season: European leagues = Aug-May start year, calendar
+      // leagues (Friendlies, WC, MLS, Brasileirão, etc) = current year.
+      // Before this, a single season=getCurrentSeason() was used for ALL
+      // leagues, returning 0 fixtures for tournaments/calendar leagues in
+      // every Jan-Jul window. Cause of the 20-day-stale cache before WC.
+      const season = getSeasonForLeague(league)
       const [fixtures, oddsToday, oddsTomorrow, injuries, standings] = await Promise.all([
         apiFetch(`/fixtures?league=${league.id}&season=${season}&from=${today}&to=${in3days}&status=NS`, diag),
         apiFetch(`/odds?league=${league.id}&season=${season}&date=${today}`, diag),
@@ -322,6 +327,12 @@ async function refreshLeagues(
       const awayId = f.teams?.away?.id
       const leagueId = f._leagueId
       if (!homeId || !awayId) return { homeId: null, awayId: null, homeForm: null, awayForm: null, h2h: null, homeStats: null, awayStats: null }
+      // Per-league season again — same bug applied here too. If a friendly
+      // gets through the fixtures fetch but team stats use season=2025
+      // for a calendar league, the stats return empty and the GPT prompt
+      // gets degraded.
+      const leagueMeta = findLeague(leagueId)
+      const season = leagueMeta ? getSeasonForLeague(leagueMeta) : new Date().getFullYear()
       const [homeForm, awayForm, h2h, homeStatsRaw, awayStatsRaw] = await Promise.all([
         apiFetch(`/fixtures?team=${homeId}&last=5`, diag),
         apiFetch(`/fixtures?team=${awayId}&last=5`, diag),
@@ -383,7 +394,7 @@ CALIBRATION RULES — these are absolute:
 Return valid JSON only.`
     }, {
       role: 'user',
-      content: `Generate CALIBRATED predictions for these ${season}/${String(season + 1).slice(2)} season matches. Real form data, H2H, injuries, and Bet365 odds (with implied probabilities) are provided.
+      content: `Generate CALIBRATED predictions for the matches below. Real form data, H2H, injuries, and Bet365 odds (with implied probabilities) are provided.
 
 Matches:
 ${fixtureList}
@@ -523,20 +534,27 @@ Return JSON with this exact structure:
   try {
     const records = predictions
       .filter(p => p.best_value && p.id)
-      .map(p => ({
+      .map(p => {
+        // Derive season per-pick from its league (was a single global var
+        // before the per-league season fix). For unknown leagues fall back
+        // to the calendar year as a safe default.
+        const leagueMetaForRec = findLeague(p._leagueId)
+        const pickSeason = leagueMetaForRec ? getSeasonForLeague(leagueMetaForRec) : new Date().getFullYear()
+        return {
         fixture_id: p.id,
         home_team: p.home_team,
         away_team: p.away_team,
         league: p.league,
         kick_off: p.date,
-        season,
+        season: pickSeason,
         bet_type: p.best_value!.label,
         prediction: p.best_value!.label.toLowerCase().replace(/ /g, '_'),
         ai_probability: (p.best_value as any).aiPct ?? null,
         odds: p.best_value!.odds ?? null,
         ev_percent: p.best_value!.ev ?? null,
         is_value_bet: p.is_value_bet,
-      }))
+        }
+      })
     if (records.length > 0) {
       await supabaseAdmin
         .from('prediction_records')

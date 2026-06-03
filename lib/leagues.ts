@@ -17,6 +17,28 @@ export type TrackedLeague = {
   country: string
   flag: string
   tier: 1 | 2 | 3
+  /**
+   * Which season-numbering convention API-Football uses for this league.
+   *
+   * - 'european' (default): season runs Aug → May, identified by the
+   *   start year. The 2025-26 Premier League season = season=2025.
+   * - 'calendar': competition happens within a single calendar year,
+   *   identified by that year. The 2026 World Cup = season=2026, the
+   *   2026 Brazilian Brasileirão = season=2026, etc.
+   *
+   * Set 'calendar' for: all international tournaments (WC, Euro, Copa
+   * America, AFCON, Friendlies), South American competitions
+   * (Brasileirão, Argentine Primera, Copa Libertadores, Copa Sudamericana,
+   * Copa do Brasil, Copa Argentina), North American (MLS, Liga MX,
+   * CONCACAF CCC), Asian (J1, AFC CL), and Nordic summer leagues
+   * (Allsvenskan, Eliteserien).
+   *
+   * Bug history: before this field existed, the cron asked for the wrong
+   * season for ~12 of the 50 tracked leagues. In June 2026 it queried
+   * season=2025 for everything, so friendlies (real season=2026) returned
+   * 0 fixtures and the entire pre-World Cup window had no picks.
+   */
+  seasonType?: 'european' | 'calendar'
 }
 
 export const TRACKED_LEAGUES: readonly TrackedLeague[] = [
@@ -42,40 +64,65 @@ export const TRACKED_LEAGUES: readonly TrackedLeague[] = [
   { id: 203, name: 'Süper Lig',              country: 'Turkey',        flag: '🇹🇷', tier: 2 },
   { id: 40,  name: 'Championship',           country: 'England',       flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', tier: 2 },
   { id: 144, name: 'Pro League',             country: 'Belgium',       flag: '🇧🇪', tier: 2 },
-  { id: 113, name: 'Allsvenskan',            country: 'Sweden',        flag: '🇸🇪', tier: 2 },
-  { id: 262, name: 'Liga MX',                country: 'Mexico',        flag: '🇲🇽', tier: 2 },
-  { id: 253, name: 'MLS',                    country: 'USA',           flag: '🇺🇸', tier: 2 },
+  { id: 113, name: 'Allsvenskan',            country: 'Sweden',        flag: '🇸🇪', tier: 2, seasonType: 'calendar' },
+  { id: 262, name: 'Liga MX',                country: 'Mexico',        flag: '🇲🇽', tier: 2, seasonType: 'calendar' },
+  { id: 253, name: 'MLS',                    country: 'USA',           flag: '🇺🇸', tier: 2, seasonType: 'calendar' },
   { id: 79,  name: 'Bundesliga 2',           country: 'Germany',       flag: '🇩🇪', tier: 2 },
   { id: 136, name: 'Serie B',                country: 'Italy',         flag: '🇮🇹', tier: 2 },
   { id: 141, name: 'Segunda División',       country: 'Spain',         flag: '🇪🇸', tier: 2 },
   { id: 62,  name: 'Ligue 2',                country: 'France',        flag: '🇫🇷', tier: 2 },
   { id: 41,  name: 'League One',             country: 'England',       flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', tier: 2 },
   { id: 119, name: 'Danish Superliga',       country: 'Denmark',       flag: '🇩🇰', tier: 2 },
-  { id: 103, name: 'Eliteserien',            country: 'Norway',        flag: '🇳🇴', tier: 2 },
+  { id: 103, name: 'Eliteserien',            country: 'Norway',        flag: '🇳🇴', tier: 2, seasonType: 'calendar' },
   { id: 197, name: 'Super League 1',         country: 'Greece',        flag: '🇬🇷', tier: 2 },
   { id: 218, name: 'Bundesliga (Austria)',   country: 'Austria',       flag: '🇦🇹', tier: 2 },
   { id: 207, name: 'Super League',           country: 'Switzerland',   flag: '🇨🇭', tier: 2 },
 
   // ── Tier 3: South America, Asia, intl + smaller European ──────────────
-  { id: 71,  name: 'Brasileirão',            country: 'Brazil',        flag: '🇧🇷', tier: 3 },
-  { id: 128, name: 'Argentine Primera',      country: 'Argentina',     flag: '🇦🇷', tier: 3 },
-  { id: 13,  name: 'Copa Libertadores',      country: 'South America', flag: '🏆', tier: 3 },
-  { id: 11,  name: 'Copa Sudamericana',      country: 'South America', flag: '🥈', tier: 3 },
+  { id: 71,  name: 'Brasileirão',            country: 'Brazil',        flag: '🇧🇷', tier: 3, seasonType: 'calendar' },
+  { id: 128, name: 'Argentine Primera',      country: 'Argentina',     flag: '🇦🇷', tier: 3, seasonType: 'calendar' },
+  { id: 13,  name: 'Copa Libertadores',      country: 'South America', flag: '🏆', tier: 3, seasonType: 'calendar' },
+  { id: 11,  name: 'Copa Sudamericana',      country: 'South America', flag: '🥈', tier: 3, seasonType: 'calendar' },
   { id: 307, name: 'Saudi Pro League',       country: 'Saudi Arabia',  flag: '🇸🇦', tier: 3 },
-  { id: 98,  name: 'J1 League',              country: 'Japan',         flag: '🇯🇵', tier: 3 },
+  { id: 98,  name: 'J1 League',              country: 'Japan',         flag: '🇯🇵', tier: 3, seasonType: 'calendar' },
   { id: 179, name: 'Scottish Premiership',   country: 'Scotland',      flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', tier: 3 },
   { id: 106, name: 'Ekstraklasa',            country: 'Poland',        flag: '🇵🇱', tier: 3 },
-  { id: 1,   name: 'World Cup',              country: 'World',         flag: '🌍', tier: 3 },
-  { id: 9,   name: 'Copa America',           country: 'South America', flag: '🏆', tier: 3 },
-  { id: 6,   name: 'Africa Cup of Nations',  country: 'Africa',        flag: '🌍', tier: 3 },
-  { id: 17,  name: 'AFC Champions League',   country: 'Asia',          flag: '🏆', tier: 3 },
-  { id: 16,  name: 'CONCACAF Champions Cup', country: 'N. America',    flag: '🏆', tier: 3 },
-  { id: 4,   name: 'Euro Championship',      country: 'Europe',        flag: '🇪🇺', tier: 3 },
-  { id: 10,  name: 'Friendlies (Intl)',      country: 'World',         flag: '🌍', tier: 3 },
-  { id: 73,  name: 'Copa do Brasil',         country: 'Brazil',        flag: '🇧🇷', tier: 3 },
-  { id: 130, name: 'Copa Argentina',         country: 'Argentina',     flag: '🇦🇷', tier: 3 },
+  { id: 1,   name: 'World Cup',              country: 'World',         flag: '🌍', tier: 3, seasonType: 'calendar' },
+  { id: 9,   name: 'Copa America',           country: 'South America', flag: '🏆', tier: 3, seasonType: 'calendar' },
+  { id: 6,   name: 'Africa Cup of Nations',  country: 'Africa',        flag: '🌍', tier: 3, seasonType: 'calendar' },
+  { id: 17,  name: 'AFC Champions League',   country: 'Asia',          flag: '🏆', tier: 3, seasonType: 'calendar' },
+  { id: 16,  name: 'CONCACAF Champions Cup', country: 'N. America',    flag: '🏆', tier: 3, seasonType: 'calendar' },
+  { id: 4,   name: 'Euro Championship',      country: 'Europe',        flag: '🇪🇺', tier: 3, seasonType: 'calendar' },
+  { id: 10,  name: 'Friendlies (Intl)',      country: 'World',         flag: '🌍', tier: 3, seasonType: 'calendar' },
+  { id: 73,  name: 'Copa do Brasil',         country: 'Brazil',        flag: '🇧🇷', tier: 3, seasonType: 'calendar' },
+  { id: 130, name: 'Copa Argentina',         country: 'Argentina',     flag: '🇦🇷', tier: 3, seasonType: 'calendar' },
   { id: 188, name: 'A-League',               country: 'Australia',     flag: '🇦🇺', tier: 3 },
 ] as const
+
+/**
+ * Compute the correct API-Football season number for a given league, based
+ * on its season-numbering convention:
+ *
+ * - European leagues (Aug → May): season = start year. So in Mar 2026,
+ *   the Premier League is still season=2025 (the 2025-26 season).
+ * - Calendar leagues (single calendar year): season = current year.
+ *
+ * This function fixes a long-standing bug where the cron used a single
+ * year for all leagues — getting 0 fixtures for friendlies / WC / MLS /
+ * Brasileirão etc. for ~6 months out of every 12.
+ */
+export function getSeasonForLeague(league: { seasonType?: 'european' | 'calendar' }): number {
+  const now = new Date()
+  const month = now.getMonth() + 1 // 1-12
+  const year = now.getFullYear()
+  if (league.seasonType === 'calendar') {
+    return year
+  }
+  // European default: Aug-May. After August → current calendar year.
+  // Before August → previous calendar year (we're still in the season
+  // that started last August).
+  return month >= 8 ? year : year - 1
+}
 
 /**
  * Filter the central list down to a tier (1, 2, or 3).
