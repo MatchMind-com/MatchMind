@@ -94,23 +94,69 @@ async function batchedAll<T, R>(
 function extractOdds(bookmaker: any) {
   if (!bookmaker) return null
   const bets = bookmaker.bets || []
+  // Bet365's bet IDs in API-Football, verified against real fixtures:
+  //   1  Match Winner            13 First Half Winner (HT Result)
+  //   5  Goals Over/Under        34 BTTS - First Half
+  //   8  Both Teams Score        36 Win To Nil
+  //   12 Double Chance           45 Corners Over/Under (9.5)
+  // Card markets (id 14) aren't reliably exposed by Bet365 — skipped.
   const mw = bets.find((b: any) => b.id === 1)
   const ou = bets.find((b: any) => b.id === 5)
   const btts = bets.find((b: any) => b.id === 8)
-  const dc = bets.find((b: any) => b.id === 12) // Double Chance
-  const home = parseFloat(mw?.values?.find((v: any) => v.value === 'Home')?.odd || '0')
-  const draw = parseFloat(mw?.values?.find((v: any) => v.value === 'Draw')?.odd || '0')
-  const away = parseFloat(mw?.values?.find((v: any) => v.value === 'Away')?.odd || '0')
-  const over25 = parseFloat(ou?.values?.find((v: any) => v.value === 'Over 2.5')?.odd || '0')
-  const under25 = parseFloat(ou?.values?.find((v: any) => v.value === 'Under 2.5')?.odd || '0')
-  const bttsYes = parseFloat(btts?.values?.find((v: any) => v.value === 'Yes')?.odd || '0')
-  const bttsNo = parseFloat(btts?.values?.find((v: any) => v.value === 'No')?.odd || '0')
-  // Double Chance — API uses values like "Home/Draw", "Home/Away", "Draw/Away"
-  const dc1x = parseFloat(dc?.values?.find((v: any) => v.value === 'Home/Draw')?.odd || '0')
-  const dcx2 = parseFloat(dc?.values?.find((v: any) => v.value === 'Draw/Away')?.odd || '0')
-  const dc12 = parseFloat(dc?.values?.find((v: any) => v.value === 'Home/Away')?.odd || '0')
+  const dc = bets.find((b: any) => b.id === 12)
+  const htMw = bets.find((b: any) => b.id === 13)
+  const htBtts = bets.find((b: any) => b.id === 34)
+  const winNil = bets.find((b: any) => b.id === 36)
+  const corners = bets.find((b: any) => b.id === 45)
+
+  const findOdd = (bet: any, valueName: string): number => {
+    if (!bet) return 0
+    return parseFloat(bet.values?.find((v: any) => v.value === valueName)?.odd || '0')
+  }
+
+  const home   = findOdd(mw, 'Home')
+  const draw   = findOdd(mw, 'Draw')
+  const away   = findOdd(mw, 'Away')
+
+  // Goals totals — Bet365 exposes 1.5 / 2.5 / 3.5 lines on most fixtures
+  const over15  = findOdd(ou, 'Over 1.5')
+  const under15 = findOdd(ou, 'Under 1.5')
+  const over25  = findOdd(ou, 'Over 2.5')
+  const under25 = findOdd(ou, 'Under 2.5')
+  const over35  = findOdd(ou, 'Over 3.5')
+  const under35 = findOdd(ou, 'Under 3.5')
+
+  const bttsYes = findOdd(btts, 'Yes')
+  const bttsNo  = findOdd(btts, 'No')
+
+  // Double Chance — API uses 'Home/Draw', 'Draw/Away', 'Home/Away'
+  const dc1x = findOdd(dc, 'Home/Draw')
+  const dcx2 = findOdd(dc, 'Draw/Away')
+  const dc12 = findOdd(dc, 'Home/Away')
+
+  // HT Result (First Half Winner)
+  const htHome = findOdd(htMw, 'Home')
+  const htDraw = findOdd(htMw, 'Draw')
+  const htAway = findOdd(htMw, 'Away')
+
+  // HT BTTS + Win-to-Nil + Corners 9.5 (single-line markets)
+  const htBttsYes  = findOdd(htBtts, 'Yes')
+  const winNilHome = findOdd(winNil, 'Home')
+  const winNilAway = findOdd(winNil, 'Away')
+  const corners95Over  = findOdd(corners, 'Over 9.5')
+  const corners95Under = findOdd(corners, 'Under 9.5')
+
   if (!home && !draw && !away) return null
-  return { home, draw, away, over25, under25, btts: bttsYes, btts_no: bttsNo, dc_1x: dc1x, dc_x2: dcx2, dc_12: dc12 }
+  return {
+    home, draw, away,
+    over15, under15, over25, under25, over35, under35,
+    btts: bttsYes, btts_no: bttsNo,
+    dc_1x: dc1x, dc_x2: dcx2, dc_12: dc12,
+    ht_home: htHome, ht_draw: htDraw, ht_away: htAway,
+    ht_btts: htBttsYes,
+    win_nil_home: winNilHome, win_nil_away: winNilAway,
+    corners_over: corners95Over, corners_under: corners95Under,
+  }
 }
 
 function calcEV(aiPct: number, decimalOdds: number): number | null {
@@ -454,7 +500,7 @@ Return valid JSON only.`
 Matches:
 ${fixtureList}
 
-Return JSON with this exact structure:
+Return JSON with this exact structure. CALIBRATE every probability against the implied market probability. Use lineup quality, recent form, ref tendencies for HT/corners markets:
 {
   "predictions": [
     {
@@ -462,8 +508,17 @@ Return JSON with this exact structure:
       "home_win_pct": 55,
       "draw_pct": 25,
       "away_win_pct": 20,
+      "over_1_5_pct": 85,
       "over_2_5_pct": 65,
+      "over_3_5_pct": 38,
       "btts_pct": 55,
+      "ht_home_pct": 40,
+      "ht_draw_pct": 38,
+      "ht_away_pct": 22,
+      "ht_btts_pct": 28,
+      "corners_over_9_5_pct": 52,
+      "win_to_nil_home_pct": 30,
+      "win_to_nil_away_pct": 12,
       "confidence": 8,
       "recommended_bet": "Home Win",
       "recommended_odds_range": "1.85-2.10",
@@ -506,47 +561,87 @@ Return JSON with this exact structure:
     const homeWinPct = pred.home_win_pct ?? 40
     const drawPct = pred.draw_pct ?? 25
     const awayWinPct = pred.away_win_pct ?? 35
+    const over15Pct = pred.over_1_5_pct ?? 75
     const over25Pct = pred.over_2_5_pct ?? 55
+    const over35Pct = pred.over_3_5_pct ?? 30
     const bttsPct = pred.btts_pct ?? 50
+    const htHomePct = pred.ht_home_pct ?? 32
+    const htDrawPct = pred.ht_draw_pct ?? 42
+    const htAwayPct = pred.ht_away_pct ?? 26
+    const htBttsPct = pred.ht_btts_pct ?? 25
+    const cornersOver95Pct = pred.corners_over_9_5_pct ?? 50
+    const winNilHomePct = pred.win_to_nil_home_pct ?? 25
+    const winNilAwayPct = pred.win_to_nil_away_pct ?? 15
 
-    // Derived probabilities — no extra GPT call. These give the cron a much
-    // wider market set to find value in (was 5 markets, now 10) so the
-    // recommended pick isn't always "Over 2.5". The implied/derived probs
-    // sum correctly because they're complements / combinations of what
-    // GPT already returned.
+    // Derived probabilities — complements/combinations of what GPT returned.
+    // No extra GPT cost, expands market coverage from 5 → 22.
+    const under15Pct = Math.max(0, 100 - over15Pct)
     const under25Pct = Math.max(0, 100 - over25Pct)
+    const under35Pct = Math.max(0, 100 - over35Pct)
     const bttsNoPct  = Math.max(0, 100 - bttsPct)
-    const dc1xPct    = Math.min(100, homeWinPct + drawPct)    // 1X (Home or Draw)
-    const dcx2Pct    = Math.min(100, drawPct + awayWinPct)    // X2 (Draw or Away)
-    const dc12Pct    = Math.min(100, homeWinPct + awayWinPct) // 12 (Home or Away)
+    const cornersUnder95Pct = Math.max(0, 100 - cornersOver95Pct)
+    const dc1xPct    = Math.min(100, homeWinPct + drawPct)
+    const dcx2Pct    = Math.min(100, drawPct + awayWinPct)
+    const dc12Pct    = Math.min(100, homeWinPct + awayWinPct)
 
-    const homeEV    = o?.home    ? calcEV(homeWinPct, o.home)   : null
-    const drawEV    = o?.draw    ? calcEV(drawPct, o.draw)      : null
-    const awayEV    = o?.away    ? calcEV(awayWinPct, o.away)   : null
-    const over25EV  = o?.over25  ? calcEV(over25Pct, o.over25)  : null
-    const under25EV = o?.under25 ? calcEV(under25Pct, o.under25): null
-    const bttsEV    = o?.btts    ? calcEV(bttsPct, o.btts)      : null
-    const bttsNoEV  = o?.btts_no ? calcEV(bttsNoPct, o.btts_no) : null
-    const dc1xEV    = o?.dc_1x   ? calcEV(dc1xPct, o.dc_1x)     : null
-    const dcx2EV    = o?.dc_x2   ? calcEV(dcx2Pct, o.dc_x2)     : null
-    const dc12EV    = o?.dc_12   ? calcEV(dc12Pct, o.dc_12)     : null
+    const homeEV         = o?.home          ? calcEV(homeWinPct, o.home)         : null
+    const drawEV         = o?.draw          ? calcEV(drawPct, o.draw)            : null
+    const awayEV         = o?.away          ? calcEV(awayWinPct, o.away)         : null
+    const over15EV       = o?.over15        ? calcEV(over15Pct, o.over15)        : null
+    const under15EV      = o?.under15       ? calcEV(under15Pct, o.under15)      : null
+    const over25EV       = o?.over25        ? calcEV(over25Pct, o.over25)        : null
+    const under25EV      = o?.under25       ? calcEV(under25Pct, o.under25)      : null
+    const over35EV       = o?.over35        ? calcEV(over35Pct, o.over35)        : null
+    const under35EV      = o?.under35       ? calcEV(under35Pct, o.under35)      : null
+    const bttsEV         = o?.btts          ? calcEV(bttsPct, o.btts)            : null
+    const bttsNoEV       = o?.btts_no       ? calcEV(bttsNoPct, o.btts_no)       : null
+    const dc1xEV         = o?.dc_1x         ? calcEV(dc1xPct, o.dc_1x)           : null
+    const dcx2EV         = o?.dc_x2         ? calcEV(dcx2Pct, o.dc_x2)           : null
+    const dc12EV         = o?.dc_12         ? calcEV(dc12Pct, o.dc_12)           : null
+    const htHomeEV       = o?.ht_home       ? calcEV(htHomePct, o.ht_home)       : null
+    const htDrawEV       = o?.ht_draw       ? calcEV(htDrawPct, o.ht_draw)       : null
+    const htAwayEV       = o?.ht_away       ? calcEV(htAwayPct, o.ht_away)       : null
+    const htBttsEV       = o?.ht_btts       ? calcEV(htBttsPct, o.ht_btts)       : null
+    const cornersOverEV  = o?.corners_over  ? calcEV(cornersOver95Pct, o.corners_over)  : null
+    const cornersUnderEV = o?.corners_under ? calcEV(cornersUnder95Pct, o.corners_under): null
+    const winNilHomeEV   = o?.win_nil_home  ? calcEV(winNilHomePct, o.win_nil_home)     : null
+    const winNilAwayEV   = o?.win_nil_away  ? calcEV(winNilAwayPct, o.win_nil_away)     : null
 
     const MAX_REAL_EV = 25
-    const MAX_REAL_ODDS = 4.0
-    // 10 markets evaluated. The category tag drives a soft diversity rule
-    // below — when multiple markets tie within 3% EV, we prefer non-totals
-    // so the site doesn't display 8 of 9 picks as "Over 2.5".
+    const MAX_REAL_ODDS = 6.0  // bumped from 4.0 — HT picks + corners can sit at 3-5
+    // 22 markets evaluated (was 10). Diversity rule below keeps the picks
+    // page varied — when top-EV is Totals AND a non-totals is within 3%,
+    // the non-totals wins.
     const allCandidates = [
-      { label: 'Home Win',  category: '1x2',     ev: homeEV,    odds: o?.home,    aiPct: homeWinPct },
-      { label: 'Draw',      category: '1x2',     ev: drawEV,    odds: o?.draw,    aiPct: drawPct },
-      { label: 'Away Win',  category: '1x2',     ev: awayEV,    odds: o?.away,    aiPct: awayWinPct },
-      { label: '1X',        category: 'dc',      ev: dc1xEV,    odds: o?.dc_1x,   aiPct: dc1xPct },
-      { label: 'X2',        category: 'dc',      ev: dcx2EV,    odds: o?.dc_x2,   aiPct: dcx2Pct },
-      { label: '12',        category: 'dc',      ev: dc12EV,    odds: o?.dc_12,   aiPct: dc12Pct },
-      { label: 'Over 2.5',  category: 'totals',  ev: over25EV,  odds: o?.over25,  aiPct: over25Pct },
-      { label: 'Under 2.5', category: 'totals',  ev: under25EV, odds: o?.under25, aiPct: under25Pct },
-      { label: 'BTTS',      category: 'btts',    ev: bttsEV,    odds: o?.btts,    aiPct: bttsPct },
-      { label: 'BTTS No',   category: 'btts',    ev: bttsNoEV,  odds: o?.btts_no, aiPct: bttsNoPct },
+      // Match Result
+      { label: 'Home Win',         category: '1x2',     ev: homeEV,         odds: o?.home,         aiPct: homeWinPct },
+      { label: 'Draw',             category: '1x2',     ev: drawEV,         odds: o?.draw,         aiPct: drawPct },
+      { label: 'Away Win',         category: '1x2',     ev: awayEV,         odds: o?.away,         aiPct: awayWinPct },
+      // Double Chance
+      { label: '1X',               category: 'dc',      ev: dc1xEV,         odds: o?.dc_1x,        aiPct: dc1xPct },
+      { label: 'X2',               category: 'dc',      ev: dcx2EV,         odds: o?.dc_x2,        aiPct: dcx2Pct },
+      { label: '12',               category: 'dc',      ev: dc12EV,         odds: o?.dc_12,        aiPct: dc12Pct },
+      // Totals (3 lines)
+      { label: 'Over 1.5',         category: 'totals',  ev: over15EV,       odds: o?.over15,       aiPct: over15Pct },
+      { label: 'Under 1.5',        category: 'totals',  ev: under15EV,      odds: o?.under15,      aiPct: under15Pct },
+      { label: 'Over 2.5',         category: 'totals',  ev: over25EV,       odds: o?.over25,       aiPct: over25Pct },
+      { label: 'Under 2.5',        category: 'totals',  ev: under25EV,      odds: o?.under25,      aiPct: under25Pct },
+      { label: 'Over 3.5',         category: 'totals',  ev: over35EV,       odds: o?.over35,       aiPct: over35Pct },
+      { label: 'Under 3.5',        category: 'totals',  ev: under35EV,      odds: o?.under35,      aiPct: under35Pct },
+      // BTTS
+      { label: 'BTTS',             category: 'btts',    ev: bttsEV,         odds: o?.btts,         aiPct: bttsPct },
+      { label: 'BTTS No',          category: 'btts',    ev: bttsNoEV,       odds: o?.btts_no,      aiPct: bttsNoPct },
+      // Half-time
+      { label: 'HT Home',          category: 'ht',      ev: htHomeEV,       odds: o?.ht_home,      aiPct: htHomePct },
+      { label: 'HT Draw',          category: 'ht',      ev: htDrawEV,       odds: o?.ht_draw,      aiPct: htDrawPct },
+      { label: 'HT Away',          category: 'ht',      ev: htAwayEV,       odds: o?.ht_away,      aiPct: htAwayPct },
+      { label: 'HT BTTS',          category: 'ht',      ev: htBttsEV,       odds: o?.ht_btts,      aiPct: htBttsPct },
+      // Corners
+      { label: 'Corners Over 9.5', category: 'corners', ev: cornersOverEV,  odds: o?.corners_over, aiPct: cornersOver95Pct },
+      { label: 'Corners Under 9.5',category: 'corners', ev: cornersUnderEV, odds: o?.corners_under,aiPct: cornersUnder95Pct },
+      // Win to Nil
+      { label: 'Home Win to Nil',  category: 'winnil',  ev: winNilHomeEV,   odds: o?.win_nil_home, aiPct: winNilHomePct },
+      { label: 'Away Win to Nil',  category: 'winnil',  ev: winNilAwayEV,   odds: o?.win_nil_away, aiPct: winNilAwayPct },
     ]
     const valueBets = allCandidates
       .filter(x => x.ev !== null && x.ev > 0 && x.ev <= MAX_REAL_EV)
