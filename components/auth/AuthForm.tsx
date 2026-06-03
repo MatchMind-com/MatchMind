@@ -106,10 +106,10 @@ export default function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                 className="flex-1 py-2.5 text-[12px] font-bold uppercase tracking-[0.1em] transition-colors"
                 style={{
                   color: activeTab === tab ? '#F97316' : '#6B6860',
-                  borderBottom: activeTab === tab ? '2px solid #F97316' : '2px solid transparent',
                   marginBottom: '-1px',
                   background: 'none',
                   border: 'none',
+                  // borderBottom AFTER `border: 'none'` so this one wins
                   borderBottom: activeTab === tab ? '2px solid #F97316' : '2px solid transparent',
                   cursor: 'pointer',
                 }}

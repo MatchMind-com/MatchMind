@@ -662,28 +662,45 @@ Return JSON with this exact structure. CALIBRATE every probability against the i
     const winNilAwayEV   = evOr(winNilAwayPct, o?.win_nil_away)
 
     // ── Tier 1.5: derived probabilities for 11 new markets ──────────────
-    // Independent-event approximations. Football outcomes aren't strictly
-    // independent (a Home Win at 1-0 implies BTTS=No) so apply a 0.85
-    // correlation discount to combo probs. Conservative — stops over-
-    // confidence on combinations like "Home Win + BTTS".
+    // Football outcomes are NOT independent — HT lead and FT win are tightly
+    // correlated (~75-85% of teams leading at HT go on to win). Naive
+    // multiplication with a 0.85 discount double-counts this correlation
+    // and crushes probabilities below what the bookmaker is pricing, so
+    // no picks ever surface.
+    //
+    // Use empirical conditional probabilities (P(FT | HT)) instead.
+    // Source: long-run historical base rates across top European leagues.
+    const cond = (a: number | null, factor: number) =>
+      a != null ? Math.min(99, Math.round(a * factor)) : null
+
+    // HT/FT — empirical conditional rates given HT state.
+    //   P(Home win FT | Home leads HT)  ≈ 0.85
+    //   P(Home win FT | HT draw)        ≈ 0.30
+    //   P(FT draw     | HT draw)        ≈ 0.40
+    //   P(Away win FT | HT draw)        ≈ 0.18
+    const htftHHPct  = cond(htHomePct, 0.85)  // HT Home / FT Home
+    const htftDHPct  = cond(htDrawPct, 0.30)  // HT Draw / FT Home
+    const htftDDPct  = cond(htDrawPct, 0.40)  // HT Draw / FT Draw
+    const htftDAPct  = cond(htDrawPct, 0.18)  // HT Draw / FT Away
+
+    // Result + BTTS combos — less correlated than HT/FT but still not
+    // independent (a 1-0 home win implies BTTS=No, a 3-2 implies BTTS=Yes).
+    // Use multiplication with a 0.85 discount to keep combos conservative.
     const combo = (a: number | null, b: number | null) =>
       (a != null && b != null) ? Math.min(99, Math.round((a / 100) * (b / 100) * 0.85 * 100)) : null
-
-    // HT/FT — Home leads at HT × Home wins FT (heavy correlation, so 0.85 ×)
-    // Note: Home/Home is the most common HT/FT bet; derive from htHome × home win
-    const htftHHPct  = combo(htHomePct, homeWinPct)
-    const htftDHPct  = combo(htDrawPct, homeWinPct)
-    const htftDDPct  = combo(htDrawPct, drawPct)
-    const htftDAPct  = combo(htDrawPct, awayWinPct)
-    // Result + BTTS combos
     const rbttsHomeYesPct = combo(homeWinPct, bttsPct)
     const rbttsHomeNoPct  = combo(homeWinPct, bttsNoPct)
     const rbttsDrawYesPct = combo(drawPct, bttsPct)
     const rbttsAwayYesPct = combo(awayWinPct, bttsPct)
     const rbttsAwayNoPct  = combo(awayWinPct, bttsNoPct)
-    // Clean Sheet ≈ Win-to-Nil (close enough for our purposes)
+
+    // Clean Sheet ≈ Win-to-Nil (same outcome from defending team's view).
+    // Bet365 rarely supplies bet ID 27/28, so most fixtures fall back to
+    // null odds and these candidates are silently skipped — that's fine,
+    // we leave the code in so other bookmakers (Pinnacle etc.) can fill it.
     const csHomePct = winNilHomePct
     const csAwayPct = winNilAwayPct
+
     // European Handicap -1: home wins by 2+ goals. Roughly homeWin × 0.55
     // (most home wins are 1-goal margins, so ~45% of home wins are by 2+).
     const ehHomePct = homeWinPct != null ? Math.round(homeWinPct * 0.55) : null
