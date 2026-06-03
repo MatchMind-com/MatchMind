@@ -5,13 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { PRIMARY_AFFILIATE } from '@/lib/affiliates'
 import { kellyStake } from '@/lib/bankroll'
 import PreBetPause, { type PreBetPauseBet } from '@/components/pre-bet-pause'
-import WcPromoBanner from '@/components/WcPromoBanner'
 
-// FORCE_PRO_TIER = true keeps the paywall off entirely (current state).
-// To turn the paywall ON post-WC while keeping WC free, swap to:
-//   import { isWcPromoActive } from '@/lib/wc-promo'
-//   const FORCE_PRO_TIER = isWcPromoActive()
-// That single change auto-restores the paywall once the tournament ends.
 const FORCE_PRO_TIER = true // temp: set false to restore paywall
 
 interface BookmakerOdds {
@@ -108,7 +102,7 @@ function ConfidenceDots({ score }: { score: number }) {
   return (
     <div className="flex gap-1">
       {Array.from({ length: 10 }).map((_, i) => (
-        <div key={i} className={`w-1.5 h-1.5 ${i < score ? 'bg-blue-400' : 'bg-white/10'}`} />
+        <div key={i} className={`w-1.5 h-1.5 ${i < score ? 'bg-orange-400' : 'bg-white/10'}`} />
       ))}
     </div>
   )
@@ -166,6 +160,17 @@ function FireIcon() {
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
+    </svg>
+  )
+}
+
+function GridIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="7" height="7" strokeWidth={1.5} />
+      <rect x="14" y="3" width="7" height="7" strokeWidth={1.5} />
+      <rect x="3" y="14" width="7" height="7" strokeWidth={1.5} />
+      <rect x="14" y="14" width="7" height="7" strokeWidth={1.5} />
     </svg>
   )
 }
@@ -282,7 +287,7 @@ function TrackBetModal({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
       <div
-        className="relative bg-[#161B26] border border-white/[0.10] p-5 w-full max-w-sm shadow-2xl"
+        className="relative bg-[#13131F] border border-white/[0.10] p-5 w-full max-w-sm shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         {done ? (
@@ -520,14 +525,11 @@ export default function PredictionsPage() {
   return (
     <div className="p-5 lg:p-7 max-w-4xl mx-auto space-y-6">
 
-      {/* WC promo notice — self-hides outside the promo window */}
-      <WcPromoBanner variant="inline" />
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-8 h-8 bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+            <div className="w-8 h-8 bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
               <BrainIcon />
             </div>
             <h1 className="text-2xl font-black text-white tracking-tight">AI Predictions</h1>
@@ -540,7 +542,7 @@ export default function PredictionsPage() {
       {loading && (
         <div className="space-y-4">
           {[1,2,3].map(i => (
-            <div key={i} className="bg-[#0E1628] h-44 animate-pulse border border-white/[0.07]" />
+            <div key={i} className="bg-[#0E0E12] h-44 animate-pulse border border-white/[0.07]" />
           ))}
           <p className="text-center text-slate-600 text-sm">Fetching odds + running AI analysis…</p>
         </div>
@@ -548,13 +550,12 @@ export default function PredictionsPage() {
 
       {/* Error — cache miss (first deploy, cron hasn't run yet) */}
       {!loading && error === '__cache_miss__' && (
-        <div className="bg-blue-500/10 border border-blue-500/20 p-8 text-center space-y-3">
-          <div className="text-3xl">⏳</div>
-          <p className="text-blue-300 font-semibold">Predictions are warming up</p>
+        <div className="bg-white/[0.04] border border-white/[0.10] p-8 text-center space-y-3">
+          <p className="text-white font-semibold">Predictions are warming up</p>
           <p className="text-slate-500 text-sm">Our AI is analysing today&apos;s fixtures right now.<br/>This only happens once — check back in a few minutes.</p>
           <button
             onClick={() => { setLoading(true); setError(''); fetch('/api/predictions').then(r => r.json()).then(d => { if (d.success) setPredictions(d.predictions || []); else if (d.cache_miss) setError('__cache_miss__'); else setError(d.error || 'Failed to load predictions') }).catch(() => setError('Failed to load predictions')).finally(() => setLoading(false)) }}
-            className="mt-2 px-4 py-2 text-sm bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 transition-colors"
+            className="mt-2 px-4 py-2 text-sm bg-orange-500/15 hover:bg-orange-500/25 text-orange-300 border border-orange-500/30 transition-colors"
           >
             Try again
           </button>
@@ -570,7 +571,7 @@ export default function PredictionsPage() {
 
       {/* No fixtures */}
       {!loading && !error && predictions.length === 0 && (
-        <div className="bg-[#0E1628] border border-white/[0.07] p-10 text-center">
+        <div className="bg-[#0E0E12] border border-white/[0.07] p-10 text-center">
           <p className="text-slate-400 font-semibold mb-1">No upcoming fixtures</p>
           <p className="text-slate-600 text-sm">No matches in the next 3 days. Check back soon.</p>
         </div>
@@ -582,7 +583,7 @@ export default function PredictionsPage() {
           {[
             { id: 'accas'   as const, label: 'Accumulators', icon: <TargetIcon /> },
             { id: 'bets'    as const, label: 'Value Bets',   icon: <FireIcon /> },
-            { id: 'matches' as const, label: `All Matches`,  icon: <span className="text-xs">⚽</span>, count: predictions.length },
+            { id: 'matches' as const, label: `All Matches`,  icon: <GridIcon />, count: predictions.length },
           ].map(t => {
             const active = tab === t.id
             return (
@@ -598,7 +599,7 @@ export default function PredictionsPage() {
                 {t.icon}
                 <span>{t.label}</span>
                 {t.count != null && (
-                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${active ? 'bg-orange-500/20 text-orange-200' : 'bg-white/10 text-slate-400'}`}>
+                  <span className={`text-[10px] font-black px-1.5 py-0.5 ${active ? 'bg-orange-500/20 text-orange-200' : 'bg-white/10 text-slate-400'}`}>
                     {t.count}
                   </span>
                 )}
@@ -623,7 +624,7 @@ export default function PredictionsPage() {
               ).join('\n') + `\n\n${tier.label} Acca · Combined @ ${combinedOdds.toFixed(2)} · Combined EV +${combinedEV}%\nBuilt by MatchMind`
 
               return (
-                <div key={tier.key} className={`bg-[#0E1628] border ${tier.border} overflow-hidden`}>
+                <div key={tier.key} className={`bg-[#0E0E12] border ${tier.border} overflow-hidden`}>
                   {/* Tier header */}
                   <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between flex-wrap gap-2"
                     style={{ background: `linear-gradient(90deg, ${tier.headerBg} 0%, transparent 100%)` }}>
@@ -715,7 +716,7 @@ export default function PredictionsPage() {
 
       {/* Acca teaser — Free users on the accas tab */}
       {tab === 'accas' && !loading && !error && predictions.length > 0 && !isPro && (
-        <div className="bg-[#0E1628] border border-orange-500/20 p-5 flex items-center justify-between gap-4">
+        <div className="bg-[#0E0E12] border border-orange-500/20 p-5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
               <TargetIcon />
@@ -787,7 +788,7 @@ export default function PredictionsPage() {
                     .sort((a, b) => b.ev - a.ev)
                     .slice(0, 3)
                   return (
-                    <div key={tier.key} className={`bg-[#0E1628] border ${tier.border} overflow-hidden`}>
+                    <div key={tier.key} className={`bg-[#0E0E12] border ${tier.border} overflow-hidden`}>
                       <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between"
                         style={{ background: `linear-gradient(90deg, ${tier.headerBg} 0%, transparent 100%)` }}>
                         <div className="flex items-center gap-2">
@@ -842,7 +843,7 @@ export default function PredictionsPage() {
 
           {/* Value bet teaser — Free (only shown on Value Bets tab) */}
           {tab === 'bets' && !isPro && (
-            <div className="bg-[#0E1628] border border-orange-500/20 p-5 flex items-center justify-between">
+            <div className="bg-[#0E0E12] border border-orange-500/20 p-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
                   <FireIcon />
@@ -872,8 +873,8 @@ export default function PredictionsPage() {
                   key={pred.id || idx}
                   className={`border overflow-hidden transition-all ${
                     pred.is_value_bet
-                      ? 'bg-[#0E1628] border-emerald-500/25 hover:border-emerald-400/40'
-                      : 'bg-[#0E1628] border-white/[0.07] hover:border-blue-500/25'
+                      ? 'bg-[#0E0E12] border-emerald-500/25 hover:border-emerald-400/40'
+                      : 'bg-[#0E0E12] border-white/[0.07] hover:border-white/[0.12]'
                   }`}
                 >
                   {/* Pinnacle edge banner */}
@@ -993,10 +994,10 @@ export default function PredictionsPage() {
                         <div className={`border px-4 py-3 mb-3 flex items-center justify-between ${
                           pred.is_value_bet && isPro
                             ? 'bg-emerald-600/8 border-emerald-500/25'
-                            : 'bg-blue-600/8 border-blue-500/20'
+                            : 'bg-white/[0.03] border-white/[0.07]'
                         }`}>
                           <div>
-                            <p className={`text-[10px] font-semibold uppercase tracking-wide mb-0.5 ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-blue-400'}`}>
+                            <p className={`text-[10px] font-semibold uppercase tracking-wide mb-0.5 ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-white/40'}`}>
                               AI Recommended Bet
                             </p>
                             <p className="text-white font-bold text-sm">{pred.recommended_bet}</p>
@@ -1005,13 +1006,13 @@ export default function PredictionsPage() {
                             {recOdds ? (
                               <>
                                 <p className="text-slate-500 text-[10px]">{pred.bookmaker_name ?? 'Live'}</p>
-                                <p className={`font-black text-base ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-blue-300'}`}>{recOdds.toFixed(2)}</p>
+                                <p className={`font-black text-base ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-white'}`}>{recOdds.toFixed(2)}</p>
                                 {recEV !== null && <p className={`text-[9px] font-bold ${recEV > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>{recEV > 0 ? '+' : ''}{recEV}% EV</p>}
                               </>
                             ) : (
                               <>
                                 <p className="text-slate-500 text-[10px]">Est. odds</p>
-                                <p className={`font-bold text-sm ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-blue-300'}`}>{pred.recommended_odds_range}</p>
+                                <p className={`font-bold text-sm ${pred.is_value_bet && isPro ? 'text-emerald-400' : 'text-white'}`}>{pred.recommended_odds_range}</p>
                               </>
                             )}
                           </div>
@@ -1034,7 +1035,7 @@ export default function PredictionsPage() {
                       className={`flex items-center justify-between w-full px-4 py-2.5 mb-2 transition-all group ${
                         pred.is_value_bet && isPro
                           ? 'bg-emerald-600 hover:bg-emerald-500'
-                          : 'bg-blue-600 hover:bg-blue-500'
+                          : 'bg-orange-500 hover:bg-orange-400'
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -1092,7 +1093,7 @@ export default function PredictionsPage() {
                     {/* Expand toggle */}
                     <button
                       onClick={() => setExpanded(isExpanded ? null : idx)}
-                      className="text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 font-medium"
+                      className="text-xs text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-1 font-medium"
                     >
                       {isExpanded ? '▲ Hide' : '▼ Show'} detailed analysis
                     </button>
@@ -1147,7 +1148,7 @@ export default function PredictionsPage() {
                                   </div>
                                   <div className="flex justify-between text-[11px]">
                                     <span className="text-slate-500">Clean sheets</span>
-                                    <span className="text-blue-400 font-bold">{pred.home_stats.clean_sheets} ({pred.home_stats.clean_sheet_pct}%)</span>
+                                    <span className="text-white font-bold">{pred.home_stats.clean_sheets} ({pred.home_stats.clean_sheet_pct}%)</span>
                                   </div>
                                   <div className="flex justify-between text-[11px]">
                                     <span className="text-slate-500">Home record</span>
@@ -1175,7 +1176,7 @@ export default function PredictionsPage() {
                                   </div>
                                   <div className="flex justify-between text-[11px]">
                                     <span className="text-slate-500">Clean sheets</span>
-                                    <span className="text-blue-400 font-bold">{pred.away_stats.clean_sheets} ({pred.away_stats.clean_sheet_pct}%)</span>
+                                    <span className="text-white font-bold">{pred.away_stats.clean_sheets} ({pred.away_stats.clean_sheet_pct}%)</span>
                                   </div>
                                   <div className="flex justify-between text-[11px]">
                                     <span className="text-slate-500">Away record</span>
@@ -1198,8 +1199,8 @@ export default function PredictionsPage() {
                                   <span className="text-white font-bold">{pred.away_stats.goals_per_game}</span>
                                 </div>
                                 <div className="flex gap-0.5 h-1.5 overflow-hidden">
-                                  <div className="bg-blue-500 rounded-l-full" style={{ width: `${(pred.home_stats.goals_per_game / (pred.home_stats.goals_per_game + pred.away_stats.goals_per_game + 0.001)) * 100}%` }} />
-                                  <div className="bg-slate-700 flex-1 rounded-r-full" />
+                                  <div className="bg-orange-500" style={{ width: `${(pred.home_stats.goals_per_game / (pred.home_stats.goals_per_game + pred.away_stats.goals_per_game + 0.001)) * 100}%` }} />
+                                  <div className="bg-slate-700 flex-1" />
                                 </div>
                               </div>
                               {/* Goals Against bar */}
@@ -1210,8 +1211,8 @@ export default function PredictionsPage() {
                                   <span className="text-white font-bold">{pred.away_stats.conceded_per_game}</span>
                                 </div>
                                 <div className="flex gap-0.5 h-1.5 overflow-hidden">
-                                  <div className="bg-red-500 rounded-l-full" style={{ width: `${(pred.home_stats.conceded_per_game / (pred.home_stats.conceded_per_game + pred.away_stats.conceded_per_game + 0.001)) * 100}%` }} />
-                                  <div className="bg-slate-700 flex-1 rounded-r-full" />
+                                  <div className="bg-red-500" style={{ width: `${(pred.home_stats.conceded_per_game / (pred.home_stats.conceded_per_game + pred.away_stats.conceded_per_game + 0.001)) * 100}%` }} />
+                                  <div className="bg-slate-700 flex-1" />
                                 </div>
                               </div>
                               {/* Clean sheets bar */}
@@ -1222,8 +1223,8 @@ export default function PredictionsPage() {
                                   <span className="text-white font-bold">{pred.away_stats.clean_sheet_pct}%</span>
                                 </div>
                                 <div className="flex gap-0.5 h-1.5 overflow-hidden">
-                                  <div className="bg-emerald-500 rounded-l-full" style={{ width: `${(pred.home_stats.clean_sheet_pct / (pred.home_stats.clean_sheet_pct + pred.away_stats.clean_sheet_pct + 0.001)) * 100}%` }} />
-                                  <div className="bg-slate-700 flex-1 rounded-r-full" />
+                                  <div className="bg-emerald-500" style={{ width: `${(pred.home_stats.clean_sheet_pct / (pred.home_stats.clean_sheet_pct + pred.away_stats.clean_sheet_pct + 0.001)) * 100}%` }} />
+                                  <div className="bg-slate-700 flex-1" />
                                 </div>
                               </div>
                             </div>
@@ -1234,12 +1235,12 @@ export default function PredictionsPage() {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <p className="text-slate-500 text-[10px] mb-1.5 uppercase tracking-wide">Over 2.5 Goals</p>
-                          <ConfidenceBar value={pred.over_2_5_pct} color="#3b82f6" />
+                          <ConfidenceBar value={pred.over_2_5_pct} color="#F97316" />
                           {isPro && pred.ev.over25 !== null && <div className="mt-1"><EVBadge ev={pred.ev.over25} /></div>}
                         </div>
                         <div>
                           <p className="text-slate-500 text-[10px] mb-1.5 uppercase tracking-wide">Both Teams Score</p>
-                          <ConfidenceBar value={pred.btts_pct} color="#6366f1" />
+                          <ConfidenceBar value={pred.btts_pct} color="#F97316" />
                           {isPro && pred.ev.btts !== null && <div className="mt-1"><EVBadge ev={pred.ev.btts} /></div>}
                         </div>
                       </div>
@@ -1250,7 +1251,7 @@ export default function PredictionsPage() {
                           <ul className="space-y-1.5">
                             {pred.key_factors.map((factor, fi) => (
                               <li key={fi} className="flex items-start gap-2 text-sm text-slate-300">
-                                <span className="text-blue-500 mt-0.5 shrink-0 text-xs">•</span>
+                                <span className="text-orange-500 mt-0.5 shrink-0 text-xs">•</span>
                                 {factor}
                               </li>
                             ))}
@@ -1314,10 +1315,10 @@ export default function PredictionsPage() {
             {/* Locked overlay */}
             {lockedCount > 0 && (
               <div className="relative">
-                <div className="bg-[#0E1628] border border-white/[0.07] p-8 text-center opacity-30 select-none">
+                <div className="bg-[#0E0E12] border border-white/[0.07] p-8 text-center opacity-30 select-none">
                   <p className="text-slate-400">More predictions locked…</p>
                 </div>
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#060914]/85 border border-orange-500/25">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#09090C]/85 border border-orange-500/25">
                   <div className="text-orange-400 mb-3"><LockIcon /></div>
                   <p className="text-white font-bold mb-1">{lockedCount} more predictions + Value Bets</p>
                   <p className="text-slate-400 text-sm mb-4">Upgrade to Pro for all predictions, real odds & EV scores</p>
