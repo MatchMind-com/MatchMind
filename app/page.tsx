@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import PublicFooter from '@/components/layout/PublicFooter'
+import WcPromoBanner from '@/components/WcPromoBanner'
 
 async function getLiveStats() {
   try {
@@ -75,8 +76,8 @@ export default async function LandingPage() {
   const predictions = livePreds.length > 0 ? livePreds : SAMPLE_PREDS
   const isLiveData = livePreds.length > 0
 
-  const WC_KICKOFF_MS = new Date('2026-06-11T19:00:00+00:00').getTime()
-  const daysToWC = Math.max(0, Math.ceil((WC_KICKOFF_MS - Date.now()) / 86_400_000))
+  // WC kickoff date + days-until centralized in lib/wc-promo.ts (used via
+  // <WcPromoBanner />). Banner self-gates by date; no top-level date math here.
 
   const orgSchema = {
     '@context': 'https://schema.org',
@@ -116,19 +117,8 @@ export default async function LandingPage() {
         </div>
       </div>
 
-      {/* ── WORLD CUP BANNER ── */}
-      {daysToWC > 0 && (
-        <Link
-          href="/world-cup"
-          className="flex items-center justify-center gap-3 text-xs font-bold hover:opacity-90 transition-opacity"
-          style={{ background: '#1A0800', color: '#FB923C', borderBottom: '1px solid #2A1500', padding: '8px 20px' }}
-        >
-          <span className="font-mono uppercase tracking-widest" style={{ opacity: 0.5, fontSize: '10px' }}>World Cup 2026</span>
-          <span style={{ opacity: 0.3 }}>|</span>
-          <span><strong>{daysToWC} days</strong> until kickoff — free AI predictions for every match</span>
-          <span style={{ opacity: 0.5 }}>→</span>
-        </Link>
-      )}
+      {/* ── WORLD CUP BANNER — copy + visibility centralized in lib/wc-promo.ts ── */}
+      <WcPromoBanner variant="sticky" href="/world-cup" />
 
       {/* ── NAV ── */}
       <nav className="sticky z-50" style={{
@@ -218,7 +208,7 @@ export default async function LandingPage() {
             </div>
 
             <p className="font-mono" style={{ fontSize: '11px', color: '#3A3A48', marginTop: '20px' }}>
-              {stats.users > 0 ? stats.users.toLocaleString() : '2,000+'} members · 5,534 on TikTok · every pick tracked publicly
+              {stats.users > 0 ? `${stats.users.toLocaleString()} members · ` : ''}every pick logged before kick-off · every result public
             </p>
           </div>
 
@@ -631,11 +621,15 @@ export default async function LandingPage() {
               Start free — no card →
             </Link>
             <div className="font-mono" style={{ display: 'flex', gap: '20px', fontSize: '11px', color: '#3A3A48', flexWrap: 'wrap' }}>
-              <span>{stats.users > 0 ? stats.users.toLocaleString() : '2,000+'} members</span>
-              <span>·</span>
-              <span>5,534 on TikTok</span>
-              <span>·</span>
+              {stats.users > 0 && (
+                <>
+                  <span>{stats.users.toLocaleString()} members</span>
+                  <span>·</span>
+                </>
+              )}
               <span>{stats.value_bets_today} value bets today</span>
+              <span>·</span>
+              <span>every pick public</span>
             </div>
           </div>
 

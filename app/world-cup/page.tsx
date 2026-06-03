@@ -16,6 +16,7 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
 import EmailCapture from './email-capture'
+import WcPromoBanner from '@/components/WcPromoBanner'
 
 export const revalidate = 3600 // 1 hour — fixtures don't move once drawn
 export const dynamic = 'force-static'
@@ -234,17 +235,25 @@ export default async function WorldCupPage() {
 
   return (
     <main className="min-h-screen bg-bg-base text-fg">
+      {/* Top sticky WC promo bar — same component as landing for consistency.
+          Self-hides outside the promo window. */}
+      <WcPromoBanner variant="sticky" href="#email-capture" />
+
       {/* ── Hero ── */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-brand/10 via-bg-base to-bg-base" aria-hidden />
         <div className="relative max-w-5xl mx-auto px-5 lg:px-8 pt-10 lg:pt-20 pb-12 lg:pb-16">
-          <Link href="/" className="inline-flex items-center gap-2 text-fg-muted hover:text-brand text-sm font-medium mb-8">
-            <span>←</span>
-            <span>MatchMind</span>
-          </Link>
+          <div className="flex mb-8">
+            <Link href="/" className="inline-flex items-center gap-2 text-fg-muted hover:text-brand text-sm font-medium">
+              <span>←</span>
+              <span>MatchMind</span>
+            </Link>
+          </div>
 
-          <div className="inline-flex items-center gap-2 bg-brand/10 border border-brand/30 rounded-full px-3 py-1 mb-6">
-            <span className="text-brand text-xs font-bold uppercase tracking-widest">FIFA World Cup 2026</span>
+          <div className="flex mb-6">
+            <div className="inline-flex items-center gap-2 bg-brand/10 border border-brand/30 rounded-full px-3 py-1">
+              <span className="text-brand text-xs font-bold uppercase tracking-widest">FIFA World Cup 2026</span>
+            </div>
           </div>
 
           <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] mb-6">
@@ -269,8 +278,10 @@ export default async function WorldCupPage() {
             </span>
           </div>
 
-          {/* Email capture — the conversion */}
-          <EmailCapture />
+          {/* Email capture — the conversion. id used by WcPromoBanner link. */}
+          <div id="email-capture" className="scroll-mt-24">
+            <EmailCapture />
+          </div>
 
           {/* Trust strip */}
           <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-fg-muted">

@@ -5,7 +5,13 @@ import { createClient } from '@/lib/supabase/client'
 import { PRIMARY_AFFILIATE } from '@/lib/affiliates'
 import { kellyStake } from '@/lib/bankroll'
 import PreBetPause, { type PreBetPauseBet } from '@/components/pre-bet-pause'
+import WcPromoBanner from '@/components/WcPromoBanner'
 
+// FORCE_PRO_TIER = true keeps the paywall off entirely (current state).
+// To turn the paywall ON post-WC while keeping WC free, swap to:
+//   import { isWcPromoActive } from '@/lib/wc-promo'
+//   const FORCE_PRO_TIER = isWcPromoActive()
+// That single change auto-restores the paywall once the tournament ends.
 const FORCE_PRO_TIER = true // temp: set false to restore paywall
 
 interface BookmakerOdds {
@@ -513,6 +519,9 @@ export default function PredictionsPage() {
 
   return (
     <div className="p-5 lg:p-7 max-w-4xl mx-auto space-y-6">
+
+      {/* WC promo notice — self-hides outside the promo window */}
+      <WcPromoBanner variant="inline" />
 
       {/* Header */}
       <div className="flex items-center justify-between">
