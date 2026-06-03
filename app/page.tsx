@@ -65,6 +65,12 @@ export default async function LandingPage() {
   const predictions = livePreds.length > 0 ? livePreds : SAMPLE_PREDS
   const isLiveData = livePreds.length > 0
 
+  // Days until 2026 World Cup kickoff (Mexico v South Africa, June 11).
+  // When this hits 0 we'll let the WC banner auto-expire — for now it's
+  // a high-contrast attention magnet pointing to /world-cup.
+  const WC_KICKOFF_MS = new Date('2026-06-11T19:00:00+00:00').getTime()
+  const daysToWC = Math.max(0, Math.ceil((WC_KICKOFF_MS - Date.now()) / 86_400_000))
+
   const orgSchema = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -83,8 +89,28 @@ export default async function LandingPage() {
     <div className="min-h-screen bg-[#0B0B14] text-white overflow-x-hidden">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />
 
+      {/* ── WORLD CUP BANNER (top of page, above the nav) ── */}
+      {/* Highest-attention placement so anyone landing immediately sees
+          the WC content surface. Auto-hides after WC kickoff (June 11). */}
+      {daysToWC > 0 && (
+        <Link
+          href="/world-cup"
+          className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-orange-500 to-orange-600 text-white text-center py-2 px-5 text-sm font-semibold hover:from-orange-400 hover:to-orange-500 transition-colors group"
+        >
+          <span className="inline-flex items-center gap-2">
+            <span className="hidden sm:inline">🏆</span>
+            <span>
+              <strong>{daysToWC} day{daysToWC === 1 ? '' : 's'}</strong> until World Cup —
+              free daily AI predictions for every match
+            </span>
+            <span className="opacity-80 group-hover:translate-x-0.5 transition-transform">→</span>
+          </span>
+        </Link>
+      )}
+
       {/* ── NAV ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B0B14]/85 backdrop-blur-xl border-b border-white/5">
+      {/* Pushed down by banner height when banner is showing (h-9). */}
+      <nav className={`fixed left-0 right-0 z-50 bg-[#0B0B14]/85 backdrop-blur-xl border-b border-white/5 ${daysToWC > 0 ? 'top-9' : 'top-0'}`}>
         <div className="max-w-6xl mx-auto px-5 flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#F97316] to-[#EA580C] flex items-center justify-center text-white font-black text-lg shadow-lg shadow-orange-500/30">M</div>
@@ -92,6 +118,9 @@ export default async function LandingPage() {
           </Link>
           <div className="hidden md:flex items-center gap-7 text-sm text-white/55">
             <a href="#picks" className="hover:text-white transition-colors">Today&apos;s picks</a>
+            <Link href="/world-cup" className="text-orange-300 hover:text-orange-200 transition-colors font-semibold">
+              World Cup
+            </Link>
             <a href="#how" className="hover:text-white transition-colors">How it works</a>
             <Link href="/track-record" className="hover:text-white transition-colors">Track record</Link>
             <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
