@@ -385,10 +385,10 @@ export default function AllMarketsPanel({
     setLoading(true)
     setError(null)
 
-    // Hard 12s client-side timeout so the panel never spins forever even
-    // if a bad upstream gateway holds the connection open.
+    // 25s client-side timeout — matches the server's 28s budget (API-Football
+    // fetches + GPT-4o-mini eval can take 15-20s on cold requests).
     const aborter = new AbortController()
-    const timeoutId = setTimeout(() => aborter.abort(), 12_000)
+    const timeoutId = setTimeout(() => aborter.abort(), 25_000)
 
     fetch(`/api/fixtures/${fixtureId}/all-markets`, {
       cache: refreshTick > 0 ? 'no-store' : 'default',
