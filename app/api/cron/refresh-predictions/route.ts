@@ -284,19 +284,26 @@ async function refreshLeagues(
       }
 
       // Prioritise fixtures that bookmakers actually priced — those are
-      // the matches with public interest and real edge potential. Friendlies
-      // are the worst offender for this: API returns 60+ matches alphabetically
-      // starting with weird minnow tie-ups (Philippines v Guam, Gibraltar
-      // v British Virgin Islands), which is what the cron picked before
-      // when it just sliced the first 4. Fixtures-with-odds first, then
-      // fixtures-without if we still need padding.
+      // the matches with public interest and real edge potential. Within
+      // each bucket, sort by date ASCENDING so today's matches always
+      // outrank tomorrow's when slicing.
+      //
+      // Bug history: API-Football's fixtures endpoint doesn't guarantee
+      // date ordering across calls. On 2026-06-03 the cron picked 8
+      // Thursday friendlies, completely dropping today's Netherlands v
+      // Algeria / Congo DR v Denmark / Poland v Nigeria. Explicit date
+      // sort makes prioritisation deterministic — today's fixtures
+      // ALWAYS get cache slots before tomorrow's.
+      const byDateAsc = (a: any, b: any) =>
+        new Date(a.fixture?.date ?? 0).getTime() - new Date(b.fixture?.date ?? 0).getTime()
       const allFixturesForLeague = (fixtures || []) as any[]
-      const withOdds = allFixturesForLeague.filter((f: any) => oddsMap[f.fixture?.id])
-      const withoutOdds = allFixturesForLeague.filter((f: any) => !oddsMap[f.fixture?.id])
+      const withOdds = allFixturesForLeague.filter((f: any) => oddsMap[f.fixture?.id]).sort(byDateAsc)
+      const withoutOdds = allFixturesForLeague.filter((f: any) => !oddsMap[f.fixture?.id]).sort(byDateAsc)
       // Cap higher for Friendlies (id=10) — pre-WC week has 100+ fixtures,
-      // 8 picks lets the most popular tune-ups surface. Other leagues stay
-      // at 4 since they rarely have more than a matchday's worth in window.
-      const perLeagueCap = league.id === 10 ? 8 : 4
+      // 12 picks lets both today's tune-ups AND tomorrow's surface. Other
+      // leagues stay at 4 since they rarely have more than a matchday's
+      // worth in window.
+      const perLeagueCap = league.id === 10 ? 12 : 4
       const orderedFixtures = [...withOdds, ...withoutOdds].slice(0, perLeagueCap)
 
       return orderedFixtures.map((f: any) => ({
