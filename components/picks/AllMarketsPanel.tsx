@@ -26,6 +26,7 @@ interface Selection {
   label: string
   odds: number
   impliedProb: number
+  pinnacleOdds: number | null
   aiVerdict: Verdict
   aiReason: string
   aiProb: number
@@ -36,6 +37,7 @@ interface Market {
   category: Category
   name: string
   line: string | null
+  margin: number
   selections: Selection[]
 }
 
@@ -54,6 +56,7 @@ interface AllMarketsResponse {
     bookmakers_count: number
     odds_available: boolean
     ai_evaluated: boolean
+    is_friendly?: boolean
     note?: string
   }
 }
@@ -228,10 +231,29 @@ function SelectionRow({
         {sel.label}
       </span>
 
-      {/* Odds */}
-      <span className="font-stat text-fg text-[13px] font-bold tabular-nums shrink-0 w-14 text-right">
-        @ {sel.odds.toFixed(2)}
+      {/* Odds + implied prob */}
+      <span className="shrink-0 text-right">
+        <span className="font-stat text-fg text-[13px] font-bold tabular-nums">
+          @ {sel.odds.toFixed(2)}
+        </span>
+        <span className="font-stat text-fg-muted text-[10px] tabular-nums ml-1">
+          ({sel.impliedProb}%)
+        </span>
       </span>
+
+      {/* Pinnacle reference — desktop only, only when it differs meaningfully */}
+      {sel.pinnacleOdds != null && Math.abs(sel.pinnacleOdds - sel.odds) >= 0.02 && (
+        <span className="hidden md:inline shrink-0 font-stat text-[10px] tabular-nums text-fg-muted"
+          title={`Pinnacle: ${sel.pinnacleOdds.toFixed(2)}`}
+        >
+          {sel.pinnacleOdds > sel.odds ? (
+            <span className="text-success">↑{sel.pinnacleOdds.toFixed(2)}</span>
+          ) : (
+            <span className="text-fg-muted/60">↓{sel.pinnacleOdds.toFixed(2)}</span>
+          )}
+          <span className="text-fg-muted/40 ml-0.5">pin</span>
+        </span>
+      )}
 
       {/* EV */}
       <span
@@ -331,6 +353,21 @@ function CategoryGroup({
               {betCount} BET
             </span>
           )}
+          {/* Show margin on header when only one market in this category */}
+          {markets.length === 1 && markets[0].margin > 0 && (
+            <span
+              className={`font-stat text-[9px] font-bold tabular-nums px-1.5 py-0.5 ${
+                markets[0].margin < 5
+                  ? 'text-success bg-success/10 border border-success/20'
+                  : markets[0].margin < 8
+                  ? 'text-value bg-value/10 border border-value/20'
+                  : 'text-loss bg-loss/10 border border-loss/20'
+              }`}
+              title="Bookmaker margin"
+            >
+              {markets[0].margin.toFixed(1)}%
+            </span>
+          )}
           <span className="font-stat text-fg-muted text-[10px] tabular-nums">
             {totalSelections}
           </span>
@@ -342,7 +379,23 @@ function CategoryGroup({
           {markets.map((m) => (
             <div key={`${m.name}-${m.line ?? ''}`} className="bg-bg-base/40 border border-border-subtle p-2">
               {markets.length > 1 && (
-                <p className="eyebrow px-2 mb-1.5">{m.name}</p>
+                <div className="flex items-center justify-between px-2 mb-1.5">
+                  <p className="eyebrow">{m.name}</p>
+                  {m.margin > 0 && (
+                    <span
+                      className={`font-stat text-[9px] font-bold tabular-nums px-1.5 py-0.5 ${
+                        m.margin < 5
+                          ? 'text-success bg-success/10 border border-success/20'
+                          : m.margin < 8
+                          ? 'text-value bg-value/10 border border-value/20'
+                          : 'text-loss bg-loss/10 border border-loss/20'
+                      }`}
+                      title="Bookmaker margin — lower is better for bettors"
+                    >
+                      {m.margin.toFixed(1)}% mgn
+                    </span>
+                  )}
+                </div>
               )}
               <div className="space-y-0.5">
                 {m.selections.map((sel) => (
@@ -530,6 +583,13 @@ export default function AllMarketsPanel({
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-2 bg-loss" /> AVOID
           </span>
+        </div>
+      )}
+
+      {/* Friendly warning */}
+      {data && data.diagnostics?.is_friendly && data.markets.length > 0 && (
+        <div className="bg-value/5 border border-value/20 px-3 py-2 mb-2 text-[11px] text-value">
+          Friendly fixture — expect squad rotation, reduced motivation, and less predictable outcomes. Treat all verdicts with extra caution.
         </div>
       )}
 

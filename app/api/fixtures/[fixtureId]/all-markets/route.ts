@@ -43,6 +43,7 @@ interface Selection {
   label: string
   odds: number
   impliedProb: number
+  pinnacleOdds: number | null
   aiVerdict: Verdict
   aiReason: string
   aiProb: number
@@ -53,6 +54,7 @@ interface Market {
   category: MarketCategory
   name: string
   line: string | null
+  margin: number
   selections: Selection[]
 }
 
@@ -72,6 +74,7 @@ interface AllMarketsResponse {
     bookmakers_count: number
     odds_available: boolean
     ai_evaluated: boolean
+    is_friendly: boolean
     note?: string
   }
 }
@@ -175,6 +178,7 @@ function makeSelection(label: string, oddRaw: string): Selection | null {
     label,
     odds,
     impliedProb: impliedFromOdds(odds),
+    pinnacleOdds: null,
     aiVerdict: 'skip',
     aiReason: '',
     aiProb: 0,
@@ -196,7 +200,7 @@ function extractSimple(
     if (sel) sels.push(sel)
   }
   if (!sels.length) return null
-  return { category, name, line: null, selections: sels }
+  return { category, name, line: null, margin: 0, selections: sels }
 }
 
 function extractOverUnderLines(
@@ -236,6 +240,7 @@ function extractOverUnderLines(
         category,
         name: `${baseName} O/U ${line}`,
         line,
+        margin: 0,
         selections: sels,
       })
     }
@@ -273,7 +278,7 @@ function extractAllMarkets(books: ApiBookmaker[]): Market[] {
       if (sel) sels.push(sel)
     }
     if (sels.length) {
-      markets.push({ category: 'main', name: 'Half Time / Full Time', line: null, selections: sels.slice(0, 9) })
+      markets.push({ category: 'main', name: 'Half Time / Full Time', line: null, margin: 0, selections: sels.slice(0, 9) })
     }
   }
 
@@ -377,7 +382,7 @@ function extractAllMarkets(books: ApiBookmaker[]): Market[] {
       const sel = makeSelection(v.value, v.odd)
       if (sel) sels.push(sel)
     }
-    if (sels.length) markets.push({ category: 'specials', name: 'Win to Nil', line: null, selections: sels.slice(0, 4) })
+    if (sels.length) markets.push({ category: 'specials', name: 'Win to Nil', line: null, margin: 0, selections: sels.slice(0, 4) })
   }
 
   // Handicap — Asian Handicap (id 26)
@@ -388,10 +393,41 @@ function extractAllMarkets(books: ApiBookmaker[]): Market[] {
       const sel = makeSelection(v.value, v.odd)
       if (sel) sels.push(sel)
     }
-    if (sels.length) markets.push({ category: 'handicap', name: 'Asian Handicap', line: null, selections: sels.slice(0, 6) })
+    if (sels.length) markets.push({ category: 'handicap', name: 'Asian Handicap', line: null, margin: 0, selections: sels.slice(0, 6) })
   }
 
   return markets
+}
+
+// ---- Post-processing enrichment ------------------------------------------
+//
+// Runs after extractAllMarkets to add bookmaker margin + Pinnacle reference odds
+// (for Match Winner) without touching the extraction logic.
+
+function enrichMarkets(markets: Market[], books: ApiBookmaker[]): void {
+  const pinnacle = books.find((b) => b.id === BOOKMAKER_PINNACLE)
+  const pinMatchWinnerBet = pinnacle?.bets.find((b) => b.id === 1) ?? null
+
+  for (const m of markets) {
+    // Bookmaker margin: sum(1/odds) * 100 - 100 (using raw odds, not rounded implied)
+    const rawImpliedSum = m.selections.reduce((sum, s) => sum + (1 / s.odds) * 100, 0)
+    m.margin = Math.round((rawImpliedSum - 100) * 10) / 10
+
+    // Pinnacle reference odds for Match Winner only (most impactful comparison)
+    if (pinMatchWinnerBet && m.name === 'Match Winner') {
+      // API-Football uses "Home"/"Draw"/"Away"; our labels are "Home Win"/"Draw"/"Away Win"
+      const apiToLabel: Record<string, string> = { Home: 'Home Win', Draw: 'Draw', Away: 'Away Win' }
+      for (const sel of m.selections) {
+        const pinValue = pinMatchWinnerBet.values.find(
+          (v) => (apiToLabel[v.value] ?? v.value) === sel.label
+        )
+        if (pinValue) {
+          const o = parseFloat(pinValue.odd)
+          if (o > 1) sel.pinnacleOdds = o
+        }
+      }
+    }
+  }
 }
 
 // ---- GPT batch evaluator -------------------------------------------------
@@ -643,6 +679,7 @@ export async function GET(
     const leagueName = fx.league?.name ?? '—'
     const status = fx.fixture?.status?.short ?? 'NS'
     const kickoff = fx.fixture?.date ?? ''
+    const isFriendly = leagueName.toLowerCase().includes('friendly')
 
     // Pull bookmakers from the first odds entry for this fixture.
     const oddsEntry = (oddsData ?? []).find((o: any) => o.fixture?.id === Number(fixtureId)) || (oddsData ?? [])[0]
@@ -657,6 +694,7 @@ export async function GET(
     }))
 
     let markets = extractAllMarkets(bookmakers)
+    enrichMarkets(markets, bookmakers)
     // Cap at 18 markets — covers the popular ones (1X2, Double Chance,
     // BTTS, Total/HT goals, Corners, Cards, HT result, Win to Nil) AND
     // keeps the GPT prompt small enough to evaluate inside our 10s budget.
@@ -761,6 +799,7 @@ export async function GET(
         bookmakers_count: bookmakers.length,
         odds_available: bookmakers.length > 0,
         ai_evaluated: aiEvaluated,
+        is_friendly: isFriendly,
         note: diagnosticNote,
       },
     }
