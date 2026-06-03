@@ -1,12 +1,14 @@
 /**
  * Tier 1 refresh — top European leagues + UEFA cups + major domestic cups
  * (~14 leagues). Thin wrapper around /api/cron/refresh-predictions?tier=1.
- * Scheduled separately in vercel.json so each tier gets its own 60s budget.
+ * Scheduled separately in vercel.json so each tier gets its own 300s budget.
+ * Wrapper is the actual serverless function — its maxDuration governs the
+ * whole request, not the underlying refresh-predictions route's deadline.
  */
 import { NextResponse } from 'next/server'
 import { GET as refreshGET } from '../refresh-predictions/route'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 export async function GET(req: Request) {
   const url = new URL(req.url)

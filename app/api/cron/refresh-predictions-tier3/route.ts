@@ -5,7 +5,9 @@
 import { NextResponse } from 'next/server'
 import { GET as refreshGET } from '../refresh-predictions/route'
 
-export const maxDuration = 60
+// Wrapper is the serverless function Vercel deploys — its maxDuration
+// governs the whole request, not the underlying route's 300s deadline.
+export const maxDuration = 300
 
 export async function GET(req: Request) {
   const url = new URL(req.url)
