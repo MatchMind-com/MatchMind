@@ -563,57 +563,72 @@ Return JSON with this exact structure. CALIBRATE every probability against the i
     const pred = gptMap[i + 1] || {}
     const o = f._odds
 
-    const homeWinPct = pred.home_win_pct ?? 40
-    const drawPct = pred.draw_pct ?? 25
-    const awayWinPct = pred.away_win_pct ?? 35
-    const over15Pct = pred.over_1_5_pct ?? 75
-    const over25Pct = pred.over_2_5_pct ?? 55
-    const over35Pct = pred.over_3_5_pct ?? 30
-    const bttsPct = pred.btts_pct ?? 50
-    const htHomePct = pred.ht_home_pct ?? 32
-    const htDrawPct = pred.ht_draw_pct ?? 42
-    const htAwayPct = pred.ht_away_pct ?? 26
-    const htBttsPct = pred.ht_btts_pct ?? 25
-    const cornersOver95Pct = pred.corners_over_9_5_pct ?? 50
-    const winNilHomePct = pred.win_to_nil_home_pct ?? 25
-    const winNilAwayPct = pred.win_to_nil_away_pct ?? 15
+    // GPT-returned probabilities WITH NULL FALLBACK. If GPT didn't return
+    // a field (skipped it / hit token limit / wrong JSON), use null instead
+    // of a hard-coded default. Markets with null prob get skipped in EV
+    // calc below — better to surface fewer picks than fake-flag a +18%
+    // EV on HT BTTS just because our default happened to beat the odds.
+    const homeWinPct      = pred.home_win_pct      ?? null
+    const drawPct         = pred.draw_pct          ?? null
+    const awayWinPct      = pred.away_win_pct      ?? null
+    const over15Pct       = pred.over_1_5_pct      ?? null
+    const over25Pct       = pred.over_2_5_pct      ?? null
+    const over35Pct       = pred.over_3_5_pct      ?? null
+    const bttsPct         = pred.btts_pct          ?? null
+    const htHomePct       = pred.ht_home_pct       ?? null
+    const htDrawPct       = pred.ht_draw_pct       ?? null
+    const htAwayPct       = pred.ht_away_pct       ?? null
+    const htBttsPct       = pred.ht_btts_pct       ?? null
+    const cornersOver95Pct = pred.corners_over_9_5_pct ?? null
+    const winNilHomePct   = pred.win_to_nil_home_pct ?? null
+    const winNilAwayPct   = pred.win_to_nil_away_pct ?? null
 
-    // Derived probabilities — complements/combinations of what GPT returned.
-    // No extra GPT cost, expands market coverage from 5 → 22.
-    const under15Pct = Math.max(0, 100 - over15Pct)
-    const under25Pct = Math.max(0, 100 - over25Pct)
-    const under35Pct = Math.max(0, 100 - over35Pct)
-    const bttsNoPct  = Math.max(0, 100 - bttsPct)
-    const cornersUnder95Pct = Math.max(0, 100 - cornersOver95Pct)
-    const dc1xPct    = Math.min(100, homeWinPct + drawPct)
-    const dcx2Pct    = Math.min(100, drawPct + awayWinPct)
-    const dc12Pct    = Math.min(100, homeWinPct + awayWinPct)
+    // Derived probabilities — only computed if base probabilities exist
+    const under15Pct        = over15Pct != null ? Math.max(0, 100 - over15Pct) : null
+    const under25Pct        = over25Pct != null ? Math.max(0, 100 - over25Pct) : null
+    const under35Pct        = over35Pct != null ? Math.max(0, 100 - over35Pct) : null
+    const bttsNoPct         = bttsPct != null ? Math.max(0, 100 - bttsPct) : null
+    const cornersUnder95Pct = cornersOver95Pct != null ? Math.max(0, 100 - cornersOver95Pct) : null
+    const dc1xPct = (homeWinPct != null && drawPct != null) ? Math.min(100, homeWinPct + drawPct) : null
+    const dcx2Pct = (drawPct != null && awayWinPct != null) ? Math.min(100, drawPct + awayWinPct) : null
+    const dc12Pct = (homeWinPct != null && awayWinPct != null) ? Math.min(100, homeWinPct + awayWinPct) : null
 
-    const homeEV         = o?.home          ? calcEV(homeWinPct, o.home)         : null
-    const drawEV         = o?.draw          ? calcEV(drawPct, o.draw)            : null
-    const awayEV         = o?.away          ? calcEV(awayWinPct, o.away)         : null
-    const over15EV       = o?.over15        ? calcEV(over15Pct, o.over15)        : null
-    const under15EV      = o?.under15       ? calcEV(under15Pct, o.under15)      : null
-    const over25EV       = o?.over25        ? calcEV(over25Pct, o.over25)        : null
-    const under25EV      = o?.under25       ? calcEV(under25Pct, o.under25)      : null
-    const over35EV       = o?.over35        ? calcEV(over35Pct, o.over35)        : null
-    const under35EV      = o?.under35       ? calcEV(under35Pct, o.under35)      : null
-    const bttsEV         = o?.btts          ? calcEV(bttsPct, o.btts)            : null
-    const bttsNoEV       = o?.btts_no       ? calcEV(bttsNoPct, o.btts_no)       : null
-    const dc1xEV         = o?.dc_1x         ? calcEV(dc1xPct, o.dc_1x)           : null
-    const dcx2EV         = o?.dc_x2         ? calcEV(dcx2Pct, o.dc_x2)           : null
-    const dc12EV         = o?.dc_12         ? calcEV(dc12Pct, o.dc_12)           : null
-    const htHomeEV       = o?.ht_home       ? calcEV(htHomePct, o.ht_home)       : null
-    const htDrawEV       = o?.ht_draw       ? calcEV(htDrawPct, o.ht_draw)       : null
-    const htAwayEV       = o?.ht_away       ? calcEV(htAwayPct, o.ht_away)       : null
-    const htBttsEV       = o?.ht_btts       ? calcEV(htBttsPct, o.ht_btts)       : null
-    const cornersOverEV  = o?.corners_over  ? calcEV(cornersOver95Pct, o.corners_over)  : null
-    const cornersUnderEV = o?.corners_under ? calcEV(cornersUnder95Pct, o.corners_under): null
-    const winNilHomeEV   = o?.win_nil_home  ? calcEV(winNilHomePct, o.win_nil_home)     : null
-    const winNilAwayEV   = o?.win_nil_away  ? calcEV(winNilAwayPct, o.win_nil_away)     : null
+    // EV is null when EITHER odds are missing OR GPT didn't predict the
+    // probability. No fake values. No false-positive +EV picks from
+    // defaults that happen to beat the implied odds.
+    const evOr = (pct: number | null, odds: number | null | undefined) =>
+      (pct != null && odds && odds > 1) ? calcEV(pct, odds) : null
 
-    const MAX_REAL_EV = 25
-    const MAX_REAL_ODDS = 6.0  // bumped from 4.0 — HT picks + corners can sit at 3-5
+    const homeEV         = evOr(homeWinPct, o?.home)
+    const drawEV         = evOr(drawPct, o?.draw)
+    const awayEV         = evOr(awayWinPct, o?.away)
+    const over15EV       = evOr(over15Pct, o?.over15)
+    const under15EV      = evOr(under15Pct, o?.under15)
+    const over25EV       = evOr(over25Pct, o?.over25)
+    const under25EV      = evOr(under25Pct, o?.under25)
+    const over35EV       = evOr(over35Pct, o?.over35)
+    const under35EV      = evOr(under35Pct, o?.under35)
+    const bttsEV         = evOr(bttsPct, o?.btts)
+    const bttsNoEV       = evOr(bttsNoPct, o?.btts_no)
+    const dc1xEV         = evOr(dc1xPct, o?.dc_1x)
+    const dcx2EV         = evOr(dcx2Pct, o?.dc_x2)
+    const dc12EV         = evOr(dc12Pct, o?.dc_12)
+    const htHomeEV       = evOr(htHomePct, o?.ht_home)
+    const htDrawEV       = evOr(htDrawPct, o?.ht_draw)
+    const htAwayEV       = evOr(htAwayPct, o?.ht_away)
+    const htBttsEV       = evOr(htBttsPct, o?.ht_btts)
+    const cornersOverEV  = evOr(cornersOver95Pct, o?.corners_over)
+    const cornersUnderEV = evOr(cornersUnder95Pct, o?.corners_under)
+    const winNilHomeEV   = evOr(winNilHomePct, o?.win_nil_home)
+    const winNilAwayEV   = evOr(winNilAwayPct, o?.win_nil_away)
+
+    // Tightened EV ceiling: real value-bet edges sit in 1-5%. Picks
+    // claiming +15-25% EV are almost always calibration errors (GPT
+    // overestimating probability OR our prob using a default value
+    // that accidentally beats the implied odds). Cap at 10 so flagged
+    // picks pass a basic statistical reasonableness check.
+    const MAX_REAL_EV = 10
+    const MAX_REAL_ODDS = 6.0
     // 22 markets evaluated (was 10). Diversity rule below keeps the picks
     // page varied — when top-EV is Totals AND a non-totals is within 3%,
     // the non-totals wins.
@@ -698,7 +713,32 @@ Return JSON with this exact structure. CALIBRATE every probability against the i
       recommended_odds_range: pred.recommended_odds_range ?? '—',
       key_factors: pred.key_factors ?? [],
       risk_level: pred.risk_level ?? 'Medium',
-      edge_explanation: pred.edge_explanation ?? null,
+      // Pick-specific explanation. GPT generates a generic match-level
+      // edge_explanation that often talks about a Home Win even when the
+      // EV math picked HT BTTS — confusing to users. Override with a
+      // market-aware template when the GPT text doesn't mention the
+      // picked market's keywords.
+      edge_explanation: (() => {
+        const gpt = (pred.edge_explanation || '').trim()
+        if (!bestValue) return gpt || null
+        const label = bestValue.label.toLowerCase()
+        const t = gpt.toLowerCase()
+        const matchesPick =
+          (label.includes('over') || label.includes('under')) ? (t.includes('goal') || t.includes('over') || t.includes('under') || t.includes('high-scoring') || t.includes('low-scoring')) :
+          label.includes('btts')      ? (t.includes('both') || t.includes('btts') || t.includes('attack')) :
+          label.startsWith('ht ')     ? (t.includes('half') || t.includes('first 45') || t.includes('early')) :
+          label.includes('corner')    ? t.includes('corner') :
+          label.includes('win to nil')? (t.includes('clean sheet') || t.includes('nil')) :
+          true // 1X2 / DC — GPT match-level explanation usually fits
+        if (matchesPick && gpt) return gpt
+        // Template fallback so the UI never shows a contradictory explanation.
+        const aiPct = Math.round(bestValue.aiPct)
+        const implied = bestValue.odds ? Math.round(100 / bestValue.odds) : null
+        const edge = implied != null ? aiPct - implied : null
+        return implied != null
+          ? `Model estimates ${aiPct}% probability for ${bestValue.label} vs market's implied ${implied}%. +${edge}% edge.`
+          : `Model rates ${bestValue.label} at ${aiPct}% probability — flagged as +EV against current market price.`
+      })(),
       // Bookmaker odds + every EV value (22 markets) so the UI can
       // surface alternate picks beyond just best_value if it wants to.
       bookmaker: o ? {
