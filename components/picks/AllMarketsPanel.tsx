@@ -115,7 +115,7 @@ function verdictDot(v: Verdict): { bg: string; ring: string; text: string; label
       }
     default:
       return {
-        bg: 'bg-fg-muted/40',
+        bg: 'bg-white/20',
         ring: '',
         text: 'text-fg-muted',
         label: 'SKIP',
@@ -525,7 +525,7 @@ export default function AllMarketsPanel({
             <span className="h-2 w-2 bg-value" /> LEAN
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 bg-fg-muted/40" /> SKIP
+            <span className="h-2 w-2 bg-white/20" /> SKIP
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-2 bg-loss" /> AVOID

@@ -711,7 +711,7 @@ export async function GET(
         for (const m of evaluated) {
           for (const s of m.selections) {
             s.aiVerdict = 'skip'
-            s.aiReason = `${s.label} — AI verdicts not ready, showing odds only.`
+            s.aiReason = ''
             s.aiProb = s.impliedProb
             s.ev = 0
           }
@@ -728,7 +728,7 @@ export async function GET(
       for (const m of evaluated) {
         for (const s of m.selections) {
           s.aiVerdict = 'skip'
-          s.aiReason = `${s.label} — refresh to grade with AI.`
+          s.aiReason = ''
           s.aiProb = s.impliedProb
           s.ev = 0
         }
