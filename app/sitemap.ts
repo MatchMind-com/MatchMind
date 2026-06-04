@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { getWorldCupGroups, getAllTeams } from '@/lib/world-cup-data'
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 
@@ -36,6 +37,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/login`,        changeFrequency: 'monthly', priority: 0.4 },
   ]
 
+  // World Cup programmatic pages — 12 groups + 48 teams = 60 high-value
+  // SEO landings for queries like "Brazil World Cup 2026 predictions" and
+  // "Group F World Cup 2026 fixtures". Fail-soft: if API-Football is down,
+  // we keep the static + match pages and skip WC.
+  const wcPages: MetadataRoute.Sitemap = []
+  try {
+    const [groups, teams] = await Promise.all([getWorldCupGroups(), getAllTeams()])
+    for (const g of groups) {
+      wcPages.push({
+        url: `${BASE}/world-cup/groups/${g.slug}`,
+        changeFrequency: 'daily',
+        priority: 0.85,
+      })
+    }
+    for (const p of teams) {
+      wcPages.push({
+        url: `${BASE}/world-cup/teams/${p.slug}`,
+        changeFrequency: 'daily',
+        priority: 0.85,
+      })
+    }
+  } catch (e) {
+    console.error('[sitemap] WC pages skipped:', (e as Error).message)
+  }
+
   try {
     // Include every match prediction within ±7 days — each is a unique landing
     // page with real keyword value ("Team A vs Team B prediction DATE").
@@ -49,7 +75,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .select('home_team, away_team, kick_off')
       .gte('kick_off', from.toISOString())
       .lte('kick_off', to.toISOString())
-      .lte('ev_percent', 25)
+      .lte('ev_percent', 10)
       .lte('odds', 4.0)
 
     const seen = new Set<string>()
@@ -67,9 +93,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       })
     }
 
-    return [...staticPages, ...matchPages]
+    return [...staticPages, ...wcPages, ...matchPages]
   } catch (e) {
-    console.error('[sitemap] fell back to static pages only:', (e as Error).message)
-    return staticPages
+    console.error('[sitemap] fell back to static + WC pages:', (e as Error).message)
+    return [...staticPages, ...wcPages]
   }
 }
