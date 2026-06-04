@@ -23,7 +23,8 @@ export async function GET(req: NextRequest) {
     .from('prediction_records')
     .select('home_team, away_team, league, bet_type, odds, ev_percent, ai_probability, kick_off')
     .eq('is_value_bet', true)
-    .lte('ev_percent', 25)
+    .gt('ev_percent', 0)
+    .lte('ev_percent', 10)   // MAX_REAL_EV — kill stale +20% rows
     .lte('odds', 4.0)
     .gte('created_at', today.toISOString())
     .order('ev_percent', { ascending: false })

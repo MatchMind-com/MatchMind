@@ -27,12 +27,17 @@ export async function GET(req: NextRequest) {
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
 
+  // MAX_REAL_EV in refresh-predictions/route.ts is 10 — anything above is
+  // a calibration error from before the ceiling tightening. Filter those
+  // out so the digest can't surface impossible-looking +20% picks that
+  // don't exist on the live site any more.
   const { data: valueBets, error: betsError } = await supabaseAdmin
     .from('prediction_records')
     .select('home_team, away_team, league, bet_type, odds, ev_percent, kick_off, is_value_bet')
     .is('result', null)
     .eq('is_value_bet', true)
-    .lte('ev_percent', 25)
+    .gt('ev_percent', 0)
+    .lte('ev_percent', 10)
     .lte('odds', 4.0)
     .gte('kick_off', todayStart.toISOString())
     .order('ev_percent', { ascending: false })

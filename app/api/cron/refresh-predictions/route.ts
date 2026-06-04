@@ -932,9 +932,14 @@ Return JSON with this exact structure. CALIBRATE every probability against the i
         }
       })
     if (records.length > 0) {
+      // OVERWRITE existing rows so a re-evaluation with a tighter EV ceiling
+      // (or a different best-value market) replaces the stale row instead
+      // of silently shadowing it. Was `ignoreDuplicates: true` — that bug
+      // let pre-MAX_REAL_EV=10 rows with +20% EV survive forever and
+      // surface in /api/cron/daily-digest etc.
       await supabaseAdmin
         .from('prediction_records')
-        .upsert(records, { onConflict: 'fixture_id,prediction', ignoreDuplicates: true })
+        .upsert(records, { onConflict: 'fixture_id,prediction' })
     }
   } catch (dbErr) {
     console.error('[refresh-predictions] DB save error:', dbErr)

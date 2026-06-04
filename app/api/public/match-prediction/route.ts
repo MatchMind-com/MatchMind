@@ -43,7 +43,7 @@ export async function GET(request: Request) {
       .select('id, home_team, away_team, league, kick_off, bet_type, prediction, ai_probability, odds, ev_percent, is_value_bet, result, home_score, away_score')
       .gte('kick_off', from.toISOString())
       .lte('kick_off', to.toISOString())
-      .lte('ev_percent', 25)
+      .lte('ev_percent', 10)   // MAX_REAL_EV — kill stale +20% rows
       .lte('odds', 4.0)
       .order('ev_percent', { ascending: false })
 
