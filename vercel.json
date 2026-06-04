@@ -46,9 +46,9 @@
       "schedule": "30 17 * * *"
     },
     {
-      "_comment": "Every 5 min during peak (12-23 UTC) — dedupes via supabase kickoff_tweets table",
+      "_comment": "Hobby tier doesn't allow */5 — bumped to hourly. On Pro upgrade, set back to */5 12-23 * * *",
       "path": "/api/admin/post-kickoff-alerts",
-      "schedule": "*/5 12-23 * * *"
+      "schedule": "0 12-22 * * *"
     },
     {
       "_comment": "IG token has 60d expiry — refresh weekly to keep rolling",
