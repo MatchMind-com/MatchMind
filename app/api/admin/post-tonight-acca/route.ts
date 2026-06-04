@@ -181,7 +181,8 @@ async function postTweet(text: string): Promise<{ ok: boolean; id?: string; url?
 
 export async function POST(req: Request) {
   const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  const isVercelCron = req.headers.get('x-vercel-cron') === '1'
+  if (auth !== `Bearer ${process.env.CRON_SECRET}` && !isVercelCron) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -285,3 +286,6 @@ export async function POST(req: Request) {
     legs_used: unique.length,
   }, { status: result.ok ? 200 : 502 })
 }
+
+// Vercel cron fires GET — reuse the POST handler.
+export const GET = POST
