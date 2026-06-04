@@ -97,11 +97,11 @@ const NAV: Array<{
     icon: <IconMoney />,
     matches: ['/dashboard/money', '/dashboard/bankroll', '/dashboard/track-record', '/dashboard/dream-bet'],
   },
-  // /world-cup lives outside /dashboard/* (it's the public-facing
-  // landing page) but logged-in users should still be able to reach it
-  // from inside the app during the tournament. NavItem.active check
-  // handles both prefix patterns.
-  { href: '/world-cup', label: 'World Cup', icon: <IconWorldCup /> },
+  // Dashboard-wrapped WC hub — same data as the public /world-cup
+  // landing page, but rendered inside the dashboard layout so logged-in
+  // users stay in the app. The public /world-cup remains for SEO + TikTok
+  // bio targets.
+  { href: '/dashboard/world-cup', label: 'World Cup', icon: <IconWorldCup /> },
   { href: '/dashboard/settings', label: 'Settings', icon: <IconSettings /> },
 ]
 
