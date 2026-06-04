@@ -22,8 +22,12 @@ import { notFound } from 'next/navigation'
 import {
   getAllTeams,
   getTeamBySlug,
+  getTeamEnrichment,
   teamSlug,
   type WCFixture,
+  type RecentFixture,
+  type SquadPlayer,
+  type InjuryReport,
 } from '@/lib/world-cup-data'
 
 export const revalidate = 3600
@@ -109,12 +113,80 @@ function FixtureCard({ f, currentTeamId }: { f: WCFixture; currentTeamId: number
   )
 }
 
+function FormPill({ r }: { r: RecentFixture }) {
+  const color = r.result === 'W' ? 'bg-success/15 text-success border-success/30'
+    : r.result === 'L' ? 'bg-loss/15 text-loss border-loss/30'
+    : r.result === 'D' ? 'bg-fg-muted/15 text-fg-muted border-fg-muted/30'
+    : 'bg-bg-elevated text-fg-muted border-border-subtle'
+  return (
+    <span className={`inline-flex items-center justify-center w-8 h-8 text-xs font-black border ${color}`} title={`${r.result} vs ${r.opponent}`}>
+      {r.result}
+    </span>
+  )
+}
+
+function FormRow({ r, currentTeamName }: { r: RecentFixture; currentTeamName: string }) {
+  const scoreStr = (r.goalsFor !== null && r.goalsAgainst !== null) ? `${r.goalsFor}-${r.goalsAgainst}` : '—'
+  const date = (() => {
+    try { return new Date(r.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }
+    catch { return '' }
+  })()
+  return (
+    <li className="flex items-center gap-3 py-3 border-b border-border-subtle last:border-0">
+      <FormPill r={r} />
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-sm truncate">
+          {r.isHome ? currentTeamName : r.opponent} <span className="font-mono text-fg-muted text-xs mx-1">{scoreStr}</span> {r.isHome ? r.opponent : currentTeamName}
+        </p>
+        <p className="text-fg-muted text-[11px] font-mono">{date} · {r.isHome ? 'Home' : 'Away'}</p>
+      </div>
+    </li>
+  )
+}
+
+function SquadGroup({ title, players }: { title: string; players: SquadPlayer[] }) {
+  if (players.length === 0) return null
+  return (
+    <div>
+      <p className="eyebrow mb-2">{title} ({players.length})</p>
+      <ul className="space-y-1.5">
+        {players.map(p => (
+          <li key={p.id} className="flex items-center gap-2 text-sm">
+            {p.number !== null && (
+              <span className="font-mono text-fg-muted text-[11px] w-6 text-right tabular-nums">{p.number}</span>
+            )}
+            <span className="text-fg">{p.name}</span>
+            {p.age !== null && (
+              <span className="font-mono text-fg-muted text-[11px] ml-auto">{p.age}y</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 export default async function TeamPage({ params }: { params: { team: string } }) {
   const profile = await getTeamBySlug(params.team)
   if (!profile) notFound()
   const { team, group, fixtures } = profile
 
   const teammates = group.teams.filter(t => t.id !== team.id)
+
+  // Editorial enrichment — form, squad, injuries.
+  // Fails soft per-section: if API-Football returns nothing for a smaller
+  // nation, those sections just don't render.
+  const enrichment = await getTeamEnrichment(team.id)
+  const wins = enrichment.form.filter(f => f.result === 'W').length
+  const draws = enrichment.form.filter(f => f.result === 'D').length
+  const losses = enrichment.form.filter(f => f.result === 'L').length
+
+  const squadByPosition = {
+    goalkeepers: enrichment.squad.filter(p => p.position === 'Goalkeeper'),
+    defenders: enrichment.squad.filter(p => p.position === 'Defender'),
+    midfielders: enrichment.squad.filter(p => p.position === 'Midfielder'),
+    attackers: enrichment.squad.filter(p => p.position === 'Attacker'),
+  }
 
   return (
     <main className="min-h-screen bg-bg-base text-fg">
@@ -168,6 +240,65 @@ export default async function TeamPage({ params }: { params: { team: string } })
             </div>
           )}
         </section>
+
+        {/* Recent form — last 5 games */}
+        {enrichment.form.length > 0 && (
+          <section className="mb-12">
+            <div className="flex items-center justify-between mb-4">
+              <p className="eyebrow">Form — last 5</p>
+              <p className="font-mono text-xs text-fg-muted tabular-nums">
+                <span className="text-success">{wins}W</span>
+                <span className="mx-1">·</span>
+                <span className="text-fg-muted">{draws}D</span>
+                <span className="mx-1">·</span>
+                <span className="text-loss">{losses}L</span>
+              </p>
+            </div>
+            <div className="card">
+              <ul>
+                {enrichment.form.map((f, i) => (
+                  <FormRow key={`${f.date}-${i}`} r={f} currentTeamName={team.name} />
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
+
+        {/* Injuries / unavailable */}
+        {enrichment.injuries.length > 0 && (
+          <section className="mb-12">
+            <p className="eyebrow mb-4">Injuries / unavailable</p>
+            <div className="card">
+              <ul className="space-y-2">
+                {enrichment.injuries.map((i, idx) => (
+                  <li key={`${i.player}-${idx}`} className="flex items-baseline gap-3 text-sm">
+                    <span className="font-semibold">{i.player}</span>
+                    <span className="text-fg-muted text-xs">{i.reason}</span>
+                    <span className="ml-auto text-loss text-[10px] font-bold uppercase tracking-wider">
+                      {i.type}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
+
+        {/* Squad */}
+        {enrichment.squad.length > 0 && (
+          <section className="mb-12">
+            <div className="flex items-center justify-between mb-4">
+              <p className="eyebrow">Squad ({enrichment.squad.length})</p>
+              <p className="text-fg-muted text-[10px] font-mono">via API-Football</p>
+            </div>
+            <div className="card grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-5">
+              <SquadGroup title="Goalkeepers" players={squadByPosition.goalkeepers} />
+              <SquadGroup title="Defenders" players={squadByPosition.defenders} />
+              <SquadGroup title="Midfielders" players={squadByPosition.midfielders} />
+              <SquadGroup title="Attackers" players={squadByPosition.attackers} />
+            </div>
+          </section>
+        )}
 
         {/* CTA */}
         <section className="border border-border-subtle p-6 md:p-8 bg-bg-surface mb-12">

@@ -173,3 +173,130 @@ export async function getTeamBySlug(slug: string): Promise<WCTeamProfile | null>
   const normalized = slug.toLowerCase()
   return profiles.find(p => p.slug === normalized) ?? null
 }
+
+/* ────────────────────────────────────────────────────────────
+ * Team enrichment — form, squad, injuries
+ *
+ * Used by /world-cup/teams/[team] to add real editorial content
+ * beyond just fixtures. Each enrichment fetch is independent so a
+ * failure in one (e.g. no squad data for a smaller nation) doesn't
+ * blank the page.
+ * ────────────────────────────────────────────────────────────── */
+
+export interface RecentFixture {
+  date: string                     // ISO
+  opponent: string                 // team name
+  isHome: boolean
+  goalsFor: number | null
+  goalsAgainst: number | null
+  result: 'W' | 'L' | 'D' | '?'
+}
+
+export interface SquadPlayer {
+  id: number
+  name: string
+  position: 'Goalkeeper' | 'Defender' | 'Midfielder' | 'Attacker' | string
+  age: number | null
+  number: number | null
+}
+
+export interface InjuryReport {
+  player: string
+  reason: string
+  type: string                     // "Missing Fixture" | "Questionable" | ...
+}
+
+export interface TeamEnrichment {
+  form: RecentFixture[]            // most recent first
+  squad: SquadPlayer[]             // all positions
+  injuries: InjuryReport[]
+}
+
+async function fetchLastFixtures(teamId: number, n = 5): Promise<RecentFixture[]> {
+  try {
+    const res = await fetch(`${API_BASE}/fixtures?team=${teamId}&last=${n}`, {
+      headers: { 'x-apisports-key': API_KEY },
+      next: { revalidate: 3600 },
+    })
+    if (!res.ok) return []
+    const json = await res.json()
+    return (json.response ?? []).map((f: any): RecentFixture => {
+      const isHome = f.teams?.home?.id === teamId
+      const us = isHome ? f.goals?.home : f.goals?.away
+      const them = isHome ? f.goals?.away : f.goals?.home
+      const opponent = (isHome ? f.teams?.away?.name : f.teams?.home?.name) ?? '?'
+      let result: 'W' | 'L' | 'D' | '?' = '?'
+      if (typeof us === 'number' && typeof them === 'number') {
+        result = us > them ? 'W' : us < them ? 'L' : 'D'
+      }
+      return {
+        date: f.fixture?.date ?? '',
+        opponent,
+        isHome,
+        goalsFor: typeof us === 'number' ? us : null,
+        goalsAgainst: typeof them === 'number' ? them : null,
+        result,
+      }
+    })
+  } catch {
+    return []
+  }
+}
+
+async function fetchSquad(teamId: number): Promise<SquadPlayer[]> {
+  try {
+    const res = await fetch(`${API_BASE}/players/squads?team=${teamId}`, {
+      headers: { 'x-apisports-key': API_KEY },
+      next: { revalidate: 3600 * 24 },   // squad rarely changes — 24h cache
+    })
+    if (!res.ok) return []
+    const json = await res.json()
+    const players = json.response?.[0]?.players ?? []
+    return players.map((p: any): SquadPlayer => ({
+      id: p.id,
+      name: p.name,
+      position: p.position ?? 'Unknown',
+      age: typeof p.age === 'number' ? p.age : null,
+      number: typeof p.number === 'number' ? p.number : null,
+    }))
+  } catch {
+    return []
+  }
+}
+
+async function fetchInjuries(teamId: number): Promise<InjuryReport[]> {
+  try {
+    // Some nations don't run a domestic season call — calendar 2026 covers
+    // both WC + post-club-season friendlies.
+    const res = await fetch(`${API_BASE}/injuries?team=${teamId}&season=2026`, {
+      headers: { 'x-apisports-key': API_KEY },
+      next: { revalidate: 3600 },
+    })
+    if (!res.ok) return []
+    const json = await res.json()
+    const seen = new Set<string>()
+    const out: InjuryReport[] = []
+    for (const i of json.response ?? []) {
+      const name = i.player?.name
+      if (!name || seen.has(name)) continue
+      seen.add(name)
+      out.push({
+        player: name,
+        reason: i.player?.reason ?? 'Unknown',
+        type: i.player?.type ?? 'Missing Fixture',
+      })
+    }
+    return out
+  } catch {
+    return []
+  }
+}
+
+export async function getTeamEnrichment(teamId: number): Promise<TeamEnrichment> {
+  const [form, squad, injuries] = await Promise.all([
+    fetchLastFixtures(teamId, 5),
+    fetchSquad(teamId),
+    fetchInjuries(teamId),
+  ])
+  return { form, squad, injuries }
+}

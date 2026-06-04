@@ -88,8 +88,17 @@ function fmtKickoff(iso: string): string {
 }
 
 function pickLabel(pred: PickPrediction): string {
+  // 1. Real value bet found — show it.
   if (pred.best_value?.label) return pred.best_value.label
-  return pred.recommended_bet || 'Top pick'
+  // 2. GPT had a concrete recommendation — show it (e.g. "Home Win").
+  if (pred.recommended_bet && pred.recommended_bet.toLowerCase() !== 'no clear value') {
+    return pred.recommended_bet
+  }
+  // 3. No value bet AND no recommendation. Distinguish "no odds yet" from
+  //    "evaluated, no edge" so the card reads as informative not blank.
+  const bk = pred.bookmaker
+  const noOdds = !bk || Object.values(bk).every(v => !v || v <= 1)
+  return noOdds ? 'Odds not yet released' : 'No edge over bookmaker'
 }
 
 function deriveBetType(label: string): string {
