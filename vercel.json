@@ -54,6 +54,11 @@
       "_comment": "IG token has 60d expiry — refresh weekly to keep rolling",
       "path": "/api/admin/refresh-instagram-token",
       "schedule": "0 4 * * 1"
+    },
+    {
+      "_comment": "Daily W/L recap @ 22:00 UTC (1h after check-predictions settles)",
+      "path": "/api/admin/post-daily-recap",
+      "schedule": "0 22 * * *"
     }
   ]
 }

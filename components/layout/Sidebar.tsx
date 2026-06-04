@@ -38,6 +38,14 @@ function IconMoney() {
     </svg>
   )
 }
+function IconWorldCup() {
+  // Trophy outline — World Cup theme
+  return (
+    <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth={1.6} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 4h8v6a4 4 0 11-8 0V4zM6 6H4a2 2 0 002 4M18 6h2a2 2 0 01-2 4M12 14v3m-3 3h6m-6 0a3 3 0 013-3 3 3 0 013 3" />
+    </svg>
+  )
+}
 function IconSettings() {
   return (
     <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth={1.6} viewBox="0 0 24 24">
@@ -89,6 +97,11 @@ const NAV: Array<{
     icon: <IconMoney />,
     matches: ['/dashboard/money', '/dashboard/bankroll', '/dashboard/track-record', '/dashboard/dream-bet'],
   },
+  // /world-cup lives outside /dashboard/* (it's the public-facing
+  // landing page) but logged-in users should still be able to reach it
+  // from inside the app during the tournament. NavItem.active check
+  // handles both prefix patterns.
+  { href: '/world-cup', label: 'World Cup', icon: <IconWorldCup /> },
   { href: '/dashboard/settings', label: 'Settings', icon: <IconSettings /> },
 ]
 
