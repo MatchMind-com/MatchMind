@@ -58,26 +58,37 @@ export async function GET(req: NextRequest) {
               {group.name}
             </span>
 
-            {/* 2x2 team grid w/ flags */}
+            {/* 2x2 team layout — Satori only supports flexbox (no CSS grid),
+                so use nested rows of two columns each. */}
             <div style={{
-              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0,
+              display: 'flex', flexDirection: 'column',
               border: `1px solid ${fgMuted}40`, marginTop: 12, marginBottom: 'auto',
             }}>
-              {group.teams.map((t, i) => (
+              {[0, 2].map((rowStart) => (
                 <div
-                  key={t.id}
+                  key={rowStart}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 14, padding: '18px 22px',
-                    borderRight: i % 2 === 0 ? `1px solid ${fgMuted}40` : 'none',
-                    borderBottom: i < 2 ? `1px solid ${fgMuted}40` : 'none',
+                    display: 'flex',
+                    borderBottom: rowStart === 0 ? `1px solid ${fgMuted}40` : 'none',
                   }}
                 >
-                  {t.logo && (
-                    <img src={t.logo} alt="" width={36} height={36} style={{ display: 'block' }} />
-                  )}
-                  <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.02em' }}>
-                    {t.name}
-                  </span>
+                  {group.teams.slice(rowStart, rowStart + 2).map((t, idx) => (
+                    <div
+                      key={t.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 14, padding: '18px 22px',
+                        flex: 1,
+                        borderRight: idx === 0 ? `1px solid ${fgMuted}40` : 'none',
+                      }}
+                    >
+                      {t.logo && (
+                        <img src={t.logo} alt="" width={36} height={36} style={{ display: 'block' }} />
+                      )}
+                      <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.02em' }}>
+                        {t.name}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
