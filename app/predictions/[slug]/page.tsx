@@ -41,7 +41,7 @@ async function getMatchData(slug: string) {
       .select('id, home_team, away_team, league, kick_off, bet_type, prediction, ai_probability, odds, ev_percent, is_value_bet, result, home_score, away_score')
       .gte('kick_off', from.toISOString())
       .lte('kick_off', to.toISOString())
-      .lte('ev_percent', 25)
+      .lte('ev_percent', 10)  // MAX_REAL_EV — last consumer to be tightened
       .lte('odds', 4.0)
 
     if (error) console.error('[slug] prediction_records query failed:', error.message)

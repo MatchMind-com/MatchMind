@@ -61,14 +61,23 @@ export async function postTweet(text: string): Promise<PostTweetResult> {
       body: JSON.stringify({ text }),
     })
     const data = await res.json()
-    if (!res.ok) return { ok: false, error: `HTTP ${res.status}: ${JSON.stringify(data)}` }
+    if (!res.ok) {
+      // Console-log so the failure surfaces in Vercel function logs and
+      // tracks duplicate-content / rate-limit issues. Previously the
+      // caller would just return 200 and the silent rejection was
+      // invisible until you noticed no tweet on the profile.
+      console.error('[twitter-poster] Twitter API rejected:', res.status, JSON.stringify(data))
+      return { ok: false, error: `HTTP ${res.status}: ${JSON.stringify(data)}` }
+    }
     const id = data.data?.id as string | undefined
+    console.log('[twitter-poster] posted:', id ?? '?', 'text-length:', text.length)
     return {
       ok: true,
       id,
       url: id ? `https://x.com/${ACCOUNT_HANDLE}/status/${id}` : undefined,
     }
   } catch (e: any) {
+    console.error('[twitter-poster] fetch threw:', e?.message)
     return { ok: false, error: e?.message || 'fetch failed' }
   }
 }

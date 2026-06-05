@@ -45,11 +45,23 @@ async function getPickById(id: number): Promise<Prediction | null> {
   }
 }
 
+// IMPORTANT: must match the slug shape used by /predictions/[slug] —
+// "kashima-vs-vissel-kobe-6-june-2026" (day-monthName-year), NOT
+// "...-2026-06-06". Previously this used ISO date format and every
+// share-link redirect 404'd because /predictions/[slug] couldn't match.
+function slugify(str: string) {
+  return str.toLowerCase()
+    .replace(/[áàäâ]/g, 'a').replace(/[éèëê]/g, 'e').replace(/[íìïî]/g, 'i')
+    .replace(/[óòöô]/g, 'o').replace(/[úùüû]/g, 'u').replace(/ñ/g, 'n')
+    .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim()
+}
 function makeSlug(home: string, away: string, iso?: string): string {
-  const date = iso ? new Date(iso).toISOString().slice(0, 10) : ''
-  const norm = (s: string) =>
-    s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-  return `${norm(home)}-vs-${norm(away)}${date ? `-${date}` : ''}`
+  if (!iso) return `${slugify(home)}-vs-${slugify(away)}`
+  const date = new Date(iso)
+  const day = date.getDate()
+  const month = date.toLocaleString('en-US', { month: 'long' }).toLowerCase()
+  const year = date.getFullYear()
+  return `${slugify(home)}-vs-${slugify(away)}-${day}-${month}-${year}`
 }
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {

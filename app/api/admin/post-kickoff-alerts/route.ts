@@ -112,51 +112,11 @@ async function markTweeted(fixtureId: number, tweetId?: string) {
   }
 }
 
-// ── Twitter OAuth poster (same as post-tonight-acca) ────────────────
-
-async function postTweet(text: string): Promise<{ ok: boolean; id?: string; url?: string; error?: string }> {
-  const apiKey = process.env.TWITTER_API_KEY
-  const apiSecret = process.env.TWITTER_API_SECRET
-  const accessToken = process.env.TWITTER_ACCESS_TOKEN
-  const accessSecret = process.env.TWITTER_ACCESS_SECRET
-  if (!apiKey || !apiSecret || !accessToken || !accessSecret) {
-    return { ok: false, error: 'Twitter credentials not configured' }
-  }
-  const url = 'https://api.twitter.com/2/tweets'
-  const nonce = crypto.randomBytes(16).toString('hex')
-  const timestamp = Math.floor(Date.now() / 1000).toString()
-  const oauthParams: Record<string, string> = {
-    oauth_consumer_key: apiKey,
-    oauth_nonce: nonce,
-    oauth_signature_method: 'HMAC-SHA1',
-    oauth_timestamp: timestamp,
-    oauth_token: accessToken,
-    oauth_version: '1.0',
-  }
-  const sortedParams = Object.keys(oauthParams).sort()
-    .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(oauthParams[k])}`)
-    .join('&')
-  const sigBase = `POST&${encodeURIComponent(url)}&${encodeURIComponent(sortedParams)}`
-  const sigKey = `${encodeURIComponent(apiSecret)}&${encodeURIComponent(accessSecret)}`
-  const signature = crypto.createHmac('sha1', sigKey).update(sigBase).digest('base64')
-  oauthParams.oauth_signature = signature
-  const authHeader = 'OAuth ' + Object.keys(oauthParams)
-    .map((k) => `${encodeURIComponent(k)}="${encodeURIComponent(oauthParams[k])}"`)
-    .join(', ')
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { Authorization: authHeader, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    })
-    const data = await res.json()
-    if (!res.ok) return { ok: false, error: `HTTP ${res.status}: ${JSON.stringify(data)}` }
-    const id = data.data?.id
-    return { ok: true, id, url: id ? `https://x.com/Match_Mind_AI/status/${id}` : undefined }
-  } catch (e: any) {
-    return { ok: false, error: e?.message || 'fetch failed' }
-  }
-}
+// Shared Twitter poster — single source of truth in lib/twitter-poster.ts.
+// Local duplicates were silently swallowing non-2xx Twitter responses
+// (duplicate-content rejections etc.). The shared version console.errors
+// failures so they surface in Vercel function logs.
+import { postTweet } from '@/lib/twitter-poster'
 
 function buildAlertTweet(pick: Pick, leg: { label: string; odds: number; ev: number }, minute: number, score: { home: number; away: number }): string {
   const flag = pick.leagueFlag ?? ''
