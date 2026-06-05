@@ -14,8 +14,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.matchmindcom.com'),
-  title: 'MatchMind — AI Football Intelligence',
-  description: 'AI-powered football predictions, value bets with Pinnacle edge detection, and an AI betting coach. Track your bets and grow your bankroll.',
+  title: 'MatchMind — Your sports betting fund workspace',
+  description: 'You\'re the coach of your own sports betting fund. MatchMind gives you the tools to run it — AI predictions, embedded coach, bankroll desk, public track record.',
   applicationName: 'MatchMind',
   appleWebApp: {
     capable: true,
@@ -30,8 +30,8 @@ export const metadata: Metadata = {
   // renders a branded preview on Twitter, IG DMs, WhatsApp, Slack, etc.
   // Without this, link previews were blank and got skipped past in feeds.
   openGraph: {
-    title: 'MatchMind — AI Football Intelligence',
-    description: 'AI-powered football predictions and value bets. Find the edge before kickoff.',
+    title: 'MatchMind — Your sports betting fund workspace',
+    description: 'You\'re the coach of your own sports betting fund. MatchMind gives you the tools to run it.',
     type: 'website',
     siteName: 'MatchMind',
     url: 'https://www.matchmindcom.com',
@@ -46,8 +46,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'MatchMind — AI Football Intelligence',
-    description: 'AI-powered football predictions and value bets.',
+    title: 'MatchMind — Your sports betting fund workspace',
+    description: 'You\'re the coach. We\'re the tools.',
     images: ['/api/og'],
   },
 }

@@ -186,8 +186,18 @@ export default async function LandingPage() {
               <span style={{ color: '#F97316' }}>edge.</span>
             </h1>
 
-            <p style={{ fontSize: '16px', lineHeight: 1.65, color: '#6B6860', maxWidth: '440px', marginBottom: '32px' }}>
-              AI analyses every match across {stats.leagues_covered} leagues. Each pick is logged before kick-off with full reasoning — then auto-verified against the result.
+            {/* Brand positioning line — workspace framing per
+                docs/workspace-spec.md. The "coach of your own fund"
+                line replaces the generic "AI analyses every match" pitch
+                and shifts MatchMind out of the punter-tips category into
+                betting-workspace tooling. */}
+            <p style={{ fontSize: '18px', lineHeight: 1.5, color: '#EDE9DF', maxWidth: '480px', marginBottom: '14px', fontWeight: 600 }}>
+              You&apos;re the coach of your own sports betting fund.
+              <span style={{ color: '#F97316' }}> MatchMind gives you the tools to run it.</span>
+            </p>
+            <p style={{ fontSize: '14px', lineHeight: 1.6, color: '#6B6860', maxWidth: '480px', marginBottom: '32px' }}>
+              Analyst desk, research tools, AI coach — across {stats.leagues_covered} leagues.
+              Every pick logged before kick-off, every result public.
             </p>
 
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
