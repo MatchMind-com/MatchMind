@@ -30,6 +30,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${BASE}/`,             changeFrequency: 'daily',   priority: 1.0 },
     { url: `${BASE}/world-cup`,    changeFrequency: 'daily',   priority: 0.95 },
+    { url: `${BASE}/world-cup/bracket`, changeFrequency: 'daily', priority: 0.95 },
     { url: `${BASE}/predictions`,  changeFrequency: 'hourly',  priority: 0.9 },
     { url: `${BASE}/track-record`, changeFrequency: 'daily',   priority: 0.8 },
     { url: `${BASE}/value-bets`,   changeFrequency: 'hourly',  priority: 0.9 },
