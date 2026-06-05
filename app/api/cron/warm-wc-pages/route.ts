@@ -1,31 +1,26 @@
 /**
  * GET /api/cron/warm-wc-pages
  *
- * Iterates every WC team + group + fixture SEO page sequentially with
- * a small delay between requests so Vercel ISR re-runs each page's
- * server fetch with enrichment data (last-5 form, squad, injuries) in
- * a rate-limit-respecting cadence.
+ * Pre-fetches the Next.js fetch cache for every WC team's enrichment
+ * data (last-5 form, squad, injuries) by calling getTeamEnrichment
+ * directly — NOT by rendering the page URL.
  *
- * The team pages do their own per-team fetches against API-Football's
- * /fixtures, /players/squads, and /injuries endpoints. Rendering 48
- * pages concurrently bursts past Pro plan's 450 req/min, leaving
- * random teams blank. This cron paces the rendering: 1 page per
- * second × 132 URLs ≈ 2:15 wall time, never exceeding ~12 req/min
- * against the API.
+ * Why: rendering pages via fetch() triggers ISR's stale-while-
+ * revalidate, which returns cached HTML immediately and revalidates
+ * in the background. The cron then "completes" but the cache might
+ * not actually be repopulated by the time we check. Calling the data
+ * fetcher directly synchronously populates Next.js's per-fetch cache
+ * via the revalidate option.
  *
  * Auth: Authorization: Bearer ${CRON_SECRET} OR x-vercel-cron: 1
- *
- * Scheduled in vercel.json at 03:30 UTC daily (just before the morning
- * predictions cron at 04:00 UTC, so enrichment is fresh when the day
- * starts).
+ * Scheduled in vercel.json at 03:30 UTC daily.
  */
 
 import { NextResponse } from 'next/server'
-import { getAllTeams, getWorldCupGroups, getAllFixtures } from '@/lib/world-cup-data'
+import { getAllTeams, getTeamEnrichment } from '@/lib/world-cup-data'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
-
-// Allow this function the full 300s on Pro to comfortably warm 132 URLs.
+// Pro tier maxDuration. Sequential warmup of 48 teams × 3 calls each
+// at ~300ms per call ≈ 45 seconds. Plenty of headroom.
 export const maxDuration = 300
 
 async function sleep(ms: number) {
@@ -40,79 +35,39 @@ export async function POST(req: Request) {
   }
 
   const start = Date.now()
-  const results = {
-    teams: { ok: 0, fail: 0 },
-    groups: { ok: 0, fail: 0 },
-    fixtures: { ok: 0, fail: 0 },
+  const teams = await getAllTeams()
+  const results: Array<{ slug: string; form: number; squad: number; injuries: number }> = []
+  let failures = 0
+
+  for (const profile of teams) {
+    try {
+      const enr = await getTeamEnrichment(profile.team.id)
+      results.push({
+        slug: profile.slug,
+        form: enr.form.length,
+        squad: enr.squad.length,
+        injuries: enr.injuries.length,
+      })
+    } catch (e: any) {
+      failures++
+      results.push({ slug: profile.slug, form: 0, squad: 0, injuries: 0 })
+    }
+    // Small breather between teams so we never approach the 7.5 req/sec
+    // sustained limit. Total wall time ≈ 48 × 0.6s = ~30s + actual fetch
+    // latency = ~45s. Well under our 300s function budget.
+    await sleep(300)
   }
 
-  try {
-    const [teams, groups, fixtures] = await Promise.all([
-      getAllTeams(),
-      getWorldCupGroups(),
-      getAllFixtures(),
-    ])
+  const populated = results.filter(r => r.squad > 0).length
 
-    // Warm teams first — these have the heaviest per-page enrichment
-    // (3 API calls each). 1 second between requests keeps us under
-    // the 60 req/min ceiling for /fixtures alone.
-    for (const p of teams) {
-      try {
-        const res = await fetch(`${APP_URL}/world-cup/teams/${p.slug}`, {
-          headers: { 'Cache-Control': 'no-cache' },
-        })
-        if (res.ok) results.teams.ok++
-        else results.teams.fail++
-      } catch {
-        results.teams.fail++
-      }
-      await sleep(1000)
-    }
-
-    // Groups are cheaper (no per-team enrichment), 500ms cadence is fine.
-    for (const g of groups) {
-      try {
-        const res = await fetch(`${APP_URL}/world-cup/groups/${g.slug}`, {
-          headers: { 'Cache-Control': 'no-cache' },
-        })
-        if (res.ok) results.groups.ok++
-        else results.groups.fail++
-      } catch {
-        results.groups.fail++
-      }
-      await sleep(500)
-    }
-
-    // Fixtures pull enrichment for BOTH teams — heaviest. Pace at 1.5s.
-    for (const f of fixtures.slice(0, 24)) {
-      // First wave of 24 = group-stage matchday 1+2; rest can wait
-      // for the next daily run if we're tight on time.
-      try {
-        const res = await fetch(`${APP_URL}/world-cup/fixtures/${f.id}`, {
-          headers: { 'Cache-Control': 'no-cache' },
-        })
-        if (res.ok) results.fixtures.ok++
-        else results.fixtures.fail++
-      } catch {
-        results.fixtures.fail++
-      }
-      await sleep(1500)
-    }
-
-    return NextResponse.json({
-      success: true,
-      duration_ms: Date.now() - start,
-      ...results,
-    })
-  } catch (e: any) {
-    return NextResponse.json({
-      success: false,
-      error: e?.message || 'unknown',
-      duration_ms: Date.now() - start,
-      ...results,
-    }, { status: 500 })
-  }
+  return NextResponse.json({
+    success: true,
+    duration_ms: Date.now() - start,
+    teams_total: teams.length,
+    teams_with_squad: populated,
+    teams_failed: failures,
+    sample: results.slice(0, 5),
+  })
 }
 
-// Vercel cron fires GET — reuse POST.
 export const GET = POST
