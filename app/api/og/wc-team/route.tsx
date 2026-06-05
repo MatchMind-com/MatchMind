@@ -70,12 +70,9 @@ export async function GET(req: NextRequest) {
               </span>
             </div>
 
-            {/* Opponents row — matches the working group-card pattern
-                (column flex container with stacked spans, no
-                width:1072 trick needed because the parent's children
-                are spans, not flex divs). */}
+            {/* Opponents row — width:1072 forces column-stack in Satori */}
             <div style={{
-              display: 'flex', flexDirection: 'column', marginTop: 36,
+              display: 'flex', flexDirection: 'column', width: 1072, marginTop: 36,
               borderTop: `1px solid ${fgMuted}55`, borderBottom: `1px solid ${fgMuted}55`,
               padding: '20px 0',
             }}>
@@ -88,7 +85,7 @@ export async function GET(req: NextRequest) {
             </div>
 
             {/* Footer */}
-            <div style={{ display: 'flex', marginTop: 28 }}>
+            <div style={{ display: 'flex', width: 1072, marginTop: 28 }}>
               <span style={{ fontSize: 16, color: fgMuted }}>
                 matchmindcom.com · Every pick logged · every result public · 18+
               </span>

@@ -114,9 +114,8 @@ export async function GET(req: NextRequest) {
 
         {showFull && pick ? (
           <>
-            {/* Matchup — same column-of-spans pattern that works on
-                the wc-group card. NO width hacks, NO inner divs. */}
-            <div style={{ display: 'flex', flexDirection: 'column', marginTop: 36 }}>
+            {/* Matchup — width:1072 forces column-stack vs siblings */}
+            <div style={{ display: 'flex', flexDirection: 'column', width: 1072, marginTop: 36 }}>
               <span style={{ fontSize: 60, fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1.1, color: fg }}>
                 {pick.home_team}
               </span>
@@ -128,10 +127,9 @@ export async function GET(req: NextRequest) {
               </span>
             </div>
 
-            {/* Pick block — single column, no nested flex rows.
-                Odds and edge stacked under the label, big and clear. */}
+            {/* Pick block — single column, width:1072 */}
             <div style={{
-              display: 'flex', flexDirection: 'column', marginTop: 32,
+              display: 'flex', flexDirection: 'column', width: 1072, marginTop: 32,
               borderTop: `1px solid ${fgMuted}55`, padding: '20px 0',
             }}>
               <span style={{ fontSize: 11, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em' }}>
@@ -146,7 +144,7 @@ export async function GET(req: NextRequest) {
             </div>
 
             {/* Footer */}
-            <div style={{ display: 'flex', marginTop: 24 }}>
+            <div style={{ display: 'flex', width: 1072, marginTop: 24 }}>
               <span style={{ fontSize: 16, color: fgMuted }}>
                 matchmindcom.com · Every pick logged before kick-off · every result public · 18+
               </span>
