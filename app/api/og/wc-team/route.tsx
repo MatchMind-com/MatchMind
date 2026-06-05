@@ -1,10 +1,9 @@
 /**
  * GET /api/og/wc-team?slug=brazil
  *
- * Per-team World Cup OG card — 1200×630 (Twitter/Facebook link spec).
- * Renders when /world-cup/teams/[team] is shared on social.
- *
- * Edge runtime — fast generation + CDN-cached.
+ * Per-team World Cup OG card — 1200×630.
+ * Edge runtime + 1h ISR. Satori-friendly: only flexbox, no grid, no
+ * marginTop:auto, explicit widths on text spans.
  */
 
 import { ImageResponse } from 'next/og'
@@ -12,113 +11,101 @@ import { NextRequest } from 'next/server'
 import { getTeamBySlug } from '@/lib/world-cup-data'
 
 export const runtime = 'edge'
-// 1h ISR — same as the team page itself
 export const revalidate = 3600
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const slug = searchParams.get('slug') ?? ''
   const profile = slug ? await getTeamBySlug(slug) : null
 
-  // Tokens — must inline, no Tailwind in Edge
   const bg = '#0F1115'
   const fg = '#F5F1E8'
   const fgMuted = '#6E6B62'
   const brand = '#F97316'
 
+  const opponents = profile
+    ? profile.group.teams.filter(t => t.id !== profile.team.id).map(t => t.name).join(' · ')
+    : ''
+
   return new ImageResponse(
     (
       <div
         style={{
-          width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
-          background: bg, color: fg, padding: '56px 64px',
+          width: 1200, height: 630, display: 'flex', flexDirection: 'column',
+          background: bg, color: fg, padding: '52px 64px',
           fontFamily: 'Inter, system-ui, sans-serif',
         }}
       >
-        {/* Top bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+        {/* Top bar — fixed-height row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60 }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-0.04em' }}>
+            <span style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-0.04em', color: fg }}>
               MATCH<span style={{ color: brand }}>MIND</span>
             </span>
-            <span style={{ fontSize: 11, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 3 }}>
-              FIFA World Cup 2026
+            <span style={{ fontSize: 11, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em', marginTop: 3 }}>
+              FIFA WORLD CUP 2026
             </span>
           </div>
           {profile?.group && (
-            <span style={{
-              fontSize: 14, color: brand, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase',
-              border: `1px solid ${brand}55`, padding: '8px 16px',
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: `1px solid ${brand}55`, padding: '8px 18px',
             }}>
-              {profile.group.name}
-            </span>
+              <span style={{ fontSize: 14, color: brand, fontWeight: 800, letterSpacing: '0.15em' }}>
+                {profile.group.name.toUpperCase()}
+              </span>
+            </div>
           )}
         </div>
 
         {profile ? (
           <>
-            {/* Flag + team name */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 28, marginTop: 24, marginBottom: 28 }}>
+            {/* Flag + team name — fixed-height row */}
+            <div style={{ display: 'flex', alignItems: 'center', height: 160, marginTop: 40 }}>
               {profile.team.logo && (
-                <img
-                  src={profile.team.logo}
-                  alt=""
-                  width={120}
-                  height={120}
-                  style={{ display: 'block' }}
-                />
+                <img src={profile.team.logo} alt="" width={120} height={120} style={{ marginRight: 32 }} />
               )}
-              <span style={{ fontSize: 110, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1 }}>
+              <span style={{ fontSize: 96, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1, color: fg }}>
                 {profile.team.name}
               </span>
             </div>
 
-            {/* Strap */}
-            <p style={{
-              fontSize: 24, color: fgMuted, marginTop: 0, marginBottom: 32, lineHeight: 1.3, maxWidth: '95%',
-            }}>
-              {profile.fixtures.length} group-stage matches · AI value-bet predictions logged before each kick-off
-            </p>
+            {/* Description row — fixed height */}
+            <div style={{ display: 'flex', marginTop: 24, height: 64 }}>
+              <span style={{ fontSize: 22, color: fgMuted, lineHeight: 1.3, width: 1072 }}>
+                {profile.fixtures.length} group-stage matches · AI value-bet predictions logged before each kick-off.
+              </span>
+            </div>
 
-            {/* Opponents row */}
+            {/* Opponents row — fixed height with border lines */}
             <div style={{
-              display: 'flex', alignItems: 'stretch', borderTop: `1px solid ${fgMuted}40`,
-              borderBottom: `1px solid ${fgMuted}40`, paddingTop: 22, paddingBottom: 22, marginTop: 'auto',
+              display: 'flex', flexDirection: 'column', marginTop: 36, height: 110,
+              borderTop: `1px solid ${fgMuted}55`, borderBottom: `1px solid ${fgMuted}55`,
+              padding: '20px 0',
             }}>
-              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <span style={{ fontSize: 11, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-                  Opponents
-                </span>
-                <span style={{ fontSize: 26, fontWeight: 700, marginTop: 6, letterSpacing: '-0.01em' }}>
-                  {profile.group.teams.filter(t => t.id !== profile.team.id).map(t => t.name).join(' · ')}
-                </span>
-              </div>
+              <span style={{ fontSize: 11, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em', marginBottom: 8 }}>
+                GROUP-STAGE OPPONENTS
+              </span>
+              <span style={{ fontSize: 28, fontWeight: 700, color: fg, letterSpacing: '-0.01em', width: 1072 }}>
+                {opponents}
+              </span>
             </div>
 
             {/* Footer */}
-            <p style={{ fontSize: 18, color: fgMuted, marginTop: 18 }}>
-              matchmindcom.com · Every pick logged · every result public
-            </p>
+            <div style={{ display: 'flex', marginTop: 28 }}>
+              <span style={{ fontSize: 18, color: fgMuted, width: 1072 }}>
+                matchmindcom.com · Every pick logged · every result public
+              </span>
+            </div>
           </>
         ) : (
-          /* Fallback when team not found */
-          <>
-            <div style={{ display: 'flex', flexDirection: 'column', marginTop: 40 }}>
-              <span style={{ fontSize: 96, fontWeight: 900, letterSpacing: '-0.05em', lineHeight: 1 }}>World Cup 2026</span>
-              <span style={{ fontSize: 96, fontWeight: 900, letterSpacing: '-0.05em', lineHeight: 1, color: brand }}>predictions.</span>
-            </div>
-            <p style={{ fontSize: 24, color: fgMuted, marginTop: 'auto' }}>
-              48 teams · 12 groups · matchmindcom.com
-            </p>
-          </>
+          <div style={{ display: 'flex', flexDirection: 'column', marginTop: 80 }}>
+            <span style={{ fontSize: 90, fontWeight: 900, letterSpacing: '-0.05em', color: fg }}>World Cup 2026</span>
+            <span style={{ fontSize: 90, fontWeight: 900, letterSpacing: '-0.05em', color: brand, marginTop: 4 }}>predictions.</span>
+          </div>
         )}
       </div>
     ),
-    {
-      width: 1200,
-      height: 630,
-    },
+    { width: 1200, height: 630 },
   )
 }
