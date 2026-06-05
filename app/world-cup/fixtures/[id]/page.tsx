@@ -30,6 +30,7 @@ import {
   teamSlug,
   type RecentFixture,
 } from '@/lib/world-cup-data'
+import TrackRecordBadge from '@/components/world-cup/TrackRecordBadge'
 
 export const revalidate = 3600
 export const dynamicParams = true
@@ -174,7 +175,7 @@ export default async function FixturePage({ params }: { params: { id: string } }
           </Link>
         </div>
 
-        <div className="mb-10">
+        <div className="mb-6">
           <p className="text-fg-secondary text-base">
             <span className="font-mono">{fmtKickoffLong(fixture.date)}</span>
             {fixture.venue.name && (
@@ -185,6 +186,8 @@ export default async function FixturePage({ params }: { params: { id: string } }
             )}
           </p>
         </div>
+
+        <TrackRecordBadge />
 
         {/* AI pick placeholder — actual pick wiring would pull from
             prediction_records once WC odds drop. For now, a clean

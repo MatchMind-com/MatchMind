@@ -29,6 +29,7 @@ import {
   type SquadPlayer,
   type InjuryReport,
 } from '@/lib/world-cup-data'
+import TrackRecordBadge from '@/components/world-cup/TrackRecordBadge'
 
 export const revalidate = 3600
 
@@ -223,10 +224,13 @@ export default async function TeamPage({ params }: { params: { team: string } })
             {team.name}
           </h1>
         </div>
-        <p className="text-fg-secondary text-lg max-w-2xl mb-10 leading-relaxed">
+        <p className="text-fg-secondary text-lg max-w-2xl mb-6 leading-relaxed">
           AI value-bet predictions for {team.name}&apos;s {fixtures.length} group-stage fixtures at the
           2026 World Cup. Picks are logged before kick-off and results published publicly.
         </p>
+
+        {/* Track-record trust signal — proof immediately under the hero */}
+        <TrackRecordBadge />
 
         {/* Group-stage fixtures */}
         <section className="mb-12">

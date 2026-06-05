@@ -27,6 +27,7 @@ import {
   teamSlug,
   type WCFixture,
 } from '@/lib/world-cup-data'
+import TrackRecordBadge from '@/components/world-cup/TrackRecordBadge'
 
 export const revalidate = 3600
 
@@ -134,10 +135,12 @@ export default async function GroupPage({ params }: { params: { group: string } 
         <h1 className="font-display text-5xl md:text-6xl font-black tracking-tight leading-[1.05] mb-5">
           {group.name}
         </h1>
-        <p className="text-fg-secondary text-lg max-w-2xl mb-10 leading-relaxed">
+        <p className="text-fg-secondary text-lg max-w-2xl mb-6 leading-relaxed">
           {teamList}. AI value-bet predictions are released each morning during the group stage —
           every pick logged before kick-off, every result published.
         </p>
+
+        <TrackRecordBadge />
 
         {/* Teams grid */}
         <section className="mb-12">
