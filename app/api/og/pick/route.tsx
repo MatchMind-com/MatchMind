@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
         {showFull && pick ? (
           <>
             {/* Matchup — single line, big type. width:1072 so it stays on one row */}
-            <div style={{ display: 'flex', alignItems: 'center', height: 110, marginTop: 36 }}>
+            <div style={{ display: 'flex', alignItems: 'center', width: 1072, height: 110, marginTop: 36 }}>
               <span style={{
                 fontSize: 64, fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1, color: fg,
                 width: 1072,
@@ -126,7 +126,7 @@ export async function GET(req: NextRequest) {
 
             {/* Pick / Odds / Edge row — three equal columns, explicit widths */}
             <div style={{
-              display: 'flex', height: 150, marginTop: 28,
+              display: 'flex', width: 1072, height: 150, marginTop: 28,
               borderTop: `1px solid ${fgMuted}55`, borderBottom: `1px solid ${fgMuted}55`,
               padding: '24px 0',
             }}>
@@ -173,7 +173,7 @@ export async function GET(req: NextRequest) {
             </div>
 
             {/* Footer */}
-            <div style={{ display: 'flex', marginTop: 28 }}>
+            <div style={{ display: 'flex', width: 1072, marginTop: 28 }}>
               <span style={{ fontSize: 18, color: fgMuted, width: 1072 }}>
                 matchmindcom.com · Every pick logged before kick-off · every result public · 18+
               </span>

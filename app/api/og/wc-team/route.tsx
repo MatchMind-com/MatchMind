@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
         {profile ? (
           <>
             {/* Flag + team name */}
-            <div style={{ display: 'flex', alignItems: 'center', height: 120, marginTop: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'center', width: 1072, height: 120, marginTop: 28 }}>
               {profile.team.logo && (
                 <img src={profile.team.logo} alt="" width={96} height={96} style={{ marginRight: 26 }} />
               )}
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
             </div>
 
             {/* Description — single line height */}
-            <div style={{ display: 'flex', marginTop: 16, height: 30 }}>
+            <div style={{ display: 'flex', width: 1072, marginTop: 16, height: 30 }}>
               <span style={{ fontSize: 22, color: fgMuted, width: 1072 }}>
                 {profile.fixtures.length} group-stage matches · AI value-bet predictions logged before kick-off
               </span>
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
 
             {/* Opponents row */}
             <div style={{
-              display: 'flex', flexDirection: 'column', marginTop: 28, height: 96,
+              display: 'flex', flexDirection: 'column', width: 1072, marginTop: 28, height: 96,
               borderTop: `1px solid ${fgMuted}55`, borderBottom: `1px solid ${fgMuted}55`,
               padding: '16px 0',
             }}>
@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
             </div>
 
             {/* Footer */}
-            <div style={{ display: 'flex', marginTop: 22 }}>
+            <div style={{ display: 'flex', width: 1072, marginTop: 22 }}>
               <span style={{ fontSize: 16, color: fgMuted, width: 1072 }}>
                 matchmindcom.com · Every pick logged · every result public
               </span>
