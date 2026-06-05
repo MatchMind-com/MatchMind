@@ -37,6 +37,27 @@ export const dynamicParams = true
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 
+interface PickFromCache {
+  id: number
+  best_value?: { label?: string; odds?: number; ev?: number } | null
+  recommended_bet?: string
+  recommended_odds_range?: string
+  is_value_bet?: boolean
+  bookmaker_name?: string | null
+}
+
+async function getPickForFixture(fixtureId: number): Promise<PickFromCache | null> {
+  try {
+    const res = await fetch(`${APP_URL}/api/predictions`, { next: { revalidate: 600 } })
+    if (!res.ok) return null
+    const data = await res.json()
+    const preds = Array.isArray(data?.predictions) ? (data.predictions as PickFromCache[]) : []
+    return preds.find(p => p.id === fixtureId) ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function generateStaticParams() {
   const fixtures = await getAllFixtures()
   return fixtures.map(f => ({ id: String(f.id) }))
@@ -127,10 +148,11 @@ export default async function FixturePage({ params }: { params: { id: string } }
   if (!data) notFound()
   const { fixture, group } = data
 
-  // Pull form for both teams in parallel — failing soft per side.
-  const [homeEnr, awayEnr] = await Promise.all([
+  // Pull form for both teams + the actual AI pick from cache (if any)
+  const [homeEnr, awayEnr, livePick] = await Promise.all([
     getTeamEnrichment(fixture.home.id).catch(() => null),
     getTeamEnrichment(fixture.away.id).catch(() => null),
+    getPickForFixture(fixture.id),
   ])
 
   return (
@@ -189,22 +211,65 @@ export default async function FixturePage({ params }: { params: { id: string } }
 
         <TrackRecordBadge />
 
-        {/* AI pick placeholder — actual pick wiring would pull from
-            prediction_records once WC odds drop. For now, a clean
-            "odds release closer to kickoff" note keeps the page honest. */}
-        <section className="card mb-12 bg-bg-elevated">
-          <div className="flex items-center gap-3">
-            <span className="text-brand text-2xl leading-none">⚡</span>
-            <div>
-              <p className="font-semibold text-fg">AI prediction publishes 24h before kick-off</p>
-              <p className="text-fg-muted text-sm mt-1">
-                Bookmakers don&apos;t typically price World Cup fixtures more than ~3 days out. The
-                AI value bet for this match will appear here as soon as odds drop —
-                logged before kick-off, result published after full-time.
-              </p>
-            </div>
-          </div>
-        </section>
+        {/* AI pick — live from predictions cache if available, else
+            honest placeholder. Auto-surfaces when bookmakers price the
+            fixture (typically 24-48h before kick-off). */}
+        {(() => {
+          const bv = livePick?.best_value
+          if (livePick && bv?.label && bv.odds && livePick.is_value_bet) {
+            return (
+              <section className="card mb-12 bg-bg-elevated border-brand/30">
+                <p className="eyebrow text-brand mb-2">AI value pick</p>
+                <p className="font-display text-3xl md:text-4xl font-black tracking-tight mb-3">
+                  {bv.label}
+                  <span className="text-brand ml-3">@ {bv.odds.toFixed(2)}</span>
+                  {bv.ev != null && (
+                    <span className="text-success text-2xl md:text-3xl ml-3">
+                      +{bv.ev}% EV
+                    </span>
+                  )}
+                </p>
+                <p className="text-fg-muted text-sm">
+                  Logged before kick-off · result auto-verified · odds from {livePick.bookmaker_name ?? 'live bookmaker'}.{' '}
+                  <Link href="/track-record" className="text-brand hover:underline">
+                    See full track record →
+                  </Link>
+                </p>
+              </section>
+            )
+          }
+          if (livePick && livePick.bookmaker_name && !livePick.is_value_bet) {
+            return (
+              <section className="card mb-12 bg-bg-elevated">
+                <div className="flex items-center gap-3">
+                  <span className="text-fg-muted text-2xl leading-none">○</span>
+                  <div>
+                    <p className="font-semibold text-fg">No edge over bookmaker</p>
+                    <p className="text-fg-muted text-sm mt-1">
+                      AI evaluated this fixture across 36 markets ({livePick.bookmaker_name} odds)
+                      and didn&apos;t find a positive-EV pick. We&apos;ll re-evaluate as odds shift.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            )
+          }
+          return (
+            <section className="card mb-12 bg-bg-elevated">
+              <div className="flex items-center gap-3">
+                <span className="text-brand text-2xl leading-none">⚡</span>
+                <div>
+                  <p className="font-semibold text-fg">AI prediction publishes when odds drop</p>
+                  <p className="text-fg-muted text-sm mt-1">
+                    Bookmakers don&apos;t typically price World Cup fixtures more than ~3 days out.
+                    The AI value bet for this match will appear here as soon as odds drop —
+                    logged before kick-off, result published after full-time.
+                  </p>
+                </div>
+              </div>
+            </section>
+          )
+        })()}
 
         {/* Form — both teams side by side */}
         <section className="mb-12 grid grid-cols-1 md:grid-cols-2 gap-4">
