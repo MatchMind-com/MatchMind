@@ -18,6 +18,19 @@ export const revalidate = 3600
 
 const WC_KICKOFF_ISO = '2026-06-11T19:00:00+00:00'
 
+/** Pick the next ~6 fixtures kicking off within the next 36h. */
+function nextFixtures(allFixtures: WCFixture[], hours = 36, max = 6): WCFixture[] {
+  const now = Date.now()
+  const cutoff = now + hours * 3600 * 1000
+  return allFixtures
+    .filter(f => {
+      const t = new Date(f.date).getTime()
+      return Number.isFinite(t) && t > now && t < cutoff
+    })
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(0, max)
+}
+
 function daysUntil(iso: string): number {
   const diff = new Date(iso).getTime() - Date.now()
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
@@ -64,6 +77,10 @@ function FixtureRow({ f }: { f: WCFixture }) {
 export default async function DashboardWorldCupPage() {
   const groups = await getWorldCupGroups()
   const days = daysUntil(WC_KICKOFF_ISO)
+  // Flatten all group-stage fixtures, then surface the next handful
+  const allFixtures = groups.flatMap(g => g.fixtures)
+    .filter((f, i, arr) => arr.findIndex(x => x.id === f.id) === i)
+  const upNext = nextFixtures(allFixtures, 36, 6)
 
   return (
     <div className="p-5 lg:p-7 max-w-6xl mx-auto space-y-6">
@@ -89,6 +106,49 @@ export default async function DashboardWorldCupPage() {
           </div>
         )}
       </header>
+
+      {/* Up next — surfaces during/just before WC. Hides if no
+          fixtures inside the 36h window (off-tournament periods). */}
+      {upNext.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <p className="eyebrow">Up next · 36h</p>
+            <p className="text-fg-muted text-[10px] font-bold uppercase tracking-widest">
+              {upNext.length} match{upNext.length === 1 ? '' : 'es'}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {upNext.map(f => {
+              const ko = new Date(f.date).toLocaleString('en-GB', {
+                weekday: 'short', day: 'numeric', month: 'short',
+                hour: '2-digit', minute: '2-digit',
+                timeZone: 'Europe/London',
+              })
+              return (
+                <Link
+                  key={f.id}
+                  href={`/world-cup/fixtures/${f.id}`}
+                  className="card hover:border-border-strong transition-colors group block"
+                >
+                  <p className="eyebrow text-brand mb-2">{f.round}</p>
+                  <div className="flex items-center gap-3 mb-2 min-w-0">
+                    {f.home.logo && <Image src={f.home.logo} alt="" width={20} height={20} className="shrink-0" unoptimized />}
+                    <span className="font-semibold text-sm truncate group-hover:text-brand transition-colors">{f.home.name}</span>
+                  </div>
+                  <div className="flex items-center gap-3 mb-3 min-w-0">
+                    {f.away.logo && <Image src={f.away.logo} alt="" width={20} height={20} className="shrink-0" unoptimized />}
+                    <span className="font-semibold text-sm truncate group-hover:text-brand transition-colors">{f.away.name}</span>
+                  </div>
+                  <p className="font-mono text-fg-muted text-[11px]">{ko} BST</p>
+                  {f.venue.name && (
+                    <p className="text-fg-muted text-[11px] mt-0.5 truncate">{f.venue.name}</p>
+                  )}
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Quick promo banner — wallet-style, sits inside the layout */}
       <section className="card bg-brand/5 border-brand/20">

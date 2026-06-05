@@ -55,7 +55,8 @@ export async function generateMetadata(
   const { fixture } = data
   const title = `${fixture.home.name} vs ${fixture.away.name} — World Cup 2026 Prediction | MatchMind`
   const description = `AI value-bet prediction for ${fixture.home.name} vs ${fixture.away.name} at the 2026 World Cup. Kick-off ${fmtKickoffLong(fixture.date)}${fixture.venue.name ? ` · ${fixture.venue.name}` : ''}.`
-  const ogImage = `${APP_URL}/api/og/wc-team?slug=${teamSlug(fixture.home.name)}`
+  // Per-fixture custom OG — both flags + names + kickoff
+  const ogImage = `${APP_URL}/api/og/wc-fixture?id=${id}`
   return {
     title,
     description,
