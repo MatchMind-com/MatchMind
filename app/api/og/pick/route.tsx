@@ -114,67 +114,40 @@ export async function GET(req: NextRequest) {
 
         {showFull && pick ? (
           <>
-            {/* Matchup — single line, big type. width:1072 so it stays on one row */}
-            <div style={{ display: 'flex', alignItems: 'center', width: 1072, height: 110, marginTop: 36 }}>
-              <span style={{
-                fontSize: 64, fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1, color: fg,
-                width: 1072,
-              }}>
-                {pick.home_team} <span style={{ color: fgMuted, fontWeight: 700 }}>vs</span> {pick.away_team}
+            {/* Matchup — same column-of-spans pattern that works on
+                the wc-group card. NO width hacks, NO inner divs. */}
+            <div style={{ display: 'flex', flexDirection: 'column', marginTop: 36 }}>
+              <span style={{ fontSize: 60, fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1.1, color: fg }}>
+                {pick.home_team}
+              </span>
+              <span style={{ fontSize: 22, color: fgMuted, fontWeight: 700, marginTop: 4 }}>
+                vs
+              </span>
+              <span style={{ fontSize: 60, fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1.1, color: fg, marginTop: 4 }}>
+                {pick.away_team}
               </span>
             </div>
 
-            {/* Pick / Odds / Edge row — three equal columns, explicit widths */}
+            {/* Pick block — single column, no nested flex rows.
+                Odds and edge stacked under the label, big and clear. */}
             <div style={{
-              display: 'flex', width: 1072, height: 150, marginTop: 28,
-              borderTop: `1px solid ${fgMuted}55`, borderBottom: `1px solid ${fgMuted}55`,
-              padding: '24px 0',
+              display: 'flex', flexDirection: 'column', marginTop: 32,
+              borderTop: `1px solid ${fgMuted}55`, padding: '20px 0',
             }}>
-              <div style={{ display: 'flex', flexDirection: 'column', width: 596, paddingRight: 24 }}>
-                <span style={{ fontSize: 11, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em' }}>
-                  AI PICK
-                </span>
-                <span style={{ fontSize: 38, fontWeight: 900, marginTop: 10, letterSpacing: '-0.02em', color: fg }}>
-                  {label}
-                </span>
-              </div>
-              <div style={{
-                display: 'flex', flexDirection: 'column', width: 220, padding: '0 24px',
-                borderLeft: `1px solid ${fgMuted}55`,
-                alignItems: 'center',
-              }}>
-                <span style={{ fontSize: 11, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em' }}>
-                  ODDS
-                </span>
-                <span style={{
-                  fontSize: 56, fontWeight: 900, color: brand, marginTop: 4,
-                  letterSpacing: '-0.02em', lineHeight: 1,
-                }}>
-                  {odds!.toFixed(2)}
-                </span>
-              </div>
-              {ev !== null && (
-                <div style={{
-                  display: 'flex', flexDirection: 'column', width: 220, padding: '0 24px',
-                  borderLeft: `1px solid ${fgMuted}55`,
-                  alignItems: 'center',
-                }}>
-                  <span style={{ fontSize: 11, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em' }}>
-                    EDGE
-                  </span>
-                  <span style={{
-                    fontSize: 56, fontWeight: 900, color: success, marginTop: 4,
-                    letterSpacing: '-0.02em', lineHeight: 1,
-                  }}>
-                    +{ev}%
-                  </span>
-                </div>
-              )}
+              <span style={{ fontSize: 11, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em' }}>
+                AI PICK
+              </span>
+              <span style={{ fontSize: 32, fontWeight: 900, marginTop: 6, letterSpacing: '-0.02em', color: fg }}>
+                {label} <span style={{ color: brand, marginLeft: 16 }}>@ {odds!.toFixed(2)}</span>
+                {ev !== null && (
+                  <span style={{ color: success, marginLeft: 16 }}>+{ev}% EV</span>
+                )}
+              </span>
             </div>
 
             {/* Footer */}
-            <div style={{ display: 'flex', width: 1072, marginTop: 28 }}>
-              <span style={{ fontSize: 18, color: fgMuted, width: 1072 }}>
+            <div style={{ display: 'flex', marginTop: 24 }}>
+              <span style={{ fontSize: 16, color: fgMuted }}>
                 matchmindcom.com · Every pick logged before kick-off · every result public · 18+
               </span>
             </div>

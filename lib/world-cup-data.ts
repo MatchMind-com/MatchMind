@@ -147,6 +147,32 @@ export async function getGroupBySlug(slug: string): Promise<WCGroup | null> {
   return groups.find(g => g.slug === normalized) ?? null
 }
 
+/** All group-stage fixtures across every group, flat list. */
+export async function getAllFixtures(): Promise<WCFixture[]> {
+  const groups = await getWorldCupGroups()
+  const out: WCFixture[] = []
+  const seen = new Set<number>()
+  for (const g of groups) {
+    for (const f of g.fixtures) {
+      if (!seen.has(f.id)) {
+        seen.add(f.id)
+        out.push(f)
+      }
+    }
+  }
+  return out.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+}
+
+/** Find a single fixture by API-Football fixture id, with its group context. */
+export async function getFixtureById(id: number): Promise<{ fixture: WCFixture; group: WCGroup } | null> {
+  const groups = await getWorldCupGroups()
+  for (const group of groups) {
+    const fixture = group.fixtures.find(f => f.id === id)
+    if (fixture) return { fixture, group }
+  }
+  return null
+}
+
 /** All 48 teams (one per group × 4) with their group + fixtures. */
 export async function getAllTeams(): Promise<WCTeamProfile[]> {
   const groups = await getWorldCupGroups()

@@ -70,31 +70,27 @@ export async function GET(req: NextRequest) {
               </span>
             </div>
 
-            {/* Description — single line height */}
-            <div style={{ display: 'flex', width: 1072, marginTop: 16, height: 30 }}>
-              <span style={{ fontSize: 22, color: fgMuted, width: 1072 }}>
-                {profile.fixtures.length} group-stage matches · AI value-bet predictions logged before kick-off
-              </span>
-            </div>
-
-            {/* Opponents row */}
+            {/* Opponents row — matches the working group-card pattern
+                (column flex container with stacked spans, no
+                width:1072 trick needed because the parent's children
+                are spans, not flex divs). */}
             <div style={{
-              display: 'flex', flexDirection: 'column', width: 1072, marginTop: 28, height: 96,
+              display: 'flex', flexDirection: 'column', marginTop: 36,
               borderTop: `1px solid ${fgMuted}55`, borderBottom: `1px solid ${fgMuted}55`,
-              padding: '16px 0',
+              padding: '20px 0',
             }}>
-              <span style={{ fontSize: 11, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em', marginBottom: 6 }}>
-                GROUP-STAGE OPPONENTS
+              <span style={{ fontSize: 11, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em' }}>
+                GROUP-STAGE OPPONENTS · {profile.fixtures.length} MATCHES
               </span>
-              <span style={{ fontSize: 24, fontWeight: 700, color: fg, letterSpacing: '-0.01em', width: 1072 }}>
+              <span style={{ fontSize: 26, fontWeight: 700, color: fg, letterSpacing: '-0.01em', marginTop: 8 }}>
                 {opponents}
               </span>
             </div>
 
             {/* Footer */}
-            <div style={{ display: 'flex', width: 1072, marginTop: 22 }}>
-              <span style={{ fontSize: 16, color: fgMuted, width: 1072 }}>
-                matchmindcom.com · Every pick logged · every result public
+            <div style={{ display: 'flex', marginTop: 28 }}>
+              <span style={{ fontSize: 16, color: fgMuted }}>
+                matchmindcom.com · Every pick logged · every result public · 18+
               </span>
             </div>
           </>
