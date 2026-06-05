@@ -1,8 +1,6 @@
 /**
  * GET /api/og/wc-group?slug=a
- *
- * Per-group World Cup OG card — 1200×630.
- * Satori-friendly: flexbox only, explicit dimensions everywhere.
+ * Per-group WC OG card — 1200×630, absolute positioning.
  */
 
 import { ImageResponse } from 'next/og'
@@ -17,89 +15,86 @@ export async function GET(req: NextRequest) {
   const slug = searchParams.get('slug') ?? ''
   const group = slug ? await getGroupBySlug(slug) : null
 
-  const bg = '#0F1115'
-  const fg = '#F5F1E8'
-  const fgMuted = '#6E6B62'
-  const brand = '#F97316'
+  const bg = '#0F1115', fg = '#F5F1E8', fgMuted = '#6E6B62', brand = '#F97316'
+  const W = 1200, H = 630, PADX = 64
 
   return new ImageResponse(
     (
-      <div
-        style={{
-          width: 1200, height: 630, display: 'flex', flexDirection: 'column',
-          background: bg, color: fg, padding: '52px 64px',
-          fontFamily: 'Inter, system-ui, sans-serif',
-        }}
-      >
-        {/* Top bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60 }}>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-0.04em', color: fg }}>
-              MATCH<span style={{ color: brand }}>MIND</span>
-            </span>
-            <span style={{ fontSize: 11, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em', marginTop: 3 }}>
-              FIFA WORLD CUP 2026
+      <div style={{
+        width: W, height: H, display: 'flex', background: bg, color: fg,
+        position: 'relative', fontFamily: 'Inter, system-ui, sans-serif',
+      }}>
+        {/* Brand */}
+        <div style={{ position: 'absolute', top: 52, left: PADX, display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-0.04em', color: fg }}>
+            MATCH<span style={{ color: brand }}>MIND</span>
+          </span>
+          <span style={{ fontSize: 11, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em', marginTop: 3 }}>
+            FIFA WORLD CUP 2026
+          </span>
+        </div>
+
+        {/* Matches count badge */}
+        {group && (
+          <div style={{
+            position: 'absolute', top: 52, right: PADX, display: 'flex',
+            border: `1px solid ${brand}55`, padding: '8px 18px',
+          }}>
+            <span style={{ fontSize: 14, color: brand, fontWeight: 800, letterSpacing: '0.15em' }}>
+              {group.fixtures.length} MATCHES
             </span>
           </div>
-          {group && (
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: `1px solid ${brand}55`, padding: '8px 18px',
-            }}>
-              <span style={{ fontSize: 14, color: brand, fontWeight: 800, letterSpacing: '0.15em' }}>
-                {group.fixtures.length} MATCHES
-              </span>
-            </div>
-          )}
-        </div>
+        )}
 
         {group ? (
           <>
-            {/* Big group name */}
-            <div style={{ display: 'flex', marginTop: 24, height: 130 }}>
-              <span style={{ fontSize: 120, fontWeight: 900, letterSpacing: '-0.05em', lineHeight: 1, color: fg }}>
+            {/* Big group name — left half */}
+            <div style={{ position: 'absolute', top: 200, left: PADX, display: 'flex' }}>
+              <span style={{ fontSize: 130, fontWeight: 900, letterSpacing: '-0.05em', lineHeight: 1, color: fg }}>
                 {group.name}
               </span>
             </div>
 
-            {/* 4 team rows — each full width, stacked vertically */}
+            {/* Teams — right side, stacked */}
             <div style={{
-              display: 'flex', flexDirection: 'column', marginTop: 28,
-              borderTop: `1px solid ${fgMuted}55`,
+              position: 'absolute', top: 165, right: PADX, width: 440,
+              display: 'flex', flexDirection: 'column',
+              borderTop: `1px solid ${fgMuted}55`, paddingTop: 18,
             }}>
-              {group.teams.map(t => (
+              {group.teams.map((t, i) => (
                 <div
                   key={t.id}
                   style={{
-                    display: 'flex', alignItems: 'center', width: 1072, height: 64,
-                    padding: '0 4px', borderBottom: `1px solid ${fgMuted}55`,
+                    display: 'flex', alignItems: 'center',
+                    paddingTop: i === 0 ? 0 : 12, paddingBottom: 12,
+                    borderBottom: i < group.teams.length - 1 ? `1px solid ${fgMuted}55` : 'none',
                   }}
                 >
                   {t.logo && (
-                    <img src={t.logo} alt="" width={36} height={36} style={{ marginRight: 16 }} />
+                    <img src={t.logo} alt="" width={32} height={32} style={{ marginRight: 14 }} />
                   )}
-                  <span style={{ fontSize: 30, fontWeight: 800, color: fg, letterSpacing: '-0.02em' }}>
+                  <span style={{ fontSize: 28, fontWeight: 800, color: fg, letterSpacing: '-0.02em' }}>
                     {t.name}
                   </span>
                 </div>
               ))}
             </div>
 
-            {/* Footer — fixed at bottom via fixed total content height */}
-            <div style={{ display: 'flex', marginTop: 16 }}>
-              <span style={{ fontSize: 18, color: fgMuted, width: 1072 }}>
-                AI value-bet predictions for all 6 fixtures · matchmindcom.com
+            {/* Footer */}
+            <div style={{ position: 'absolute', bottom: 52, left: PADX, display: 'flex' }}>
+              <span style={{ fontSize: 16, color: fgMuted }}>
+                matchmindcom.com · AI value-bet predictions for all 6 fixtures · 18+
               </span>
             </div>
           </>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', marginTop: 80 }}>
+          <div style={{ position: 'absolute', top: 180, left: PADX, display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: 90, fontWeight: 900, letterSpacing: '-0.05em', color: fg }}>World Cup 2026</span>
             <span style={{ fontSize: 90, fontWeight: 900, letterSpacing: '-0.05em', color: brand, marginTop: 4 }}>group predictions.</span>
           </div>
         )}
       </div>
     ),
-    { width: 1200, height: 630 },
+    { width: W, height: H },
   )
 }
