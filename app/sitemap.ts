@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
-import { getWorldCupGroups, getAllTeams } from '@/lib/world-cup-data'
+import { getWorldCupGroups, getAllTeams, getAllFixtures } from '@/lib/world-cup-data'
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
 
@@ -43,7 +43,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // we keep the static + match pages and skip WC.
   const wcPages: MetadataRoute.Sitemap = []
   try {
-    const [groups, teams] = await Promise.all([getWorldCupGroups(), getAllTeams()])
+    const [groups, teams, fixtures] = await Promise.all([
+      getWorldCupGroups(),
+      getAllTeams(),
+      getAllFixtures(),
+    ])
     for (const g of groups) {
       wcPages.push({
         url: `${BASE}/world-cup/groups/${g.slug}`,
@@ -56,6 +60,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         url: `${BASE}/world-cup/teams/${p.slug}`,
         changeFrequency: 'daily',
         priority: 0.85,
+      })
+    }
+    for (const f of fixtures) {
+      wcPages.push({
+        url: `${BASE}/world-cup/fixtures/${f.id}`,
+        lastModified: new Date(f.date),
+        changeFrequency: 'daily',
+        priority: 0.9, // per-fixture pages are the highest-intent SEO surface
       })
     }
   } catch (e) {
