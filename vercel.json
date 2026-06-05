@@ -7,6 +7,8 @@
     { "path": "/api/cron/refresh-predictions-tier1",   "schedule": "0 4 * * *" },
     { "path": "/api/cron/refresh-predictions-tier2",   "schedule": "0 5 * * *" },
     { "path": "/api/cron/refresh-predictions-tier3",   "schedule": "0 6 * * *" },
+    { "path": "/api/cron/refresh-predictions-tier3",   "schedule": "0 13 * * *" },
+    { "path": "/api/cron/refresh-predictions-tier3",   "schedule": "0 16 * * *" },
     { "path": "/api/cron/daily-digest",                "schedule": "0 8 * * *" },
     { "path": "/api/cron/check-bet-slips",             "schedule": "0 21 * * *" },
 
