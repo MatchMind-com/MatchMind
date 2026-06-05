@@ -242,9 +242,16 @@ async function fetchLastFixtures(teamId: number, n = 5): Promise<RecentFixture[]
   try {
     const res = await fetch(`${API_BASE}/fixtures?team=${teamId}&last=${n}`, {
       headers: { 'x-apisports-key': API_KEY },
-      next: { revalidate: 3600 },
+      // 10-min cache: short enough that a build-time rate-limit failure
+      // gets retried on the next page request, long enough that we don't
+      // hammer API-Football. Was 1h — too long when build-time fetches
+      // failed silently for half the teams.
+      next: { revalidate: 600 },
     })
-    if (!res.ok) return []
+    if (!res.ok) {
+      console.warn(`[wc-enrichment] fixtures team=${teamId} HTTP ${res.status}`)
+      return []
+    }
     const json = await res.json()
     return (json.response ?? []).map((f: any): RecentFixture => {
       const isHome = f.teams?.home?.id === teamId
@@ -273,9 +280,17 @@ async function fetchSquad(teamId: number): Promise<SquadPlayer[]> {
   try {
     const res = await fetch(`${API_BASE}/players/squads?team=${teamId}`, {
       headers: { 'x-apisports-key': API_KEY },
-      next: { revalidate: 3600 * 24 },   // squad rarely changes — 24h cache
+      // 10-min cache only: was 24h, but if the build-time fetch hit a
+      // rate-limit and returned empty, that empty list was cached for a
+      // FULL DAY — half of WC team pages were missing squads because of
+      // this. Cache stays short until the next-request retry path is
+      // proven, then can be bumped back up.
+      next: { revalidate: 600 },
     })
-    if (!res.ok) return []
+    if (!res.ok) {
+      console.warn(`[wc-enrichment] squad team=${teamId} HTTP ${res.status}`)
+      return []
+    }
     const json = await res.json()
     const players = json.response?.[0]?.players ?? []
     return players.map((p: any): SquadPlayer => ({
@@ -296,9 +311,12 @@ async function fetchInjuries(teamId: number): Promise<InjuryReport[]> {
     // both WC + post-club-season friendlies.
     const res = await fetch(`${API_BASE}/injuries?team=${teamId}&season=2026`, {
       headers: { 'x-apisports-key': API_KEY },
-      next: { revalidate: 3600 },
+      next: { revalidate: 600 },  // 10-min, was 1h — same rate-limit reasoning as above
     })
-    if (!res.ok) return []
+    if (!res.ok) {
+      console.warn(`[wc-enrichment] injuries team=${teamId} HTTP ${res.status}`)
+      return []
+    }
     const json = await res.json()
     const seen = new Set<string>()
     const out: InjuryReport[] = []
