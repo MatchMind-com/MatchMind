@@ -216,7 +216,7 @@ async function generateVoiceover(text) {
 
 // Shared element builders
 function bg() {
-  return { type: 'shape', track: 0, time: 0, x: '50%', y: '50%', width: '100%', height: '100%', fillColor: C.bg }
+  return { type: 'shape', track: 1, time: 0, x: '50%', y: '50%', width: '100%', height: '100%', fillColor: C.bg }
 }
 
 function txt(props) {
@@ -232,12 +232,12 @@ function fadeIn(delay = 0, dur = 0.5) {
 }
 
 function slideUp(delay = 0, dist = '40px') {
-  return [{ time: delay, duration: 0.55, transition: true, type: 'textSlide', direction: 'up', distance: dist, easing: 'ease-out' }]
+  return [{ time: delay, duration: 0.55, transition: true, type: 'text-slide', direction: 'up', distance: dist, easing: 'ease-out' }]
 }
 
 function disclaimer() {
   return txt({
-    track: 9, time: 0,
+    track: 10, time: 0,
     x: '50%', y: '97.5%', width: '90%', height: 'auto',
     fontSize: '2.2 vmin', fontWeight: '400', fillColor: C.muted,
     text: '18+ · Bet Responsibly · BeGambleAware.org',
@@ -246,8 +246,8 @@ function disclaimer() {
 
 function ctaBar(t, dur) {
   return [
-    shape({ track: 8, time: t, duration: dur, x: '50%', y: '90%', width: '92%', height: '9%', fillColor: C.surface, animations: fadeIn(0, 0.4) }),
-    txt({ track: 9, time: t, duration: dur, x: '50%', y: '90%', width: '88%', height: 'auto', fontSize: '4 vmin', fontWeight: '700', fillColor: C.orange, text: 'matchmind.com', animations: fadeIn(0.2, 0.5) }),
+    shape({ track: 9, time: t, duration: dur, x: '50%', y: '90%', width: '92%', height: '9%', fillColor: C.surface, animations: fadeIn(0, 0.4) }),
+    txt({ track: 10, time: t, duration: dur, x: '50%', y: '90%', width: '88%', height: 'auto', fontSize: '4 vmin', fontWeight: '700', fillColor: C.orange, text: 'matchmind.com', animations: fadeIn(0.2, 0.5) }),
   ]
 }
 
@@ -272,43 +272,43 @@ function buildEdgeScanner(vars) {
       bg(),
 
       // ── Header
-      shape({ track: 1, time: 0, x: '50%', y: '8%', width: '35%', height: '0.3%', fillColor: C.orange, animations: fadeIn(0.1) }),
-      txt({ track: 2, time: 0.1, x: '50%', y: '10%', width: '90%', height: 'auto', fontSize: '3.5 vmin', fontWeight: '700', fillColor: C.orange, letterSpacing: 5, text: 'EDGE SCANNER', animations: fadeIn(0, 0.5) }),
-      shape({ track: 1, time: 0.1, x: '50%', y: '12%', width: '35%', height: '0.3%', fillColor: C.orange, animations: fadeIn(0.1) }),
+      shape({ track: 2, time: 0, x: '50%', y: '8%', width: '35%', height: '0.3%', fillColor: C.orange, animations: fadeIn(0.1) }),
+      txt({ track: 3, time: 0.1, x: '50%', y: '10%', width: '90%', height: 'auto', fontSize: '3.5 vmin', fontWeight: '700', fillColor: C.orange, letterSpacing: 5, text: 'EDGE SCANNER', animations: fadeIn(0, 0.5) }),
+      shape({ track: 2, time: 0.1, x: '50%', y: '12%', width: '35%', height: '0.3%', fillColor: C.orange, animations: fadeIn(0.1) }),
 
       // ── Scanning pulse line (0-2.5s)
-      shape({ track: 3, time: 0, duration: 2.5, x: '50%', y: '22%', width: '92%', height: '0.2%', fillColor: C.orange, opacity: 0.6,
+      shape({ track: 4, time: 0, duration: 2.5, x: '50%', y: '22%', width: '92%', height: '0.2%', fillColor: C.orange, opacity: 0.6,
         animations: [{ time: 0, duration: 2.5, type: 'wipe', direction: 'right', easing: 'linear' }] }),
 
       // ── Match card
-      shape({ track: 1, time: 1.5, x: '50%', y: '26%', width: '92%', height: '22%', fillColor: C.surface, animations: fadeIn(0, 0.5) }),
-      txt({ track: 3, time: 1.7, x: '50%', y: '22.5%', width: '88%', height: 'auto', fontSize: '2.5 vmin', fontWeight: '600', fillColor: C.muted, letterSpacing: 3, text: league.toUpperCase(), animations: fadeIn(0, 0.4) }),
-      txt({ track: 3, time: 1.9, x: '50%', y: '26.5%', width: '88%', height: 'auto', fontSize: '5.8 vmin', fontWeight: '800', fillColor: C.white, lineHeight: 1.1, text: match, animations: slideUp(0) }),
-      shape({ track: 2, time: 2.2, x: '50%', y: '32%', width: 'auto', height: 'auto', fillColor: C.orangeBg, borderColor: C.orange, borderWidth: 1,
+      shape({ track: 2, time: 1.5, x: '50%', y: '26%', width: '92%', height: '22%', fillColor: C.surface, animations: fadeIn(0, 0.5) }),
+      txt({ track: 4, time: 1.7, x: '50%', y: '22.5%', width: '88%', height: 'auto', fontSize: '2.5 vmin', fontWeight: '600', fillColor: C.muted, letterSpacing: 3, text: league.toUpperCase(), animations: fadeIn(0, 0.4) }),
+      txt({ track: 4, time: 1.9, x: '50%', y: '26.5%', width: '88%', height: 'auto', fontSize: '5.8 vmin', fontWeight: '800', fillColor: C.white, lineHeight: 1.1, text: match, animations: slideUp(0) }),
+      shape({ track: 3, time: 2.2, x: '50%', y: '32%', width: 'auto', height: 'auto', fillColor: C.orangeBg, borderColor: C.orange, borderWidth: 1,
         elements: [txt({ text: bet_type, fontSize: '2.8 vmin', fontWeight: '700', fillColor: C.orange, xPadding: '4%', yPadding: '1.5%' })] }),
 
       // ── Probability comparison
-      txt({ track: 3, time: 3, x: '50%', y: '43%', width: '90%', height: 'auto', fontSize: '2.2 vmin', fontWeight: '600', fillColor: C.muted, letterSpacing: 4, text: 'PROBABILITY COMPARISON', animations: fadeIn(0, 0.5) }),
+      txt({ track: 4, time: 3, x: '50%', y: '43%', width: '90%', height: 'auto', fontSize: '2.2 vmin', fontWeight: '600', fillColor: C.muted, letterSpacing: 4, text: 'PROBABILITY COMPARISON', animations: fadeIn(0, 0.5) }),
 
       // AI row
-      txt({ track: 3, time: 3.2, x: '7%', y: '47.5%', width: 'auto', height: 'auto', xAnchor: '0%', fontSize: '2.5 vmin', fontWeight: '700', fillColor: C.orange, text: 'AI MODEL', animations: fadeIn(0, 0.4) }),
-      txt({ track: 3, time: 3.2, x: '93%', y: '47.5%', width: 'auto', height: 'auto', xAnchor: '100%', fontSize: '3 vmin', fontWeight: '800', fillColor: C.orange, text: ai_prob, animations: fadeIn(0, 0.4) }),
-      shape({ track: 1, time: 3.3, x: '7%', y: '50%', xAnchor: '0%', width: '86%', height: '1.3%', fillColor: C.veryMuted, animations: fadeIn(0, 0.3) }),
-      shape({ track: 2, time: 3.5, x: '7%', y: '50%', xAnchor: '0%', width: aiBarW, height: '1.3%', fillColor: C.orange,
+      txt({ track: 4, time: 3.2, x: '7%', y: '47.5%', width: 'auto', height: 'auto', xAnchor: '0%', fontSize: '2.5 vmin', fontWeight: '700', fillColor: C.orange, text: 'AI MODEL', animations: fadeIn(0, 0.4) }),
+      txt({ track: 4, time: 3.2, x: '93%', y: '47.5%', width: 'auto', height: 'auto', xAnchor: '100%', fontSize: '3 vmin', fontWeight: '800', fillColor: C.orange, text: ai_prob, animations: fadeIn(0, 0.4) }),
+      shape({ track: 2, time: 3.3, x: '7%', y: '50%', xAnchor: '0%', width: '86%', height: '1.3%', fillColor: C.veryMuted, animations: fadeIn(0, 0.3) }),
+      shape({ track: 3, time: 3.5, x: '7%', y: '50%', xAnchor: '0%', width: aiBarW, height: '1.3%', fillColor: C.orange,
         animations: [{ time: 0, duration: 0.9, type: 'wipe', direction: 'right', easing: 'ease-out' }] }),
 
       // Bookmaker row
-      txt({ track: 3, time: 4.5, x: '7%', y: '55%', width: 'auto', height: 'auto', xAnchor: '0%', fontSize: '2.5 vmin', fontWeight: '700', fillColor: C.muted, text: 'BOOKMAKER', animations: fadeIn(0, 0.4) }),
-      txt({ track: 3, time: 4.5, x: '93%', y: '55%', width: 'auto', height: 'auto', xAnchor: '100%', fontSize: '3 vmin', fontWeight: '800', fillColor: C.muted, text: bk_prob, animations: fadeIn(0, 0.4) }),
-      shape({ track: 1, time: 4.6, x: '7%', y: '57.5%', xAnchor: '0%', width: '86%', height: '1.3%', fillColor: C.veryMuted, animations: fadeIn(0, 0.3) }),
-      shape({ track: 2, time: 4.8, x: '7%', y: '57.5%', xAnchor: '0%', width: bkBarW, height: '1.3%', fillColor: C.muted,
+      txt({ track: 4, time: 4.5, x: '7%', y: '55%', width: 'auto', height: 'auto', xAnchor: '0%', fontSize: '2.5 vmin', fontWeight: '700', fillColor: C.muted, text: 'BOOKMAKER', animations: fadeIn(0, 0.4) }),
+      txt({ track: 4, time: 4.5, x: '93%', y: '55%', width: 'auto', height: 'auto', xAnchor: '100%', fontSize: '3 vmin', fontWeight: '800', fillColor: C.muted, text: bk_prob, animations: fadeIn(0, 0.4) }),
+      shape({ track: 2, time: 4.6, x: '7%', y: '57.5%', xAnchor: '0%', width: '86%', height: '1.3%', fillColor: C.veryMuted, animations: fadeIn(0, 0.3) }),
+      shape({ track: 3, time: 4.8, x: '7%', y: '57.5%', xAnchor: '0%', width: bkBarW, height: '1.3%', fillColor: C.muted,
         animations: [{ time: 0, duration: 0.9, type: 'wipe', direction: 'right', easing: 'ease-out' }] }),
 
       // ── EV callout
-      shape({ track: 1, time: 7, x: '50%', y: '72%', width: '78%', height: '16%', fillColor: C.surface, borderColor: C.orange, borderWidth: 2, animations: [{ time: 0, duration: 0.5, transition: true, type: 'zoom', easing: 'ease-out' }] }),
-      txt({ track: 3, time: 7.2, x: '50%', y: '68.5%', width: 'auto', height: 'auto', fontSize: '2.2 vmin', fontWeight: '700', fillColor: C.muted, letterSpacing: 5, text: 'EXPECTED VALUE', animations: fadeIn(0, 0.4) }),
-      txt({ track: 3, time: 7.3, x: '50%', y: '72.5%', width: '90%', height: 'auto', fontSize: '11 vmin', fontWeight: '900', fillColor: evPos ? C.orange : C.loss, text: ev,
-        animations: [{ time: 0, duration: 0.6, transition: true, type: 'zoom', easing: 'ease-out' }] }),
+      shape({ track: 2, time: 7, x: '50%', y: '72%', width: '78%', height: '16%', fillColor: C.surface, borderColor: C.orange, borderWidth: 2, animations: [{ time: 0, duration: 0.5, transition: true, type: 'scale', easing: 'ease-out' }] }),
+      txt({ track: 4, time: 7.2, x: '50%', y: '68.5%', width: 'auto', height: 'auto', fontSize: '2.2 vmin', fontWeight: '700', fillColor: C.muted, letterSpacing: 5, text: 'EXPECTED VALUE', animations: fadeIn(0, 0.4) }),
+      txt({ track: 4, time: 7.3, x: '50%', y: '72.5%', width: '90%', height: 'auto', fontSize: '11 vmin', fontWeight: '900', fillColor: evPos ? C.orange : C.loss, text: ev,
+        animations: [{ time: 0, duration: 0.6, transition: true, type: 'scale', easing: 'ease-out' }] }),
 
       ...ctaBar(20, 10),
       disclaimer(),
@@ -335,38 +335,38 @@ function buildOddsAutopsy(vars) {
       bg(),
 
       // ── Header
-      txt({ track: 2, time: 0, x: '50%', y: '8%', width: '90%', height: 'auto', fontSize: '3.5 vmin', fontWeight: '700', fillColor: C.loss, letterSpacing: 5, text: 'ODDS AUTOPSY', animations: fadeIn(0, 0.5) }),
-      shape({ track: 1, time: 0.2, x: '50%', y: '10.5%', width: '92%', height: '0.15%', fillColor: C.loss, opacity: 0.4, animations: fadeIn(0, 0.5) }),
+      txt({ track: 3, time: 0, x: '50%', y: '8%', width: '90%', height: 'auto', fontSize: '3.5 vmin', fontWeight: '700', fillColor: C.loss, letterSpacing: 5, text: 'ODDS AUTOPSY', animations: fadeIn(0, 0.5) }),
+      shape({ track: 2, time: 0.2, x: '50%', y: '10.5%', width: '92%', height: '0.15%', fillColor: C.loss, opacity: 0.4, animations: fadeIn(0, 0.5) }),
 
       // ── Match + market
-      txt({ track: 3, time: 0.5, x: '50%', y: '16%', width: '88%', height: 'auto', fontSize: '2.8 vmin', fontWeight: '600', fillColor: C.muted, text: match, animations: fadeIn(0, 0.5) }),
-      txt({ track: 3, time: 0.8, x: '50%', y: '21%', width: '90%', height: 'auto', fontSize: '6 vmin', fontWeight: '900', fillColor: C.white, text: market, animations: slideUp(0) }),
-      txt({ track: 3, time: 1, x: '50%', y: '26%', width: '88%', height: 'auto', fontSize: '3 vmin', fontWeight: '600', fillColor: C.muted, text: `@ ${bk_odds}`, animations: fadeIn(0, 0.5) }),
+      txt({ track: 4, time: 0.5, x: '50%', y: '16%', width: '88%', height: 'auto', fontSize: '2.8 vmin', fontWeight: '600', fillColor: C.muted, text: match, animations: fadeIn(0, 0.5) }),
+      txt({ track: 4, time: 0.8, x: '50%', y: '21%', width: '90%', height: 'auto', fontSize: '6 vmin', fontWeight: '900', fillColor: C.white, text: market, animations: slideUp(0) }),
+      txt({ track: 4, time: 1, x: '50%', y: '26%', width: '88%', height: 'auto', fontSize: '3 vmin', fontWeight: '600', fillColor: C.muted, text: `@ ${bk_odds}`, animations: fadeIn(0, 0.5) }),
 
       // ── Divider
-      shape({ track: 1, time: 1.5, x: '50%', y: '31%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0, 0.5) }),
+      shape({ track: 2, time: 1.5, x: '50%', y: '31%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0, 0.5) }),
 
       // ── Bookmaker implied
-      txt({ track: 2, time: 2, x: '50%', y: '36%', width: '88%', height: 'auto', fontSize: '2.3 vmin', fontWeight: '600', fillColor: C.muted, letterSpacing: 3, text: 'BOOKMAKER SAYS', animations: fadeIn(0, 0.5) }),
-      txt({ track: 3, time: 2.2, x: '50%', y: '42%', width: '90%', height: 'auto', fontSize: '10 vmin', fontWeight: '900', fillColor: C.white, text: bk_implied, animations: fadeIn(0, 0.6) }),
+      txt({ track: 3, time: 2, x: '50%', y: '36%', width: '88%', height: 'auto', fontSize: '2.3 vmin', fontWeight: '600', fillColor: C.muted, letterSpacing: 3, text: 'BOOKMAKER SAYS', animations: fadeIn(0, 0.5) }),
+      txt({ track: 4, time: 2.2, x: '50%', y: '42%', width: '90%', height: 'auto', fontSize: '10 vmin', fontWeight: '900', fillColor: C.white, text: bk_implied, animations: fadeIn(0, 0.6) }),
 
       // ── AI true probability
-      txt({ track: 2, time: 3.5, x: '50%', y: '51%', width: '88%', height: 'auto', fontSize: '2.3 vmin', fontWeight: '600', fillColor: C.orange, letterSpacing: 3, text: 'MODEL SAYS', animations: fadeIn(0, 0.5) }),
-      txt({ track: 3, time: 3.7, x: '50%', y: '57%', width: '90%', height: 'auto', fontSize: '10 vmin', fontWeight: '900', fillColor: C.orange, text: ai_prob, animations: [{ time: 0, duration: 0.6, transition: true, type: 'zoom', easing: 'ease-out' }] }),
+      txt({ track: 3, time: 3.5, x: '50%', y: '51%', width: '88%', height: 'auto', fontSize: '2.3 vmin', fontWeight: '600', fillColor: C.orange, letterSpacing: 3, text: 'MODEL SAYS', animations: fadeIn(0, 0.5) }),
+      txt({ track: 4, time: 3.7, x: '50%', y: '57%', width: '90%', height: 'auto', fontSize: '10 vmin', fontWeight: '900', fillColor: C.orange, text: ai_prob, animations: [{ time: 0, duration: 0.6, transition: true, type: 'scale', easing: 'ease-out' }] }),
 
       // ── Margin extracted
-      shape({ track: 1, time: 5, x: '50%', y: '67%', width: '78%', height: '8%', fillColor: C.lossBg, borderColor: C.loss, borderWidth: 1, animations: fadeIn(0, 0.4) }),
-      txt({ track: 3, time: 5.1, x: '50%', y: '65.5%', width: 'auto', height: 'auto', fontSize: '2 vmin', fontWeight: '700', fillColor: C.loss, letterSpacing: 4, text: 'MARGIN EXTRACTED', animations: fadeIn(0, 0.4) }),
-      txt({ track: 3, time: 5.2, x: '50%', y: '67.5%', width: '90%', height: 'auto', fontSize: '6 vmin', fontWeight: '800', fillColor: C.loss, text: margin, animations: fadeIn(0, 0.5) }),
+      shape({ track: 2, time: 5, x: '50%', y: '67%', width: '78%', height: '8%', fillColor: C.lossBg, borderColor: C.loss, borderWidth: 1, animations: fadeIn(0, 0.4) }),
+      txt({ track: 4, time: 5.1, x: '50%', y: '65.5%', width: 'auto', height: 'auto', fontSize: '2 vmin', fontWeight: '700', fillColor: C.loss, letterSpacing: 4, text: 'MARGIN EXTRACTED', animations: fadeIn(0, 0.4) }),
+      txt({ track: 4, time: 5.2, x: '50%', y: '67.5%', width: '90%', height: 'auto', fontSize: '6 vmin', fontWeight: '800', fillColor: C.loss, text: margin, animations: fadeIn(0, 0.5) }),
 
       // ── Edge found
-      shape({ track: 1, time: 6, x: '50%', y: '78%', width: '78%', height: '8%', fillColor: C.orangeBg, borderColor: C.orange, borderWidth: 1, animations: fadeIn(0, 0.4) }),
-      txt({ track: 3, time: 6.1, x: '50%', y: '76.5%', width: 'auto', height: 'auto', fontSize: '2 vmin', fontWeight: '700', fillColor: C.orange, letterSpacing: 4, text: 'EDGE FOUND', animations: fadeIn(0, 0.4) }),
-      txt({ track: 3, time: 6.2, x: '50%', y: '78.5%', width: '90%', height: 'auto', fontSize: '6 vmin', fontWeight: '800', fillColor: C.orange, text: ev, animations: fadeIn(0, 0.5) }),
+      shape({ track: 2, time: 6, x: '50%', y: '78%', width: '78%', height: '8%', fillColor: C.orangeBg, borderColor: C.orange, borderWidth: 1, animations: fadeIn(0, 0.4) }),
+      txt({ track: 4, time: 6.1, x: '50%', y: '76.5%', width: 'auto', height: 'auto', fontSize: '2 vmin', fontWeight: '700', fillColor: C.orange, letterSpacing: 4, text: 'EDGE FOUND', animations: fadeIn(0, 0.4) }),
+      txt({ track: 4, time: 6.2, x: '50%', y: '78.5%', width: '90%', height: 'auto', fontSize: '6 vmin', fontWeight: '800', fillColor: C.orange, text: ev, animations: fadeIn(0, 0.5) }),
 
       // ── Verdict badge
-      shape({ track: 1, time: 8, x: '50%', y: '87%', width: '55%', height: '6%', fillColor: verdictBg, borderColor: verdictColor, borderWidth: 2, animations: [{ time: 0, duration: 0.5, transition: true, type: 'zoom' }] }),
-      txt({ track: 3, time: 8.1, x: '50%', y: '87%', width: 'auto', height: 'auto', fontSize: '4 vmin', fontWeight: '900', fillColor: verdictColor, letterSpacing: 6, text: verdict, animations: fadeIn(0, 0.4) }),
+      shape({ track: 2, time: 8, x: '50%', y: '87%', width: '55%', height: '6%', fillColor: verdictBg, borderColor: verdictColor, borderWidth: 2, animations: [{ time: 0, duration: 0.5, transition: true, type: 'scale' }] }),
+      txt({ track: 4, time: 8.1, x: '50%', y: '87%', width: 'auto', height: 'auto', fontSize: '4 vmin', fontWeight: '900', fillColor: verdictColor, letterSpacing: 6, text: verdict, animations: fadeIn(0, 0.4) }),
 
       ...ctaBar(20, 15),
       disclaimer(),
@@ -390,35 +390,35 @@ function buildSharpVsSquare(vars) {
       bg(),
 
       // ── Header
-      txt({ track: 2, time: 0, x: '50%', y: '7%', width: '90%', height: 'auto', fontSize: '3.5 vmin', fontWeight: '700', fillColor: C.white, letterSpacing: 4, text: 'SHARP VS SQUARE', animations: fadeIn(0, 0.5) }),
-      txt({ track: 2, time: 0.2, x: '50%', y: '11%', width: '88%', height: 'auto', fontSize: '2.8 vmin', fontWeight: '500', fillColor: C.muted, text: match, animations: fadeIn(0, 0.5) }),
+      txt({ track: 3, time: 0, x: '50%', y: '7%', width: '90%', height: 'auto', fontSize: '3.5 vmin', fontWeight: '700', fillColor: C.white, letterSpacing: 4, text: 'SHARP VS SQUARE', animations: fadeIn(0, 0.5) }),
+      txt({ track: 3, time: 0.2, x: '50%', y: '11%', width: '88%', height: 'auto', fontSize: '2.8 vmin', fontWeight: '500', fillColor: C.muted, text: match, animations: fadeIn(0, 0.5) }),
 
       // ── Divider line
-      shape({ track: 1, time: 0.5, x: '50%', y: '15%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0, 0.5) }),
+      shape({ track: 2, time: 0.5, x: '50%', y: '15%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0, 0.5) }),
 
       // ── Left panel: The Public
-      shape({ track: 1, time: 1, x: '27%', y: '47%', width: '50%', height: '60%', fillColor: C.surface, animations: fadeIn(0, 0.5) }),
-      txt({ track: 3, time: 1.2, x: '27%', y: '22%', width: '48%', height: 'auto', fontSize: '2.2 vmin', fontWeight: '700', fillColor: C.muted, letterSpacing: 5, text: 'THE PUBLIC', animations: fadeIn(0, 0.5) }),
-      shape({ track: 2, time: 1.2, x: '27%', y: '24.5%', width: '40%', height: '0.25%', fillColor: C.muted, opacity: 0.3, animations: fadeIn(0) }),
-      txt({ track: 3, time: 1.5, x: '27%', y: '33%', width: '48%', height: 'auto', fontSize: '5 vmin', fontWeight: '900', fillColor: C.white, text: public_pick, animations: slideUp(0) }),
-      txt({ track: 3, time: 1.7, x: '27%', y: '40%', width: '48%', height: 'auto', fontSize: '4 vmin', fontWeight: '700', fillColor: C.muted, text: `@ ${public_odds}`, animations: fadeIn(0, 0.4) }),
-      txt({ track: 3, time: 1.9, x: '27%', y: '45%', width: '48%', height: 'auto', fontSize: '3 vmin', fontWeight: '600', fillColor: C.veryMuted, text: public_implied, animations: fadeIn(0, 0.4) }),
+      shape({ track: 2, time: 1, x: '27%', y: '47%', width: '50%', height: '60%', fillColor: C.surface, animations: fadeIn(0, 0.5) }),
+      txt({ track: 4, time: 1.2, x: '27%', y: '22%', width: '48%', height: 'auto', fontSize: '2.2 vmin', fontWeight: '700', fillColor: C.muted, letterSpacing: 5, text: 'THE PUBLIC', animations: fadeIn(0, 0.5) }),
+      shape({ track: 3, time: 1.2, x: '27%', y: '24.5%', width: '40%', height: '0.25%', fillColor: C.muted, opacity: 0.3, animations: fadeIn(0) }),
+      txt({ track: 4, time: 1.5, x: '27%', y: '33%', width: '48%', height: 'auto', fontSize: '5 vmin', fontWeight: '900', fillColor: C.white, text: public_pick, animations: slideUp(0) }),
+      txt({ track: 4, time: 1.7, x: '27%', y: '40%', width: '48%', height: 'auto', fontSize: '4 vmin', fontWeight: '700', fillColor: C.muted, text: `@ ${public_odds}`, animations: fadeIn(0, 0.4) }),
+      txt({ track: 4, time: 1.9, x: '27%', y: '45%', width: '48%', height: 'auto', fontSize: '3 vmin', fontWeight: '600', fillColor: C.veryMuted, text: public_implied, animations: fadeIn(0, 0.4) }),
 
       // ── VS divider
-      txt({ track: 4, time: 2.5, x: '50%', y: '35%', width: 'auto', height: 'auto', fontSize: '3.5 vmin', fontWeight: '900', fillColor: C.muted, text: 'VS',
-        animations: [{ time: 0, duration: 0.4, transition: true, type: 'zoom' }] }),
+      txt({ track: 5, time: 2.5, x: '50%', y: '35%', width: 'auto', height: 'auto', fontSize: '3.5 vmin', fontWeight: '900', fillColor: C.muted, text: 'VS',
+        animations: [{ time: 0, duration: 0.4, transition: true, type: 'scale' }] }),
 
       // ── Right panel: The Model
-      shape({ track: 1, time: 2, x: '73%', y: '47%', width: '50%', height: '60%', fillColor: C.orangeBg, borderColor: C.orange, borderWidth: 1, animations: fadeIn(0, 0.5) }),
-      txt({ track: 3, time: 2.2, x: '73%', y: '22%', width: '48%', height: 'auto', fontSize: '2.2 vmin', fontWeight: '700', fillColor: C.orange, letterSpacing: 5, text: 'THE MODEL', animations: fadeIn(0, 0.5) }),
-      shape({ track: 2, time: 2.2, x: '73%', y: '24.5%', width: '40%', height: '0.25%', fillColor: C.orange, opacity: 0.5, animations: fadeIn(0) }),
-      txt({ track: 3, time: 2.5, x: '73%', y: '33%', width: '48%', height: 'auto', fontSize: '5 vmin', fontWeight: '900', fillColor: C.orange, text: ai_pick, animations: slideUp(0) }),
-      txt({ track: 3, time: 2.7, x: '73%', y: '40%', width: '48%', height: 'auto', fontSize: '4 vmin', fontWeight: '700', fillColor: C.white, text: `@ ${ai_odds}`, animations: fadeIn(0, 0.4) }),
-      txt({ track: 3, time: 2.9, x: '73%', y: '45%', width: '48%', height: 'auto', fontSize: '3 vmin', fontWeight: '600', fillColor: C.orange, text: `${ai_prob} true`, animations: fadeIn(0, 0.4) }),
+      shape({ track: 2, time: 2, x: '73%', y: '47%', width: '50%', height: '60%', fillColor: C.orangeBg, borderColor: C.orange, borderWidth: 1, animations: fadeIn(0, 0.5) }),
+      txt({ track: 4, time: 2.2, x: '73%', y: '22%', width: '48%', height: 'auto', fontSize: '2.2 vmin', fontWeight: '700', fillColor: C.orange, letterSpacing: 5, text: 'THE MODEL', animations: fadeIn(0, 0.5) }),
+      shape({ track: 3, time: 2.2, x: '73%', y: '24.5%', width: '40%', height: '0.25%', fillColor: C.orange, opacity: 0.5, animations: fadeIn(0) }),
+      txt({ track: 4, time: 2.5, x: '73%', y: '33%', width: '48%', height: 'auto', fontSize: '5 vmin', fontWeight: '900', fillColor: C.orange, text: ai_pick, animations: slideUp(0) }),
+      txt({ track: 4, time: 2.7, x: '73%', y: '40%', width: '48%', height: 'auto', fontSize: '4 vmin', fontWeight: '700', fillColor: C.white, text: `@ ${ai_odds}`, animations: fadeIn(0, 0.4) }),
+      txt({ track: 4, time: 2.9, x: '73%', y: '45%', width: '48%', height: 'auto', fontSize: '3 vmin', fontWeight: '600', fillColor: C.orange, text: `${ai_prob} true`, animations: fadeIn(0, 0.4) }),
 
       // ── "Find out tomorrow"
-      shape({ track: 1, time: 10, x: '50%', y: '78%', width: '92%', height: '6%', fillColor: C.surface, animations: fadeIn(0, 0.5) }),
-      txt({ track: 3, time: 10.2, x: '50%', y: '78%', width: '88%', height: 'auto', fontSize: '3.5 vmin', fontWeight: '700', fillColor: C.white, text: 'Find out tomorrow', animations: fadeIn(0, 0.4) }),
+      shape({ track: 2, time: 10, x: '50%', y: '78%', width: '92%', height: '6%', fillColor: C.surface, animations: fadeIn(0, 0.5) }),
+      txt({ track: 4, time: 10.2, x: '50%', y: '78%', width: '88%', height: 'auto', fontSize: '3.5 vmin', fontWeight: '700', fillColor: C.white, text: 'Find out tomorrow', animations: fadeIn(0, 0.4) }),
 
       ...ctaBar(18, 7),
       disclaimer(),
@@ -444,37 +444,37 @@ function buildTheGrind(vars) {
       bg(),
 
       // ── Header
-      txt({ track: 2, time: 0, x: '50%', y: '7.5%', width: '90%', height: 'auto', fontSize: '2.5 vmin', fontWeight: '700', fillColor: C.muted, letterSpacing: 5, text: 'THE GRIND', animations: fadeIn(0, 0.5) }),
-      txt({ track: 2, time: 0.3, x: '50%', y: '11.5%', width: '90%', height: 'auto', fontSize: '5.5 vmin', fontWeight: '900', fillColor: C.white, text: `WEEK ${week_num}`, animations: slideUp(0) }),
-      shape({ track: 1, time: 0.5, x: '50%', y: '15%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0) }),
+      txt({ track: 3, time: 0, x: '50%', y: '7.5%', width: '90%', height: 'auto', fontSize: '2.5 vmin', fontWeight: '700', fillColor: C.muted, letterSpacing: 5, text: 'THE GRIND', animations: fadeIn(0, 0.5) }),
+      txt({ track: 3, time: 0.3, x: '50%', y: '11.5%', width: '90%', height: 'auto', fontSize: '5.5 vmin', fontWeight: '900', fillColor: C.white, text: `WEEK ${week_num}`, animations: slideUp(0) }),
+      shape({ track: 2, time: 0.5, x: '50%', y: '15%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0) }),
 
       // ── W/L badges
-      txt({ track: 3, time: 1, x: '50%', y: '19.5%', width: '88%', height: 'auto', fontSize: '2.5 vmin', fontWeight: '600', fillColor: C.muted, text: bets_text, animations: fadeIn(0, 0.5) }),
-      shape({ track: 1, time: 1.2, x: '35%', y: '25.5%', width: '28%', height: '8%', fillColor: C.successBg, borderColor: C.success, borderWidth: 1, animations: fadeIn(0, 0.4) }),
-      txt({ track: 3, time: 1.3, x: '35%', y: '25.5%', width: '28%', height: 'auto', fontSize: '4 vmin', fontWeight: '900', fillColor: C.success, text: `${wins}W`, animations: fadeIn(0, 0.3) }),
-      shape({ track: 1, time: 1.2, x: '65%', y: '25.5%', width: '28%', height: '8%', fillColor: C.lossBg, borderColor: C.loss, borderWidth: 1, animations: fadeIn(0, 0.4) }),
-      txt({ track: 3, time: 1.3, x: '65%', y: '25.5%', width: '28%', height: 'auto', fontSize: '4 vmin', fontWeight: '900', fillColor: C.loss, text: `${losses}L`, animations: fadeIn(0, 0.3) }),
+      txt({ track: 4, time: 1, x: '50%', y: '19.5%', width: '88%', height: 'auto', fontSize: '2.5 vmin', fontWeight: '600', fillColor: C.muted, text: bets_text, animations: fadeIn(0, 0.5) }),
+      shape({ track: 2, time: 1.2, x: '35%', y: '25.5%', width: '28%', height: '8%', fillColor: C.successBg, borderColor: C.success, borderWidth: 1, animations: fadeIn(0, 0.4) }),
+      txt({ track: 4, time: 1.3, x: '35%', y: '25.5%', width: '28%', height: 'auto', fontSize: '4 vmin', fontWeight: '900', fillColor: C.success, text: `${wins}W`, animations: fadeIn(0, 0.3) }),
+      shape({ track: 2, time: 1.2, x: '65%', y: '25.5%', width: '28%', height: '8%', fillColor: C.lossBg, borderColor: C.loss, borderWidth: 1, animations: fadeIn(0, 0.4) }),
+      txt({ track: 4, time: 1.3, x: '65%', y: '25.5%', width: '28%', height: 'auto', fontSize: '4 vmin', fontWeight: '900', fillColor: C.loss, text: `${losses}L`, animations: fadeIn(0, 0.3) }),
 
       // ── Win/loss bar
-      shape({ track: 1, time: 2, x: '7%', y: '33.5%', xAnchor: '0%', width: '86%', height: '1.5%', fillColor: C.lossBg, animations: fadeIn(0, 0.4) }),
-      shape({ track: 2, time: 2.2, x: '7%', y: '33.5%', xAnchor: '0%', width: `${Math.round((wins / Math.max(wins + losses, 1)) * 86)}%`, height: '1.5%', fillColor: C.success,
+      shape({ track: 2, time: 2, x: '7%', y: '33.5%', xAnchor: '0%', width: '86%', height: '1.5%', fillColor: C.lossBg, animations: fadeIn(0, 0.4) }),
+      shape({ track: 3, time: 2.2, x: '7%', y: '33.5%', xAnchor: '0%', width: `${Math.round((wins / Math.max(wins + losses, 1)) * 86)}%`, height: '1.5%', fillColor: C.success,
         animations: [{ time: 0, duration: 0.8, type: 'wipe', direction: 'right', easing: 'ease-out' }] }),
 
       // ── Divider
-      shape({ track: 1, time: 2.5, x: '50%', y: '38%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0) }),
+      shape({ track: 2, time: 2.5, x: '50%', y: '38%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0) }),
 
       // ── Week P&L
-      txt({ track: 2, time: 3, x: '50%', y: '43%', width: '88%', height: 'auto', fontSize: '2.3 vmin', fontWeight: '700', fillColor: C.muted, letterSpacing: 4, text: 'WEEK P&L', animations: fadeIn(0, 0.5) }),
-      txt({ track: 3, time: 3.2, x: '50%', y: '50%', width: '90%', height: 'auto', fontSize: '12 vmin', fontWeight: '900', fillColor: pnlColor, text: week_pnl,
-        animations: [{ time: 0, duration: 0.6, transition: true, type: 'zoom', easing: 'ease-out' }] }),
+      txt({ track: 3, time: 3, x: '50%', y: '43%', width: '88%', height: 'auto', fontSize: '2.3 vmin', fontWeight: '700', fillColor: C.muted, letterSpacing: 4, text: 'WEEK P&L', animations: fadeIn(0, 0.5) }),
+      txt({ track: 4, time: 3.2, x: '50%', y: '50%', width: '90%', height: 'auto', fontSize: '12 vmin', fontWeight: '900', fillColor: pnlColor, text: week_pnl,
+        animations: [{ time: 0, duration: 0.6, transition: true, type: 'scale', easing: 'ease-out' }] }),
 
       // ── Divider
-      shape({ track: 1, time: 5, x: '50%', y: '58%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0) }),
+      shape({ track: 2, time: 5, x: '50%', y: '58%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0) }),
 
       // ── Running total
-      txt({ track: 2, time: 5.5, x: '50%', y: '63%', width: '88%', height: 'auto', fontSize: '2.3 vmin', fontWeight: '700', fillColor: C.muted, letterSpacing: 4, text: 'RUNNING TOTAL', animations: fadeIn(0, 0.5) }),
-      txt({ track: 3, time: 5.7, x: '50%', y: '71%', width: '90%', height: 'auto', fontSize: '10 vmin', fontWeight: '900', fillColor: C.white, text: running_total, animations: fadeIn(0, 0.6) }),
-      txt({ track: 3, time: 6, x: '50%', y: '77%', width: '88%', height: 'auto', fontSize: '2.5 vmin', fontWeight: '500', fillColor: C.muted, text: 'starting from £1,000 · Kelly sizing', animations: fadeIn(0, 0.5) }),
+      txt({ track: 3, time: 5.5, x: '50%', y: '63%', width: '88%', height: 'auto', fontSize: '2.3 vmin', fontWeight: '700', fillColor: C.muted, letterSpacing: 4, text: 'RUNNING TOTAL', animations: fadeIn(0, 0.5) }),
+      txt({ track: 4, time: 5.7, x: '50%', y: '71%', width: '90%', height: 'auto', fontSize: '10 vmin', fontWeight: '900', fillColor: C.white, text: running_total, animations: fadeIn(0, 0.6) }),
+      txt({ track: 4, time: 6, x: '50%', y: '77%', width: '88%', height: 'auto', fontSize: '2.5 vmin', fontWeight: '500', fillColor: C.muted, text: 'starting from £1,000 · Kelly sizing', animations: fadeIn(0, 0.5) }),
 
       ...ctaBar(25, 15),
       disclaimer(),
@@ -500,19 +500,19 @@ function buildLeagueRadar(vars) {
     const isTop = i === 0
     return [
       // Rank number
-      txt({ track: 3, time: t, x: '7%', y: `${y}%`, xAnchor: '0%', width: 'auto', height: 'auto',
+      txt({ track: 4, time: t, x: '7%', y: `${y}%`, xAnchor: '0%', width: 'auto', height: 'auto',
         fontSize: '2.8 vmin', fontWeight: '900', fillColor: isTop ? C.orange : C.muted,
         text: `${i + 1}`, animations: fadeIn(0, 0.4) }),
       // League name
-      txt({ track: 3, time: t, x: '17%', y: `${y - 1}%`, xAnchor: '0%', width: '55%', height: 'auto',
+      txt({ track: 4, time: t, x: '17%', y: `${y - 1}%`, xAnchor: '0%', width: '55%', height: 'auto',
         fontSize: '2.5 vmin', fontWeight: isTop ? '700' : '500', fillColor: isTop ? C.white : C.muted,
         text: item.league, animations: fadeIn(0, 0.4) }),
       // Edge count
-      txt({ track: 3, time: t, x: '93%', y: `${y - 1}%`, xAnchor: '100%', width: 'auto', height: 'auto',
+      txt({ track: 4, time: t, x: '93%', y: `${y - 1}%`, xAnchor: '100%', width: 'auto', height: 'auto',
         fontSize: '2.5 vmin', fontWeight: '700', fillColor: isTop ? C.orange : C.muted,
         text: `${item.count} edges`, animations: fadeIn(0, 0.4) }),
       // Bar
-      shape({ track: 1, time: t + 0.1, x: '17%', y: `${y + 2}%`, xAnchor: '0%', width: barW, height: '0.8%',
+      shape({ track: 2, time: t + 0.1, x: '17%', y: `${y + 2}%`, xAnchor: '0%', width: barW, height: '0.8%',
         fillColor: isTop ? C.orange : C.veryMuted,
         animations: [{ time: 0, duration: 0.6, type: 'wipe', direction: 'right', easing: 'ease-out' }] }),
     ]
@@ -525,22 +525,22 @@ function buildLeagueRadar(vars) {
       bg(),
 
       // ── Header
-      txt({ track: 2, time: 0, x: '50%', y: '8%', width: '90%', height: 'auto', fontSize: '3.5 vmin', fontWeight: '700', fillColor: C.orange, letterSpacing: 5, text: 'LEAGUE RADAR', animations: fadeIn(0, 0.5) }),
-      txt({ track: 2, time: 0.3, x: '50%', y: '12.5%', width: '88%', height: 'auto', fontSize: '2.5 vmin', fontWeight: '500', fillColor: C.muted, text: `WEEK ${week_num} · VALUE EDGES DETECTED`, letterSpacing: 2, animations: fadeIn(0, 0.5) }),
-      shape({ track: 1, time: 0.5, x: '50%', y: '16.5%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0) }),
+      txt({ track: 3, time: 0, x: '50%', y: '8%', width: '90%', height: 'auto', fontSize: '3.5 vmin', fontWeight: '700', fillColor: C.orange, letterSpacing: 5, text: 'LEAGUE RADAR', animations: fadeIn(0, 0.5) }),
+      txt({ track: 3, time: 0.3, x: '50%', y: '12.5%', width: '88%', height: 'auto', fontSize: '2.5 vmin', fontWeight: '500', fillColor: C.muted, text: `WEEK ${week_num} · VALUE EDGES DETECTED`, letterSpacing: 2, animations: fadeIn(0, 0.5) }),
+      shape({ track: 2, time: 0.5, x: '50%', y: '16.5%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0) }),
 
       // ── Column headers
-      txt({ track: 2, time: 1, x: '17%', y: '21%', xAnchor: '0%', width: '40%', height: 'auto', fontSize: '1.8 vmin', fontWeight: '600', fillColor: C.veryMuted, letterSpacing: 4, text: 'LEAGUE', animations: fadeIn(0) }),
-      txt({ track: 2, time: 1, x: '93%', y: '21%', xAnchor: '100%', width: 'auto', height: 'auto', fontSize: '1.8 vmin', fontWeight: '600', fillColor: C.veryMuted, letterSpacing: 4, text: 'EDGES', animations: fadeIn(0) }),
-      shape({ track: 1, time: 1, x: '50%', y: '23%', width: '92%', height: '0.1%', fillColor: C.border, animations: fadeIn(0) }),
+      txt({ track: 3, time: 1, x: '17%', y: '21%', xAnchor: '0%', width: '40%', height: 'auto', fontSize: '1.8 vmin', fontWeight: '600', fillColor: C.veryMuted, letterSpacing: 4, text: 'LEAGUE', animations: fadeIn(0) }),
+      txt({ track: 3, time: 1, x: '93%', y: '21%', xAnchor: '100%', width: 'auto', height: 'auto', fontSize: '1.8 vmin', fontWeight: '600', fillColor: C.veryMuted, letterSpacing: 4, text: 'EDGES', animations: fadeIn(0) }),
+      shape({ track: 2, time: 1, x: '50%', y: '23%', width: '92%', height: '0.1%', fillColor: C.border, animations: fadeIn(0) }),
 
       // ── League rows (dynamic)
       ...leagueRows,
 
       // ── Top league highlight
       ...(top_league ? [
-        shape({ track: 1, time: 5, x: '50%', y: '88%', width: '92%', height: '7%', fillColor: C.orangeBg, borderColor: C.orange, borderWidth: 1, animations: fadeIn(0, 0.5) }),
-        txt({ track: 3, time: 5.1, x: '50%', y: '88%', width: '88%', height: 'auto', fontSize: '3 vmin', fontWeight: '700', fillColor: C.orange, text: `#1 · ${top_league}`, animations: fadeIn(0, 0.4) }),
+        shape({ track: 2, time: 5, x: '50%', y: '88%', width: '92%', height: '7%', fillColor: C.orangeBg, borderColor: C.orange, borderWidth: 1, animations: fadeIn(0, 0.5) }),
+        txt({ track: 4, time: 5.1, x: '50%', y: '88%', width: '88%', height: 'auto', fontSize: '3 vmin', fontWeight: '700', fillColor: C.orange, text: `#1 · ${top_league}`, animations: fadeIn(0, 0.4) }),
       ] : []),
 
       ...ctaBar(20, 10),
