@@ -12,6 +12,28 @@
 const API_KEY = process.env.API_FOOTBALL_KEY!
 const API_BASE = 'https://v3.football.api-sports.io'
 
+// ── Module-level concurrency cap for API-Football calls ─────────────
+// Pro plan caps at 450 req/min ≈ 7.5/sec. Burst patterns (48 team
+// pages × 3 endpoints rendering in parallel during build/ISR) easily
+// exceed this. A simple async semaphore prevents the spike.
+const MAX_CONCURRENT = 4
+let inFlight = 0
+const waiters: Array<() => void> = []
+async function acquire(): Promise<void> {
+  if (inFlight < MAX_CONCURRENT) { inFlight++; return }
+  await new Promise<void>(resolve => waiters.push(resolve))
+  inFlight++
+}
+function release(): void {
+  inFlight--
+  const next = waiters.shift()
+  if (next) next()
+}
+async function rateLimitedFetch(url: string, init?: RequestInit): Promise<Response> {
+  await acquire()
+  try { return await fetch(url, init) } finally { release() }
+}
+
 export interface WCTeam {
   id: number
   name: string
@@ -60,7 +82,7 @@ export function groupSlug(name: string): string {
 
 async function fetchFixtures(): Promise<WCFixture[]> {
   try {
-    const res = await fetch(`${API_BASE}/fixtures?league=1&season=2026`, {
+    const res = await rateLimitedFetch(`${API_BASE}/fixtures?league=1&season=2026`, {
       headers: { 'x-apisports-key': API_KEY },
       next: { revalidate: 3600 },
     })
@@ -81,7 +103,7 @@ async function fetchFixtures(): Promise<WCFixture[]> {
 
 async function fetchStandings(): Promise<Map<string, WCTeam[]>> {
   try {
-    const res = await fetch(`${API_BASE}/standings?league=1&season=2026`, {
+    const res = await rateLimitedFetch(`${API_BASE}/standings?league=1&season=2026`, {
       headers: { 'x-apisports-key': API_KEY },
       next: { revalidate: 3600 },
     })
@@ -240,7 +262,7 @@ export interface TeamEnrichment {
 
 async function fetchLastFixtures(teamId: number, n = 5): Promise<RecentFixture[]> {
   try {
-    const res = await fetch(`${API_BASE}/fixtures?team=${teamId}&last=${n}`, {
+    const res = await rateLimitedFetch(`${API_BASE}/fixtures?team=${teamId}&last=${n}`, {
       headers: { 'x-apisports-key': API_KEY },
       // 10-min cache: short enough that a build-time rate-limit failure
       // gets retried on the next page request, long enough that we don't
@@ -278,7 +300,7 @@ async function fetchLastFixtures(teamId: number, n = 5): Promise<RecentFixture[]
 
 async function fetchSquad(teamId: number): Promise<SquadPlayer[]> {
   try {
-    const res = await fetch(`${API_BASE}/players/squads?team=${teamId}`, {
+    const res = await rateLimitedFetch(`${API_BASE}/players/squads?team=${teamId}`, {
       headers: { 'x-apisports-key': API_KEY },
       // 10-min cache only: was 24h, but if the build-time fetch hit a
       // rate-limit and returned empty, that empty list was cached for a
@@ -309,7 +331,7 @@ async function fetchInjuries(teamId: number): Promise<InjuryReport[]> {
   try {
     // Some nations don't run a domestic season call — calendar 2026 covers
     // both WC + post-club-season friendlies.
-    const res = await fetch(`${API_BASE}/injuries?team=${teamId}&season=2026`, {
+    const res = await rateLimitedFetch(`${API_BASE}/injuries?team=${teamId}&season=2026`, {
       headers: { 'x-apisports-key': API_KEY },
       next: { revalidate: 600 },  // 10-min, was 1h — same rate-limit reasoning as above
     })
@@ -337,10 +359,14 @@ async function fetchInjuries(teamId: number): Promise<InjuryReport[]> {
 }
 
 export async function getTeamEnrichment(teamId: number): Promise<TeamEnrichment> {
-  const [form, squad, injuries] = await Promise.all([
-    fetchLastFixtures(teamId, 5),
-    fetchSquad(teamId),
-    fetchInjuries(teamId),
-  ])
+  // Sequential, NOT Promise.all — at build time + ISR revalidation, 48
+  // team pages renderring concurrently each hitting 3 endpoints would
+  // hit ~150 simultaneous API-Football calls, blowing the rate limit
+  // and leaving half the teams with empty data cached for the cache
+  // window. One-at-a-time per team keeps concurrent calls to 3×n
+  // (where n = pages rendering at this instant), much safer.
+  const form = await fetchLastFixtures(teamId, 5)
+  const squad = await fetchSquad(teamId)
+  const injuries = await fetchInjuries(teamId)
   return { form, squad, injuries }
 }
