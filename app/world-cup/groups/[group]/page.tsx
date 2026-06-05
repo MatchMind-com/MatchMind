@@ -50,7 +50,8 @@ export async function generateMetadata(
   const teamList = group.teams.map(t => t.name).join(', ')
   const title = `${group.name} — World Cup 2026 Predictions & Fixtures | MatchMind`
   const description = `AI value-bet predictions for ${group.name} at the 2026 World Cup: ${teamList}. Every pick logged before kick-off, every result tracked publicly.`
-  const ogImage = `${APP_URL}/api/og/world-cup`
+  // Per-group custom OG card — 2×2 team grid with flags.
+  const ogImage = `${APP_URL}/api/og/wc-group?slug=${group.slug}`
 
   return {
     title,
