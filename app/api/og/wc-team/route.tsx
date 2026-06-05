@@ -60,40 +60,40 @@ export async function GET(req: NextRequest) {
 
         {profile ? (
           <>
-            {/* Flag + team name — fixed-height row */}
-            <div style={{ display: 'flex', alignItems: 'center', height: 160, marginTop: 40 }}>
+            {/* Flag + team name */}
+            <div style={{ display: 'flex', alignItems: 'center', height: 120, marginTop: 28 }}>
               {profile.team.logo && (
-                <img src={profile.team.logo} alt="" width={120} height={120} style={{ marginRight: 32 }} />
+                <img src={profile.team.logo} alt="" width={96} height={96} style={{ marginRight: 26 }} />
               )}
-              <span style={{ fontSize: 96, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1, color: fg }}>
+              <span style={{ fontSize: 84, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1, color: fg }}>
                 {profile.team.name}
               </span>
             </div>
 
-            {/* Description row — fixed height */}
-            <div style={{ display: 'flex', marginTop: 24, height: 64 }}>
-              <span style={{ fontSize: 22, color: fgMuted, lineHeight: 1.3, width: 1072 }}>
-                {profile.fixtures.length} group-stage matches · AI value-bet predictions logged before each kick-off.
+            {/* Description — single line height */}
+            <div style={{ display: 'flex', marginTop: 16, height: 30 }}>
+              <span style={{ fontSize: 22, color: fgMuted, width: 1072 }}>
+                {profile.fixtures.length} group-stage matches · AI value-bet predictions logged before kick-off
               </span>
             </div>
 
-            {/* Opponents row — fixed height with border lines */}
+            {/* Opponents row */}
             <div style={{
-              display: 'flex', flexDirection: 'column', marginTop: 36, height: 110,
+              display: 'flex', flexDirection: 'column', marginTop: 28, height: 96,
               borderTop: `1px solid ${fgMuted}55`, borderBottom: `1px solid ${fgMuted}55`,
-              padding: '20px 0',
+              padding: '16px 0',
             }}>
-              <span style={{ fontSize: 11, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em', marginBottom: 8 }}>
+              <span style={{ fontSize: 11, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em', marginBottom: 6 }}>
                 GROUP-STAGE OPPONENTS
               </span>
-              <span style={{ fontSize: 28, fontWeight: 700, color: fg, letterSpacing: '-0.01em', width: 1072 }}>
+              <span style={{ fontSize: 24, fontWeight: 700, color: fg, letterSpacing: '-0.01em', width: 1072 }}>
                 {opponents}
               </span>
             </div>
 
             {/* Footer */}
-            <div style={{ display: 'flex', marginTop: 28 }}>
-              <span style={{ fontSize: 18, color: fgMuted, width: 1072 }}>
+            <div style={{ display: 'flex', marginTop: 22 }}>
+              <span style={{ fontSize: 16, color: fgMuted, width: 1072 }}>
                 matchmindcom.com · Every pick logged · every result public
               </span>
             </div>
