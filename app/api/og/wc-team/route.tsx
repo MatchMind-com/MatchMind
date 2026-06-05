@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
         {profile ? (
           <>
             {/* Flag + team name */}
-            <div style={{ display: 'flex', alignItems: 'center', width: 1072, height: 120, marginTop: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'center', width: "100%", height: 120, marginTop: 28 }}>
               {profile.team.logo && (
                 <img src={profile.team.logo} alt="" width={96} height={96} style={{ marginRight: 26 }} />
               )}
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
 
             {/* Opponents row — width:1072 forces column-stack in Satori */}
             <div style={{
-              display: 'flex', flexDirection: 'column', width: 1072, marginTop: 36,
+              display: 'flex', flexDirection: 'column', width: "100%", marginTop: 36,
               borderTop: `1px solid ${fgMuted}55`, borderBottom: `1px solid ${fgMuted}55`,
               padding: '20px 0',
             }}>
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
             </div>
 
             {/* Footer */}
-            <div style={{ display: 'flex', width: 1072, marginTop: 28 }}>
+            <div style={{ display: 'flex', width: "100%", marginTop: 28 }}>
               <span style={{ fontSize: 16, color: fgMuted }}>
                 matchmindcom.com · Every pick logged · every result public · 18+
               </span>

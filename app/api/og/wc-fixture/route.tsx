@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
         }}
       >
         {/* Top bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: 1072, height: 60 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: "100%", height: 60 }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-0.04em', color: fg }}>
               MATCH<span style={{ color: brand }}>MIND</span>
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
         {data ? (
           <>
             {/* Home team — flag + name on one row */}
-            <div style={{ display: 'flex', alignItems: 'center', width: 1072, height: 96, marginTop: 40 }}>
+            <div style={{ display: 'flex', alignItems: 'center', width: "100%", height: 96, marginTop: 40 }}>
               {data.fixture.home.logo && (
                 <img src={data.fixture.home.logo} alt="" width={80} height={80} style={{ marginRight: 28 }} />
               )}
@@ -82,14 +82,14 @@ export async function GET(req: NextRequest) {
             </div>
 
             {/* vs separator */}
-            <div style={{ display: 'flex', width: 1072, marginTop: 8 }}>
+            <div style={{ display: 'flex', width: "100%", marginTop: 8 }}>
               <span style={{ fontSize: 18, color: fgMuted, fontWeight: 700, letterSpacing: '0.2em' }}>
                 VS
               </span>
             </div>
 
             {/* Away team */}
-            <div style={{ display: 'flex', alignItems: 'center', width: 1072, height: 96, marginTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', width: "100%", height: 96, marginTop: 8 }}>
               {data.fixture.away.logo && (
                 <img src={data.fixture.away.logo} alt="" width={80} height={80} style={{ marginRight: 28 }} />
               )}
@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
 
             {/* Kickoff + venue strip */}
             <div style={{
-              display: 'flex', flexDirection: 'column', width: 1072, marginTop: 32,
+              display: 'flex', flexDirection: 'column', width: "100%", marginTop: 32,
               borderTop: `1px solid ${fgMuted}55`, padding: '18px 0',
             }}>
               <span style={{ fontSize: 11, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em' }}>
@@ -113,14 +113,14 @@ export async function GET(req: NextRequest) {
             </div>
 
             {/* Footer */}
-            <div style={{ display: 'flex', width: 1072, marginTop: 16 }}>
+            <div style={{ display: 'flex', width: "100%", marginTop: 16 }}>
               <span style={{ fontSize: 16, color: fgMuted }}>
                 matchmindcom.com · AI value-bet prediction logged before kick-off
               </span>
             </div>
           </>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', width: 1072, marginTop: 60 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', width: "100%", marginTop: 60 }}>
             <span style={{ fontSize: 90, fontWeight: 900, letterSpacing: '-0.05em', color: fg }}>World Cup 2026</span>
             <span style={{ fontSize: 90, fontWeight: 900, letterSpacing: '-0.05em', color: brand, marginTop: 4 }}>fixture predictions.</span>
           </div>
