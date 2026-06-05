@@ -932,14 +932,29 @@ Return JSON with this exact structure. CALIBRATE every probability against the i
         }
       })
     if (records.length > 0) {
-      // OVERWRITE existing rows so a re-evaluation with a tighter EV ceiling
-      // (or a different best-value market) replaces the stale row instead
-      // of silently shadowing it. Was `ignoreDuplicates: true` — that bug
-      // let pre-MAX_REAL_EV=10 rows with +20% EV survive forever and
-      // surface in /api/cron/daily-digest etc.
-      await supabaseAdmin
+      // FIRST-PICK-WINS: only insert a row if this fixture_id doesn't
+      // already have one. Previously the (fixture_id, prediction) unique
+      // key let DIFFERENT picks for the same fixture pile up — when the
+      // cron re-ran with new data and best_value changed (Home Win →
+      // Over 2.5 → BTTS No → ...), every variant became a separate row
+      // and ALL settled independently when the match ended. Albania v
+      // Israel ended up with 7 settled "picks" for 1 game. Win-rate
+      // and ROI maths were polluted.
+      //
+      // Now: query existing fixture_ids in the batch, filter records to
+      // only NEW fixtures, plain INSERT (no upsert). The pick we make
+      // pre-kickoff is the canonical one — it's what users would have
+      // bet on. Later cron runs don't get to retroactively rewrite it.
+      const fixtureIds = records.map(r => r.fixture_id)
+      const { data: existing } = await supabaseAdmin
         .from('prediction_records')
-        .upsert(records, { onConflict: 'fixture_id,prediction' })
+        .select('fixture_id')
+        .in('fixture_id', fixtureIds)
+      const seenIds = new Set((existing ?? []).map((r: any) => r.fixture_id))
+      const newRecords = records.filter(r => !seenIds.has(r.fixture_id))
+      if (newRecords.length > 0) {
+        await supabaseAdmin.from('prediction_records').insert(newRecords)
+      }
     }
   } catch (dbErr) {
     console.error('[refresh-predictions] DB save error:', dbErr)
