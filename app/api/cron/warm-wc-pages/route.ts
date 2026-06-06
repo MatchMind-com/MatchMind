@@ -17,7 +17,8 @@
  */
 
 import { NextResponse } from 'next/server'
-import { getAllTeams, getTeamEnrichment } from '@/lib/world-cup-data'
+import { revalidatePath } from 'next/cache'
+import { getAllTeams, getTeamEnrichment, getAllFixtures } from '@/lib/world-cup-data'
 
 // Pro tier maxDuration. Sequential warmup of 48 teams × 3 calls each
 // at ~300ms per call ≈ 45 seconds. Plenty of headroom.
@@ -38,9 +39,11 @@ export async function POST(req: Request) {
   const teams = await getAllTeams()
   const results: Array<{ slug: string; form: number; squad: number; injuries: number }> = []
   let failures = 0
+  let revalidated = 0
 
   for (const profile of teams) {
     try {
+      // 1) Populate Next.js fetch cache with team enrichment
       const enr = await getTeamEnrichment(profile.team.id)
       results.push({
         slug: profile.slug,
@@ -48,15 +51,29 @@ export async function POST(req: Request) {
         squad: enr.squad.length,
         injuries: enr.injuries.length,
       })
+
+      // 2) Force the static page HTML to regenerate on next request —
+      //    without this, pages serve their OLD static HTML and visitors
+      //    never see the freshly-warmed data until ISR's 1h timer
+      //    expires. revalidatePath invalidates the page cache so the
+      //    next request rebuilds with the fresh fetch data.
+      revalidatePath(`/world-cup/teams/${profile.slug}`)
+      revalidated++
     } catch (e: any) {
       failures++
       results.push({ slug: profile.slug, form: 0, squad: 0, injuries: 0 })
     }
-    // Small breather between teams so we never approach the 7.5 req/sec
-    // sustained limit. Total wall time ≈ 48 × 0.6s = ~30s + actual fetch
-    // latency = ~45s. Well under our 300s function budget.
     await sleep(300)
   }
+
+  // Also revalidate group + fixture pages so they pick up any team data
+  // they embed (form pills on fixture pages, team links on group pages).
+  try {
+    const fixtures = await getAllFixtures()
+    for (const f of fixtures) revalidatePath(`/world-cup/fixtures/${f.id}`)
+    revalidatePath('/world-cup')
+    revalidatePath('/dashboard/world-cup')
+  } catch {}
 
   const populated = results.filter(r => r.squad > 0).length
 
@@ -65,6 +82,7 @@ export async function POST(req: Request) {
     duration_ms: Date.now() - start,
     teams_total: teams.length,
     teams_with_squad: populated,
+    pages_revalidated: revalidated,
     teams_failed: failures,
     sample: results.slice(0, 5),
   })
