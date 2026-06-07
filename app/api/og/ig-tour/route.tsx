@@ -110,7 +110,7 @@ function Slide({ slide, def }: { slide: number; def: SlideDef }) {
       <div style={{ position: 'absolute', top: 165, left: PADX, width: 80, height: 4, background: COLORS.brand, display: 'flex' }} />
 
       {/* Headline */}
-      <div style={{ position: 'absolute', top: 195, left: PADX, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'absolute', top: 195, left: PADX, width: W - PADX * 2, display: 'flex', flexDirection: 'column' }}>
         <span style={{ fontSize: 80, fontWeight: 900, letterSpacing: '-0.04em', color: COLORS.fg, lineHeight: 1 }}>
           {def.headline}
         </span>

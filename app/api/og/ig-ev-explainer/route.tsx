@@ -95,15 +95,15 @@ function Frame({ children, slide }: { children: React.ReactNode; slide: number }
 function Slide1() {
   return (
     <Frame slide={1}>
-      <div style={{ position: 'absolute', top: 195, left: PADX, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'absolute', top: 195, left: PADX, width: W - PADX * 2, display: 'flex', flexDirection: 'column' }}>
         <span style={{ fontSize: 100, fontWeight: 900, letterSpacing: '-0.04em', color: COLORS.fg, lineHeight: 1 }}>
-          What's a
+          What&apos;s a
         </span>
         <span style={{ fontSize: 100, fontWeight: 900, letterSpacing: '-0.04em', color: COLORS.brand, lineHeight: 1, marginTop: 6 }}>
           value bet?
         </span>
-        <span style={{ fontSize: 32, color: COLORS.fgMuted, lineHeight: 1.35, marginTop: 36, fontWeight: 500 }}>
-          A bet where the bookmaker has priced the outcome lower than the actual probability.
+        <span style={{ fontSize: 30, color: COLORS.fgMuted, lineHeight: 1.35, marginTop: 36, fontWeight: 500 }}>
+          A bet where the bookmaker has priced the outcome lower than its actual probability.
         </span>
       </div>
 
@@ -140,7 +140,7 @@ function Slide2() {
 
   return (
     <Frame slide={2}>
-      <div style={{ position: 'absolute', top: 195, left: PADX, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'absolute', top: 195, left: PADX, width: W - PADX * 2, display: 'flex', flexDirection: 'column' }}>
         <span style={{ fontSize: 88, fontWeight: 900, letterSpacing: '-0.04em', color: COLORS.fg, lineHeight: 1 }}>
           The maths,
         </span>
@@ -190,7 +190,7 @@ async function Slide3() {
 
   return (
     <Frame slide={3}>
-      <div style={{ position: 'absolute', top: 195, left: PADX, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'absolute', top: 195, left: PADX, width: W - PADX * 2, display: 'flex', flexDirection: 'column' }}>
         <span style={{ fontSize: 88, fontWeight: 900, letterSpacing: '-0.04em', color: COLORS.fg, lineHeight: 1 }}>
           A real
         </span>
@@ -251,7 +251,7 @@ async function Slide3() {
 function Slide4() {
   return (
     <Frame slide={4}>
-      <div style={{ position: 'absolute', top: 195, left: PADX, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'absolute', top: 195, left: PADX, width: W - PADX * 2, display: 'flex', flexDirection: 'column' }}>
         <span style={{ fontSize: 100, fontWeight: 900, letterSpacing: '-0.04em', color: COLORS.fg, lineHeight: 1 }}>
           Want the
         </span>
