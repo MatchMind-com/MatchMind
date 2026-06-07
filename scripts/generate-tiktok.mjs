@@ -57,19 +57,13 @@ const ELEVENLABS_VOICE = process.env.ELEVENLABS_VOICE_ID || 'onwK4e9ZLuTAKqWW03F
 // ── Brand tokens ─────────────────────────────────────────────────────────────
 
 const C = {
-  bg:       '#0B0B14',
-  surface:  '#13131F',
-  orange:   '#F97316',
-  white:    '#FFFFFF',
-  muted:    '#FFFFFF55',
-  veryMuted:'#FFFFFF25',
-  success:  '#10B981',
-  loss:     '#EF4444',
-  value:    '#EACC5B',
-  border:   '#FFFFFF14',
-  orangeBg: '#F9731618',
-  successBg:'#10B98118',
-  lossBg:   '#EF444418',
+  bg:      '#0B0B14',
+  surface: '#13131F',
+  orange:  '#F97316',
+  white:   '#FFFFFF',
+  success: '#10B981',
+  loss:    '#EF4444',
+  value:   '#EACC5B',
 }
 
 const FONT = 'Montserrat'
@@ -207,176 +201,227 @@ async function generateVoiceover(text) {
 
 // ── Creatomate composition builders ──────────────────────────────────────────
 //
-// Each builder returns a full Creatomate source JSON (1080×1920, 9:16).
-// No template IDs required — these are rendered inline.
-//
-// Design system:
-//   bg: #0B0B14  surface: #13131F  orange: #F97316
-//   Font: Montserrat (auto-loaded by Creatomate via Google Fonts)
+// Rules for Creatomate REST API (inline source rendering):
+//   - font_size: plain number (pixels) — NO unit strings like "3.5 vmin"
+//   - font_weight: number — NOT a string
+//   - fill_color: 6-char hex — use separate opacity: 0-1 for transparency
+//   - width/height: percent string "50%" or pixel number — NOT "auto"
+//   - No nested elements inside shape elements
+//   - track: 1-1000 (never 0)
+//   - Valid animation types: fade, scale, slide, wipe, text-slide, spin, bounce
 
-// Shared element builders
-function bg() {
-  return { type: 'shape', track: 1, time: 0, x: '50%', y: '50%', width: '100%', height: '100%', fillColor: C.bg }
+function tx(props) {
+  return { type: 'text', font_family: FONT, text_align: 'center', x_anchor: '50%', y_anchor: '50%', ...props }
+}
+function sh(props) {
+  return { type: 'shape', x_anchor: '50%', y_anchor: '50%', ...props }
+}
+function fi(delay = 0) {
+  return [{ time: delay, duration: 0.5, transition: true, type: 'fade' }]
+}
+function sc(delay = 0) {
+  return [{ time: delay, duration: 0.5, transition: true, type: 'scale', easing: 'ease-out' }]
 }
 
-function txt(props) {
-  return { type: 'text', fontFamily: FONT, textAlign: 'center', xAnchor: '50%', yAnchor: '50%', ...props }
+function baseComp() {
+  return { output_format: 'mp4', width: 1080, height: 1920, frame_rate: 30, snapshot_time: 5, fill_color: C.bg }
 }
 
-function shape(props) {
-  return { type: 'shape', xAnchor: '50%', yAnchor: '50%', ...props }
+function bgEl() {
+  return sh({ track: 1, time: 0, x: '50%', y: '50%', width: '100%', height: '100%', fill_color: C.bg })
 }
 
-function fadeIn(delay = 0, dur = 0.5) {
-  return [{ time: delay, duration: dur, transition: true, type: 'fade' }]
-}
-
-function slideUp(delay = 0, dist = '40px') {
-  return [{ time: delay, duration: 0.55, transition: true, type: 'text-slide', direction: 'up', distance: dist, easing: 'ease-out' }]
-}
-
-function disclaimer() {
-  return txt({
-    track: 10, time: 0,
-    x: '50%', y: '97.5%', width: '90%', height: 'auto',
-    fontSize: '2.2 vmin', fontWeight: '400', fillColor: C.muted,
-    text: '18+ · Bet Responsibly · BeGambleAware.org',
-  })
-}
-
-function ctaBar(t, dur) {
+function ctaEls(time = 0) {
   return [
-    shape({ track: 9, time: t, duration: dur, x: '50%', y: '90%', width: '92%', height: '9%', fillColor: C.surface, animations: fadeIn(0, 0.4) }),
-    txt({ track: 10, time: t, duration: dur, x: '50%', y: '90%', width: '88%', height: 'auto', fontSize: '4 vmin', fontWeight: '700', fillColor: C.orange, text: 'matchmind.com', animations: fadeIn(0.2, 0.5) }),
+    sh({ track: 9, time, x: '50%', y: '91%', width: '100%', height: '8%', fill_color: C.surface }),
+    tx({ track: 10, time, x: '50%', y: '91%', width: '88%', height: '8%', font_size: 36, font_weight: 700, fill_color: C.orange, text: 'matchmind.com' }),
+    tx({ track: 10, time, x: '50%', y: '97.5%', width: '90%', height: '3%', font_size: 20, font_weight: 400, fill_color: C.white, opacity: 0.35, text: '18+ · Bet Responsibly · BeGambleAware.org' }),
   ]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. EDGE SCANNER
-// Radar aesthetic: locks onto a mispriced market like targeting software.
+// Radar locks onto a mispriced market — probability comparison + EV reveal.
 // ─────────────────────────────────────────────────────────────────────────────
 function buildEdgeScanner(vars) {
   const { match = 'Home vs Away', league = 'PREMIER LEAGUE', bet_type = 'Home Win',
           ai_prob = '58%', bk_prob = '52%', ev = '+12%' } = vars
-
-  const aiNum = parseInt(ai_prob) || 58
-  const bkNum = parseInt(bk_prob) || 52
-  const aiBarW = `${Math.min(aiNum * 0.88, 88)}%`
-  const bkBarW = `${Math.min(bkNum * 0.88, 88)}%`
-  const evPos = (ev.includes('+') || parseInt(ev) > 0) ? true : false
+  const evPos = ev.startsWith('+') || parseFloat(ev) > 0
 
   return {
-    outputFormat: 'mp4', width: 1080, height: 1920, frameRate: 30,
-    fillColor: C.bg,
+    ...baseComp(),
     elements: [
-      bg(),
+      bgEl(),
 
-      // ── Header
-      shape({ track: 2, time: 0, x: '50%', y: '8%', width: '35%', height: '0.3%', fillColor: C.orange, animations: fadeIn(0.1) }),
-      txt({ track: 3, time: 0.1, x: '50%', y: '10%', width: '90%', height: 'auto', fontSize: '3.5 vmin', fontWeight: '700', fillColor: C.orange, letterSpacing: 5, text: 'EDGE SCANNER', animations: fadeIn(0, 0.5) }),
-      shape({ track: 2, time: 0.1, x: '50%', y: '12%', width: '35%', height: '0.3%', fillColor: C.orange, animations: fadeIn(0.1) }),
+      // ── Orange accent lines flanking header
+      sh({ track: 2, time: 0, x: '50%', y: '7.5%', width: '28%', height: 3, fill_color: C.orange }),
 
-      // ── Scanning pulse line (0-2.5s)
-      shape({ track: 4, time: 0, duration: 2.5, x: '50%', y: '22%', width: '92%', height: '0.2%', fillColor: C.orange, opacity: 0.6,
-        animations: [{ time: 0, duration: 2.5, type: 'wipe', direction: 'right', easing: 'linear' }] }),
+      // ── EDGE SCANNER header
+      tx({ track: 3, time: 0, x: '50%', y: '10%', width: '90%', height: '7%',
+           font_size: 42, font_weight: 700, fill_color: C.orange,
+           text: 'EDGE SCANNER', animations: fi(0) }),
 
-      // ── Match card
-      shape({ track: 2, time: 1.5, x: '50%', y: '26%', width: '92%', height: '22%', fillColor: C.surface, animations: fadeIn(0, 0.5) }),
-      txt({ track: 4, time: 1.7, x: '50%', y: '22.5%', width: '88%', height: 'auto', fontSize: '2.5 vmin', fontWeight: '600', fillColor: C.muted, letterSpacing: 3, text: league.toUpperCase(), animations: fadeIn(0, 0.4) }),
-      txt({ track: 4, time: 1.9, x: '50%', y: '26.5%', width: '88%', height: 'auto', fontSize: '5.8 vmin', fontWeight: '800', fillColor: C.white, lineHeight: 1.1, text: match, animations: slideUp(0) }),
-      shape({ track: 3, time: 2.2, x: '50%', y: '32%', width: 'auto', height: 'auto', fillColor: C.orangeBg, borderColor: C.orange, borderWidth: 1,
-        elements: [txt({ text: bet_type, fontSize: '2.8 vmin', fontWeight: '700', fillColor: C.orange, xPadding: '4%', yPadding: '1.5%' })] }),
+      sh({ track: 2, time: 0, x: '50%', y: '13%', width: '28%', height: 3, fill_color: C.orange }),
 
-      // ── Probability comparison
-      txt({ track: 4, time: 3, x: '50%', y: '43%', width: '90%', height: 'auto', fontSize: '2.2 vmin', fontWeight: '600', fillColor: C.muted, letterSpacing: 4, text: 'PROBABILITY COMPARISON', animations: fadeIn(0, 0.5) }),
+      // ── League label
+      tx({ track: 3, time: 0.4, x: '50%', y: '19%', width: '88%', height: '5%',
+           font_size: 26, font_weight: 600, fill_color: C.white, opacity: 0.45,
+           text: league.toUpperCase(), animations: fi(0) }),
 
-      // AI row
-      txt({ track: 4, time: 3.2, x: '7%', y: '47.5%', width: 'auto', height: 'auto', xAnchor: '0%', fontSize: '2.5 vmin', fontWeight: '700', fillColor: C.orange, text: 'AI MODEL', animations: fadeIn(0, 0.4) }),
-      txt({ track: 4, time: 3.2, x: '93%', y: '47.5%', width: 'auto', height: 'auto', xAnchor: '100%', fontSize: '3 vmin', fontWeight: '800', fillColor: C.orange, text: ai_prob, animations: fadeIn(0, 0.4) }),
-      shape({ track: 2, time: 3.3, x: '7%', y: '50%', xAnchor: '0%', width: '86%', height: '1.3%', fillColor: C.veryMuted, animations: fadeIn(0, 0.3) }),
-      shape({ track: 3, time: 3.5, x: '7%', y: '50%', xAnchor: '0%', width: aiBarW, height: '1.3%', fillColor: C.orange,
-        animations: [{ time: 0, duration: 0.9, type: 'wipe', direction: 'right', easing: 'ease-out' }] }),
+      // ── Match name
+      tx({ track: 4, time: 0.7, x: '50%', y: '27%', width: '88%', height: '9%',
+           font_size: 58, font_weight: 800, fill_color: C.white,
+           text: match, animations: fi(0) }),
 
-      // Bookmaker row
-      txt({ track: 4, time: 4.5, x: '7%', y: '55%', width: 'auto', height: 'auto', xAnchor: '0%', fontSize: '2.5 vmin', fontWeight: '700', fillColor: C.muted, text: 'BOOKMAKER', animations: fadeIn(0, 0.4) }),
-      txt({ track: 4, time: 4.5, x: '93%', y: '55%', width: 'auto', height: 'auto', xAnchor: '100%', fontSize: '3 vmin', fontWeight: '800', fillColor: C.muted, text: bk_prob, animations: fadeIn(0, 0.4) }),
-      shape({ track: 2, time: 4.6, x: '7%', y: '57.5%', xAnchor: '0%', width: '86%', height: '1.3%', fillColor: C.veryMuted, animations: fadeIn(0, 0.3) }),
-      shape({ track: 3, time: 4.8, x: '7%', y: '57.5%', xAnchor: '0%', width: bkBarW, height: '1.3%', fillColor: C.muted,
-        animations: [{ time: 0, duration: 0.9, type: 'wipe', direction: 'right', easing: 'ease-out' }] }),
+      // ── Bet type background pill
+      sh({ track: 3, time: 1.1, x: '50%', y: '35%', width: '55%', height: '5%',
+           fill_color: C.surface, animations: fi(0) }),
 
-      // ── EV callout
-      shape({ track: 2, time: 7, x: '50%', y: '72%', width: '78%', height: '16%', fillColor: C.surface, borderColor: C.orange, borderWidth: 2, animations: [{ time: 0, duration: 0.5, transition: true, type: 'scale', easing: 'ease-out' }] }),
-      txt({ track: 4, time: 7.2, x: '50%', y: '68.5%', width: 'auto', height: 'auto', fontSize: '2.2 vmin', fontWeight: '700', fillColor: C.muted, letterSpacing: 5, text: 'EXPECTED VALUE', animations: fadeIn(0, 0.4) }),
-      txt({ track: 4, time: 7.3, x: '50%', y: '72.5%', width: '90%', height: 'auto', fontSize: '11 vmin', fontWeight: '900', fillColor: evPos ? C.orange : C.loss, text: ev,
-        animations: [{ time: 0, duration: 0.6, transition: true, type: 'scale', easing: 'ease-out' }] }),
+      // ── Bet type text
+      tx({ track: 4, time: 1.2, x: '50%', y: '35%', width: '53%', height: '5%',
+           font_size: 28, font_weight: 700, fill_color: C.orange,
+           text: bet_type, animations: fi(0) }),
 
-      ...ctaBar(20, 10),
-      disclaimer(),
-    ]
+      // ── Divider
+      sh({ track: 2, time: 1.8, x: '50%', y: '42%', width: '88%', height: 2, fill_color: C.white, opacity: 0.1 }),
+
+      // ── PROBABILITY COMPARISON label
+      tx({ track: 3, time: 2, x: '50%', y: '45.5%', width: '88%', height: '4%',
+           font_size: 22, font_weight: 600, fill_color: C.white, opacity: 0.5,
+           text: 'PROBABILITY COMPARISON', animations: fi(0) }),
+
+      // ── AI probability (left)
+      tx({ track: 5, time: 2.3, x: '28%', y: '55%', width: '44%', height: '12%',
+           font_size: 90, font_weight: 900, fill_color: C.orange,
+           text: ai_prob, animations: fi(0) }),
+      tx({ track: 4, time: 2.3, x: '28%', y: '63%', width: '44%', height: '4%',
+           font_size: 22, font_weight: 700, fill_color: C.orange,
+           text: 'AI MODEL', animations: fi(0) }),
+
+      // ── Vertical separator
+      sh({ track: 3, time: 2.3, x: '50%', y: '57%', width: 2, height: '10%', fill_color: C.white, opacity: 0.15 }),
+
+      // ── Bookmaker probability (right)
+      tx({ track: 5, time: 2.8, x: '72%', y: '55%', width: '44%', height: '12%',
+           font_size: 90, font_weight: 900, fill_color: C.white, opacity: 0.35,
+           text: bk_prob, animations: fi(0) }),
+      tx({ track: 4, time: 2.8, x: '72%', y: '63%', width: '44%', height: '4%',
+           font_size: 22, font_weight: 700, fill_color: C.white, opacity: 0.35,
+           text: 'BOOKMAKER', animations: fi(0) }),
+
+      // ── EV section
+      sh({ track: 2, time: 3.5, x: '50%', y: '69%', width: '88%', height: 2, fill_color: C.white, opacity: 0.1 }),
+
+      // ── EV label
+      tx({ track: 4, time: 3.7, x: '50%', y: '73%', width: '88%', height: '4%',
+           font_size: 22, font_weight: 600, fill_color: C.white, opacity: 0.5,
+           text: 'EXPECTED VALUE', animations: fi(0) }),
+
+      // ── EV box background
+      sh({ track: 4, time: 3.9, x: '50%', y: '81%', width: '80%', height: '14%',
+           fill_color: C.surface, animations: sc(0) }),
+
+      // ── EV value (the big number)
+      tx({ track: 5, time: 4, x: '50%', y: '81%', width: '78%', height: '12%',
+           font_size: 110, font_weight: 900, fill_color: evPos ? C.orange : C.loss,
+           text: ev, animations: sc(0) }),
+
+      ...ctaEls(0),
+    ],
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 2. ODDS AUTOPSY
-// Forensic dissection of one mispriced market.
+// Forensic dissection of one mispriced market — bookmaker vs model vs margin.
 // ─────────────────────────────────────────────────────────────────────────────
 function buildOddsAutopsy(vars) {
   const { match = 'Home vs Away', market = 'Away Win', bk_odds = '2.75',
           bk_implied = '36%', ai_prob = '42%', margin = '5.2%',
           ev = '+14%', verdict = 'LEAN' } = vars
 
-  const verdictColor = verdict === 'BET' ? C.success : verdict === 'LEAN' ? C.orange : verdict === 'AVOID' ? C.loss : C.muted
-  const verdictBg = verdict === 'BET' ? C.successBg : verdict === 'LEAN' ? C.orangeBg : verdict === 'AVOID' ? C.lossBg : C.border
+  const verdictColor = verdict === 'BET' ? C.success : verdict === 'AVOID' ? C.loss : C.orange
 
   return {
-    outputFormat: 'mp4', width: 1080, height: 1920, frameRate: 30,
-    fillColor: C.bg,
+    ...baseComp(),
     elements: [
-      bg(),
+      bgEl(),
 
-      // ── Header
-      txt({ track: 3, time: 0, x: '50%', y: '8%', width: '90%', height: 'auto', fontSize: '3.5 vmin', fontWeight: '700', fillColor: C.loss, letterSpacing: 5, text: 'ODDS AUTOPSY', animations: fadeIn(0, 0.5) }),
-      shape({ track: 2, time: 0.2, x: '50%', y: '10.5%', width: '92%', height: '0.15%', fillColor: C.loss, opacity: 0.4, animations: fadeIn(0, 0.5) }),
+      // ── ODDS AUTOPSY header (red tint — forensic)
+      tx({ track: 3, time: 0, x: '50%', y: '8%', width: '90%', height: '6%',
+           font_size: 42, font_weight: 700, fill_color: C.loss,
+           text: 'ODDS AUTOPSY', animations: fi(0) }),
+      sh({ track: 2, time: 0.2, x: '50%', y: '11%', width: '88%', height: 2, fill_color: C.loss, opacity: 0.35 }),
 
-      // ── Match + market
-      txt({ track: 4, time: 0.5, x: '50%', y: '16%', width: '88%', height: 'auto', fontSize: '2.8 vmin', fontWeight: '600', fillColor: C.muted, text: match, animations: fadeIn(0, 0.5) }),
-      txt({ track: 4, time: 0.8, x: '50%', y: '21%', width: '90%', height: 'auto', fontSize: '6 vmin', fontWeight: '900', fillColor: C.white, text: market, animations: slideUp(0) }),
-      txt({ track: 4, time: 1, x: '50%', y: '26%', width: '88%', height: 'auto', fontSize: '3 vmin', fontWeight: '600', fillColor: C.muted, text: `@ ${bk_odds}`, animations: fadeIn(0, 0.5) }),
+      // ── Match
+      tx({ track: 3, time: 0.4, x: '50%', y: '16%', width: '88%', height: '5%',
+           font_size: 28, font_weight: 500, fill_color: C.white, opacity: 0.5,
+           text: match, animations: fi(0) }),
+
+      // ── Market
+      tx({ track: 4, time: 0.7, x: '50%', y: '22%', width: '88%', height: '8%',
+           font_size: 62, font_weight: 900, fill_color: C.white,
+           text: market, animations: fi(0) }),
+
+      // ── Odds
+      tx({ track: 3, time: 0.9, x: '50%', y: '28%', width: '88%', height: '5%',
+           font_size: 32, font_weight: 600, fill_color: C.white, opacity: 0.5,
+           text: `@ ${bk_odds}`, animations: fi(0) }),
 
       // ── Divider
-      shape({ track: 2, time: 1.5, x: '50%', y: '31%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0, 0.5) }),
+      sh({ track: 2, time: 1.3, x: '50%', y: '32%', width: '88%', height: 2, fill_color: C.white, opacity: 0.08 }),
 
-      // ── Bookmaker implied
-      txt({ track: 3, time: 2, x: '50%', y: '36%', width: '88%', height: 'auto', fontSize: '2.3 vmin', fontWeight: '600', fillColor: C.muted, letterSpacing: 3, text: 'BOOKMAKER SAYS', animations: fadeIn(0, 0.5) }),
-      txt({ track: 4, time: 2.2, x: '50%', y: '42%', width: '90%', height: 'auto', fontSize: '10 vmin', fontWeight: '900', fillColor: C.white, text: bk_implied, animations: fadeIn(0, 0.6) }),
+      // ── BOOKMAKER SAYS
+      tx({ track: 3, time: 1.5, x: '50%', y: '36%', width: '88%', height: '4%',
+           font_size: 24, font_weight: 600, fill_color: C.white, opacity: 0.5,
+           text: 'BOOKMAKER SAYS', animations: fi(0) }),
+      tx({ track: 4, time: 1.7, x: '50%', y: '43%', width: '88%', height: '11%',
+           font_size: 106, font_weight: 900, fill_color: C.white,
+           text: bk_implied, animations: fi(0) }),
 
-      // ── AI true probability
-      txt({ track: 3, time: 3.5, x: '50%', y: '51%', width: '88%', height: 'auto', fontSize: '2.3 vmin', fontWeight: '600', fillColor: C.orange, letterSpacing: 3, text: 'MODEL SAYS', animations: fadeIn(0, 0.5) }),
-      txt({ track: 4, time: 3.7, x: '50%', y: '57%', width: '90%', height: 'auto', fontSize: '10 vmin', fontWeight: '900', fillColor: C.orange, text: ai_prob, animations: [{ time: 0, duration: 0.6, transition: true, type: 'scale', easing: 'ease-out' }] }),
+      // ── MODEL SAYS
+      tx({ track: 3, time: 3, x: '50%', y: '52%', width: '88%', height: '4%',
+           font_size: 24, font_weight: 600, fill_color: C.orange,
+           text: 'MODEL SAYS', animations: fi(0) }),
+      tx({ track: 4, time: 3.2, x: '50%', y: '59%', width: '88%', height: '11%',
+           font_size: 106, font_weight: 900, fill_color: C.orange,
+           text: ai_prob, animations: sc(0) }),
 
-      // ── Margin extracted
-      shape({ track: 2, time: 5, x: '50%', y: '67%', width: '78%', height: '8%', fillColor: C.lossBg, borderColor: C.loss, borderWidth: 1, animations: fadeIn(0, 0.4) }),
-      txt({ track: 4, time: 5.1, x: '50%', y: '65.5%', width: 'auto', height: 'auto', fontSize: '2 vmin', fontWeight: '700', fillColor: C.loss, letterSpacing: 4, text: 'MARGIN EXTRACTED', animations: fadeIn(0, 0.4) }),
-      txt({ track: 4, time: 5.2, x: '50%', y: '67.5%', width: '90%', height: 'auto', fontSize: '6 vmin', fontWeight: '800', fillColor: C.loss, text: margin, animations: fadeIn(0, 0.5) }),
+      // ── Margin extracted box
+      sh({ track: 3, time: 4.5, x: '50%', y: '70%', width: '80%', height: '8%',
+           fill_color: C.surface, animations: fi(0) }),
+      tx({ track: 4, time: 4.6, x: '50%', y: '68.5%', width: '88%', height: '3%',
+           font_size: 20, font_weight: 700, fill_color: C.loss, opacity: 0.8,
+           text: 'MARGIN EXTRACTED', animations: fi(0) }),
+      tx({ track: 4, time: 4.7, x: '50%', y: '71%', width: '88%', height: '6%',
+           font_size: 60, font_weight: 800, fill_color: C.loss,
+           text: margin, animations: fi(0) }),
 
-      // ── Edge found
-      shape({ track: 2, time: 6, x: '50%', y: '78%', width: '78%', height: '8%', fillColor: C.orangeBg, borderColor: C.orange, borderWidth: 1, animations: fadeIn(0, 0.4) }),
-      txt({ track: 4, time: 6.1, x: '50%', y: '76.5%', width: 'auto', height: 'auto', fontSize: '2 vmin', fontWeight: '700', fillColor: C.orange, letterSpacing: 4, text: 'EDGE FOUND', animations: fadeIn(0, 0.4) }),
-      txt({ track: 4, time: 6.2, x: '50%', y: '78.5%', width: '90%', height: 'auto', fontSize: '6 vmin', fontWeight: '800', fillColor: C.orange, text: ev, animations: fadeIn(0, 0.5) }),
+      // ── Edge found box
+      sh({ track: 3, time: 5.5, x: '50%', y: '81%', width: '80%', height: '8%',
+           fill_color: C.surface, animations: fi(0) }),
+      tx({ track: 4, time: 5.6, x: '50%', y: '79.5%', width: '88%', height: '3%',
+           font_size: 20, font_weight: 700, fill_color: C.orange, opacity: 0.8,
+           text: 'EDGE FOUND', animations: fi(0) }),
+      tx({ track: 4, time: 5.7, x: '50%', y: '82%', width: '88%', height: '6%',
+           font_size: 60, font_weight: 800, fill_color: C.orange,
+           text: ev, animations: fi(0) }),
 
       // ── Verdict badge
-      shape({ track: 2, time: 8, x: '50%', y: '87%', width: '55%', height: '6%', fillColor: verdictBg, borderColor: verdictColor, borderWidth: 2, animations: [{ time: 0, duration: 0.5, transition: true, type: 'scale' }] }),
-      txt({ track: 4, time: 8.1, x: '50%', y: '87%', width: 'auto', height: 'auto', fontSize: '4 vmin', fontWeight: '900', fillColor: verdictColor, letterSpacing: 6, text: verdict, animations: fadeIn(0, 0.4) }),
+      sh({ track: 5, time: 7, x: '50%', y: '88.5%', width: '50%', height: '5%',
+           fill_color: C.surface, animations: sc(0) }),
+      tx({ track: 6, time: 7.1, x: '50%', y: '88.5%', width: '48%', height: '5%',
+           font_size: 38, font_weight: 900, fill_color: verdictColor,
+           text: verdict, animations: fi(0) }),
 
-      ...ctaBar(20, 15),
-      disclaimer(),
-    ]
+      ...ctaEls(0),
+    ],
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. SHARP VS SQUARE
-// Split-screen: Public favourite (left/grey) vs AI pick (right/orange).
+// Split screen: public favourite (muted left) vs AI model pick (orange right).
 // ─────────────────────────────────────────────────────────────────────────────
 function buildSharpVsSquare(vars) {
   const { match = 'Home vs Away', public_pick = 'Home Win',
@@ -384,107 +429,180 @@ function buildSharpVsSquare(vars) {
           ai_pick = 'Draw', ai_odds = '3.40', ai_prob = '38%' } = vars
 
   return {
-    outputFormat: 'mp4', width: 1080, height: 1920, frameRate: 30,
-    fillColor: C.bg,
+    ...baseComp(),
     elements: [
-      bg(),
+      bgEl(),
 
-      // ── Header
-      txt({ track: 3, time: 0, x: '50%', y: '7%', width: '90%', height: 'auto', fontSize: '3.5 vmin', fontWeight: '700', fillColor: C.white, letterSpacing: 4, text: 'SHARP VS SQUARE', animations: fadeIn(0, 0.5) }),
-      txt({ track: 3, time: 0.2, x: '50%', y: '11%', width: '88%', height: 'auto', fontSize: '2.8 vmin', fontWeight: '500', fillColor: C.muted, text: match, animations: fadeIn(0, 0.5) }),
+      // ── SHARP VS SQUARE header
+      tx({ track: 3, time: 0, x: '50%', y: '7%', width: '90%', height: '6%',
+           font_size: 40, font_weight: 700, fill_color: C.white,
+           text: 'SHARP VS SQUARE', animations: fi(0) }),
+      tx({ track: 3, time: 0.2, x: '50%', y: '11.5%', width: '88%', height: '5%',
+           font_size: 28, font_weight: 500, fill_color: C.white, opacity: 0.45,
+           text: match, animations: fi(0) }),
+      sh({ track: 2, time: 0.4, x: '50%', y: '15%', width: '88%', height: 2, fill_color: C.white, opacity: 0.08 }),
 
-      // ── Divider line
-      shape({ track: 2, time: 0.5, x: '50%', y: '15%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0, 0.5) }),
+      // ── Left panel background (the public)
+      sh({ track: 2, time: 0.8, x: '27%', y: '47%', width: '50%', height: '60%',
+           fill_color: C.surface, animations: fi(0) }),
 
-      // ── Left panel: The Public
-      shape({ track: 2, time: 1, x: '27%', y: '47%', width: '50%', height: '60%', fillColor: C.surface, animations: fadeIn(0, 0.5) }),
-      txt({ track: 4, time: 1.2, x: '27%', y: '22%', width: '48%', height: 'auto', fontSize: '2.2 vmin', fontWeight: '700', fillColor: C.muted, letterSpacing: 5, text: 'THE PUBLIC', animations: fadeIn(0, 0.5) }),
-      shape({ track: 3, time: 1.2, x: '27%', y: '24.5%', width: '40%', height: '0.25%', fillColor: C.muted, opacity: 0.3, animations: fadeIn(0) }),
-      txt({ track: 4, time: 1.5, x: '27%', y: '33%', width: '48%', height: 'auto', fontSize: '5 vmin', fontWeight: '900', fillColor: C.white, text: public_pick, animations: slideUp(0) }),
-      txt({ track: 4, time: 1.7, x: '27%', y: '40%', width: '48%', height: 'auto', fontSize: '4 vmin', fontWeight: '700', fillColor: C.muted, text: `@ ${public_odds}`, animations: fadeIn(0, 0.4) }),
-      txt({ track: 4, time: 1.9, x: '27%', y: '45%', width: '48%', height: 'auto', fontSize: '3 vmin', fontWeight: '600', fillColor: C.veryMuted, text: public_implied, animations: fadeIn(0, 0.4) }),
+      // ── THE PUBLIC label
+      tx({ track: 4, time: 1, x: '27%', y: '21%', width: '48%', height: '4%',
+           font_size: 22, font_weight: 700, fill_color: C.white, opacity: 0.5,
+           text: 'THE PUBLIC', animations: fi(0) }),
+      sh({ track: 3, time: 1, x: '27%', y: '23.5%', width: '36%', height: 2, fill_color: C.white, opacity: 0.2 }),
 
-      // ── VS divider
-      txt({ track: 5, time: 2.5, x: '50%', y: '35%', width: 'auto', height: 'auto', fontSize: '3.5 vmin', fontWeight: '900', fillColor: C.muted, text: 'VS',
-        animations: [{ time: 0, duration: 0.4, transition: true, type: 'scale' }] }),
+      // ── Public pick
+      tx({ track: 4, time: 1.3, x: '27%', y: '32%', width: '48%', height: '8%',
+           font_size: 52, font_weight: 900, fill_color: C.white, opacity: 0.5,
+           text: public_pick, animations: fi(0) }),
+      tx({ track: 4, time: 1.5, x: '27%', y: '39%', width: '48%', height: '5%',
+           font_size: 36, font_weight: 700, fill_color: C.white, opacity: 0.4,
+           text: `@ ${public_odds}`, animations: fi(0) }),
+      tx({ track: 4, time: 1.7, x: '27%', y: '44%', width: '48%', height: '4%',
+           font_size: 28, font_weight: 500, fill_color: C.white, opacity: 0.3,
+           text: public_implied, animations: fi(0) }),
 
-      // ── Right panel: The Model
-      shape({ track: 2, time: 2, x: '73%', y: '47%', width: '50%', height: '60%', fillColor: C.orangeBg, borderColor: C.orange, borderWidth: 1, animations: fadeIn(0, 0.5) }),
-      txt({ track: 4, time: 2.2, x: '73%', y: '22%', width: '48%', height: 'auto', fontSize: '2.2 vmin', fontWeight: '700', fillColor: C.orange, letterSpacing: 5, text: 'THE MODEL', animations: fadeIn(0, 0.5) }),
-      shape({ track: 3, time: 2.2, x: '73%', y: '24.5%', width: '40%', height: '0.25%', fillColor: C.orange, opacity: 0.5, animations: fadeIn(0) }),
-      txt({ track: 4, time: 2.5, x: '73%', y: '33%', width: '48%', height: 'auto', fontSize: '5 vmin', fontWeight: '900', fillColor: C.orange, text: ai_pick, animations: slideUp(0) }),
-      txt({ track: 4, time: 2.7, x: '73%', y: '40%', width: '48%', height: 'auto', fontSize: '4 vmin', fontWeight: '700', fillColor: C.white, text: `@ ${ai_odds}`, animations: fadeIn(0, 0.4) }),
-      txt({ track: 4, time: 2.9, x: '73%', y: '45%', width: '48%', height: 'auto', fontSize: '3 vmin', fontWeight: '600', fillColor: C.orange, text: `${ai_prob} true`, animations: fadeIn(0, 0.4) }),
+      // ── VS
+      tx({ track: 5, time: 2.2, x: '50%', y: '34%', width: '12%', height: '5%',
+           font_size: 32, font_weight: 900, fill_color: C.white, opacity: 0.4,
+           text: 'VS', animations: sc(0) }),
 
-      // ── "Find out tomorrow"
-      shape({ track: 2, time: 10, x: '50%', y: '78%', width: '92%', height: '6%', fillColor: C.surface, animations: fadeIn(0, 0.5) }),
-      txt({ track: 4, time: 10.2, x: '50%', y: '78%', width: '88%', height: 'auto', fontSize: '3.5 vmin', fontWeight: '700', fillColor: C.white, text: 'Find out tomorrow', animations: fadeIn(0, 0.4) }),
+      // ── Right panel background (the model)
+      sh({ track: 2, time: 1.8, x: '73%', y: '47%', width: '50%', height: '60%',
+           fill_color: C.surface, animations: fi(0) }),
 
-      ...ctaBar(18, 7),
-      disclaimer(),
-    ]
+      // ── Orange left border accent for right panel
+      sh({ track: 3, time: 1.8, x: '49%', y: '47%', width: 3, height: '60%',
+           fill_color: C.orange, opacity: 0.7, x_anchor: '0%', y_anchor: '50%' }),
+
+      // ── THE MODEL label
+      tx({ track: 4, time: 2, x: '73%', y: '21%', width: '48%', height: '4%',
+           font_size: 22, font_weight: 700, fill_color: C.orange,
+           text: 'THE MODEL', animations: fi(0) }),
+      sh({ track: 3, time: 2, x: '73%', y: '23.5%', width: '36%', height: 2, fill_color: C.orange, opacity: 0.5 }),
+
+      // ── AI pick
+      tx({ track: 4, time: 2.3, x: '73%', y: '32%', width: '48%', height: '8%',
+           font_size: 52, font_weight: 900, fill_color: C.orange,
+           text: ai_pick, animations: fi(0) }),
+      tx({ track: 4, time: 2.5, x: '73%', y: '39%', width: '48%', height: '5%',
+           font_size: 36, font_weight: 700, fill_color: C.white,
+           text: `@ ${ai_odds}`, animations: fi(0) }),
+      tx({ track: 4, time: 2.7, x: '73%', y: '44%', width: '48%', height: '4%',
+           font_size: 28, font_weight: 500, fill_color: C.orange,
+           text: `${ai_prob} true`, animations: fi(0) }),
+
+      // ── Find out tomorrow
+      sh({ track: 4, time: 9, x: '50%', y: '79%', width: '92%', height: '7%',
+           fill_color: C.surface, animations: fi(0) }),
+      tx({ track: 5, time: 9.2, x: '50%', y: '79%', width: '88%', height: '6%',
+           font_size: 36, font_weight: 700, fill_color: C.white,
+           text: 'Find out tomorrow →', animations: fi(0) }),
+
+      ...ctaEls(0),
+    ],
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 4. THE GRIND — Serial bankroll tracker
-// Honest weekly P&L update. Transparency = trust.
+// Honest weekly P&L. Transparency = trust. Long-game mindset.
 // ─────────────────────────────────────────────────────────────────────────────
 function buildTheGrind(vars) {
   const { week_num = '1', week_pnl = '+4.2u', running_total = '£1,042',
           wins = 3, losses = 2, bets_text = '5 bets settled this week' } = vars
 
-  const pnlPos = week_pnl.includes('+') || parseFloat(week_pnl) > 0
+  const pnlPos = String(week_pnl).startsWith('+') || parseFloat(week_pnl) > 0
   const pnlColor = pnlPos ? C.success : C.loss
+  const winsNum = Number(wins)
+  const lossesNum = Number(losses)
+  const total = Math.max(winsNum + lossesNum, 1)
+  const winBarPct = Math.round((winsNum / total) * 88)
 
   return {
-    outputFormat: 'mp4', width: 1080, height: 1920, frameRate: 30,
-    fillColor: C.bg,
+    ...baseComp(),
     elements: [
-      bg(),
+      bgEl(),
 
-      // ── Header
-      txt({ track: 3, time: 0, x: '50%', y: '7.5%', width: '90%', height: 'auto', fontSize: '2.5 vmin', fontWeight: '700', fillColor: C.muted, letterSpacing: 5, text: 'THE GRIND', animations: fadeIn(0, 0.5) }),
-      txt({ track: 3, time: 0.3, x: '50%', y: '11.5%', width: '90%', height: 'auto', fontSize: '5.5 vmin', fontWeight: '900', fillColor: C.white, text: `WEEK ${week_num}`, animations: slideUp(0) }),
-      shape({ track: 2, time: 0.5, x: '50%', y: '15%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0) }),
+      // ── THE GRIND header
+      tx({ track: 3, time: 0, x: '50%', y: '7%', width: '90%', height: '5%',
+           font_size: 28, font_weight: 700, fill_color: C.white, opacity: 0.5,
+           text: 'THE GRIND', animations: fi(0) }),
+      tx({ track: 3, time: 0.2, x: '50%', y: '12%', width: '90%', height: '8%',
+           font_size: 64, font_weight: 900, fill_color: C.white,
+           text: `WEEK ${week_num}`, animations: fi(0) }),
+      sh({ track: 2, time: 0.4, x: '50%', y: '16%', width: '88%', height: 2, fill_color: C.white, opacity: 0.08 }),
 
-      // ── W/L badges
-      txt({ track: 4, time: 1, x: '50%', y: '19.5%', width: '88%', height: 'auto', fontSize: '2.5 vmin', fontWeight: '600', fillColor: C.muted, text: bets_text, animations: fadeIn(0, 0.5) }),
-      shape({ track: 2, time: 1.2, x: '35%', y: '25.5%', width: '28%', height: '8%', fillColor: C.successBg, borderColor: C.success, borderWidth: 1, animations: fadeIn(0, 0.4) }),
-      txt({ track: 4, time: 1.3, x: '35%', y: '25.5%', width: '28%', height: 'auto', fontSize: '4 vmin', fontWeight: '900', fillColor: C.success, text: `${wins}W`, animations: fadeIn(0, 0.3) }),
-      shape({ track: 2, time: 1.2, x: '65%', y: '25.5%', width: '28%', height: '8%', fillColor: C.lossBg, borderColor: C.loss, borderWidth: 1, animations: fadeIn(0, 0.4) }),
-      txt({ track: 4, time: 1.3, x: '65%', y: '25.5%', width: '28%', height: 'auto', fontSize: '4 vmin', fontWeight: '900', fillColor: C.loss, text: `${losses}L`, animations: fadeIn(0, 0.3) }),
+      // ── Bets summary text
+      tx({ track: 3, time: 0.8, x: '50%', y: '19.5%', width: '88%', height: '4%',
+           font_size: 26, font_weight: 500, fill_color: C.white, opacity: 0.5,
+           text: bets_text, animations: fi(0) }),
 
-      // ── Win/loss bar
-      shape({ track: 2, time: 2, x: '7%', y: '33.5%', xAnchor: '0%', width: '86%', height: '1.5%', fillColor: C.lossBg, animations: fadeIn(0, 0.4) }),
-      shape({ track: 3, time: 2.2, x: '7%', y: '33.5%', xAnchor: '0%', width: `${Math.round((wins / Math.max(wins + losses, 1)) * 86)}%`, height: '1.5%', fillColor: C.success,
-        animations: [{ time: 0, duration: 0.8, type: 'wipe', direction: 'right', easing: 'ease-out' }] }),
+      // ── W badge background
+      sh({ track: 2, time: 1, x: '34%', y: '26%', width: '30%', height: '8%',
+           fill_color: C.surface, animations: fi(0) }),
+      // ── W badge text
+      tx({ track: 4, time: 1.1, x: '34%', y: '26%', width: '30%', height: '8%',
+           font_size: 48, font_weight: 900, fill_color: C.success,
+           text: `${wins}W`, animations: fi(0) }),
+
+      // ── L badge background
+      sh({ track: 2, time: 1, x: '66%', y: '26%', width: '30%', height: '8%',
+           fill_color: C.surface, animations: fi(0) }),
+      // ── L badge text
+      tx({ track: 4, time: 1.1, x: '66%', y: '26%', width: '30%', height: '8%',
+           font_size: 48, font_weight: 900, fill_color: C.loss,
+           text: `${losses}L`, animations: fi(0) }),
+
+      // ── Win/loss bar background
+      sh({ track: 2, time: 1.8, x: '50%', y: '33.5%', width: '88%', height: '1.5%',
+           fill_color: C.loss, opacity: 0.2, animations: fi(0) }),
+      // ── Win portion of bar
+      sh({ track: 3, time: 2, x_anchor: '0%', y_anchor: '50%',
+           x: '6%', y: '33.5%', width: `${winBarPct}%`, height: '1.5%',
+           fill_color: C.success,
+           animations: [{ time: 0, duration: 0.8, type: 'wipe', direction: 'right', easing: 'ease-out' }] }),
 
       // ── Divider
-      shape({ track: 2, time: 2.5, x: '50%', y: '38%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0) }),
+      sh({ track: 2, time: 2.5, x: '50%', y: '38%', width: '88%', height: 2, fill_color: C.white, opacity: 0.08 }),
 
-      // ── Week P&L
-      txt({ track: 3, time: 3, x: '50%', y: '43%', width: '88%', height: 'auto', fontSize: '2.3 vmin', fontWeight: '700', fillColor: C.muted, letterSpacing: 4, text: 'WEEK P&L', animations: fadeIn(0, 0.5) }),
-      txt({ track: 4, time: 3.2, x: '50%', y: '50%', width: '90%', height: 'auto', fontSize: '12 vmin', fontWeight: '900', fillColor: pnlColor, text: week_pnl,
-        animations: [{ time: 0, duration: 0.6, transition: true, type: 'scale', easing: 'ease-out' }] }),
+      // ── WEEK P&L label
+      tx({ track: 3, time: 2.8, x: '50%', y: '42%', width: '88%', height: '4%',
+           font_size: 24, font_weight: 700, fill_color: C.white, opacity: 0.5,
+           text: 'WEEK P&L', animations: fi(0) }),
+
+      // ── Big P&L number
+      tx({ track: 4, time: 3, x: '50%', y: '50%', width: '90%', height: '13%',
+           font_size: 130, font_weight: 900, fill_color: pnlColor,
+           text: week_pnl, animations: sc(0) }),
 
       // ── Divider
-      shape({ track: 2, time: 5, x: '50%', y: '58%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0) }),
+      sh({ track: 2, time: 4.5, x: '50%', y: '58%', width: '88%', height: 2, fill_color: C.white, opacity: 0.08 }),
 
-      // ── Running total
-      txt({ track: 3, time: 5.5, x: '50%', y: '63%', width: '88%', height: 'auto', fontSize: '2.3 vmin', fontWeight: '700', fillColor: C.muted, letterSpacing: 4, text: 'RUNNING TOTAL', animations: fadeIn(0, 0.5) }),
-      txt({ track: 4, time: 5.7, x: '50%', y: '71%', width: '90%', height: 'auto', fontSize: '10 vmin', fontWeight: '900', fillColor: C.white, text: running_total, animations: fadeIn(0, 0.6) }),
-      txt({ track: 4, time: 6, x: '50%', y: '77%', width: '88%', height: 'auto', fontSize: '2.5 vmin', fontWeight: '500', fillColor: C.muted, text: 'starting from £1,000 · Kelly sizing', animations: fadeIn(0, 0.5) }),
+      // ── RUNNING TOTAL label
+      tx({ track: 3, time: 5, x: '50%', y: '62%', width: '88%', height: '4%',
+           font_size: 24, font_weight: 700, fill_color: C.white, opacity: 0.5,
+           text: 'RUNNING TOTAL', animations: fi(0) }),
 
-      ...ctaBar(25, 15),
-      disclaimer(),
-    ]
+      // ── Running total value
+      tx({ track: 4, time: 5.2, x: '50%', y: '71%', width: '90%', height: '12%',
+           font_size: 108, font_weight: 900, fill_color: C.white,
+           text: running_total, animations: fi(0) }),
+
+      // ── Starting point note
+      tx({ track: 3, time: 5.5, x: '50%', y: '79%', width: '88%', height: '4%',
+           font_size: 24, font_weight: 500, fill_color: C.white, opacity: 0.4,
+           text: 'starting from £1,000 · Kelly sizing', animations: fi(0) }),
+
+      ...ctaEls(0),
+    ],
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 5. LEAGUE RADAR
-// Weekly data journalism: which leagues had the most edges.
+// Weekly data journalism: which leagues had the most detected edges.
 // ─────────────────────────────────────────────────────────────────────────────
 function buildLeagueRadar(vars) {
   const { week_num = '1', leagues = [], top_league = '' } = vars
@@ -492,60 +610,67 @@ function buildLeagueRadar(vars) {
   const items = Array.isArray(leagues) ? leagues.slice(0, 6) : []
   const maxCount = Math.max(...items.map(l => l.count || 0), 1)
 
-  // Build league rows (each 8.5% tall, starting at y=30%)
   const leagueRows = items.flatMap((item, i) => {
-    const t = 1.5 + i * 0.4
-    const y = 30 + i * 9.5
-    const barW = `${Math.max(Math.round((item.count / maxCount) * 70), 8)}%`
+    const t = 1.5 + i * 0.35
+    const yPct = 27 + i * 9
+    const barW = `${Math.max(Math.round((item.count / maxCount) * 68), 8)}%`
     const isTop = i === 0
     return [
-      // Rank number
-      txt({ track: 4, time: t, x: '7%', y: `${y}%`, xAnchor: '0%', width: 'auto', height: 'auto',
-        fontSize: '2.8 vmin', fontWeight: '900', fillColor: isTop ? C.orange : C.muted,
-        text: `${i + 1}`, animations: fadeIn(0, 0.4) }),
-      // League name
-      txt({ track: 4, time: t, x: '17%', y: `${y - 1}%`, xAnchor: '0%', width: '55%', height: 'auto',
-        fontSize: '2.5 vmin', fontWeight: isTop ? '700' : '500', fillColor: isTop ? C.white : C.muted,
-        text: item.league, animations: fadeIn(0, 0.4) }),
-      // Edge count
-      txt({ track: 4, time: t, x: '93%', y: `${y - 1}%`, xAnchor: '100%', width: 'auto', height: 'auto',
-        fontSize: '2.5 vmin', fontWeight: '700', fillColor: isTop ? C.orange : C.muted,
-        text: `${item.count} edges`, animations: fadeIn(0, 0.4) }),
-      // Bar
-      shape({ track: 2, time: t + 0.1, x: '17%', y: `${y + 2}%`, xAnchor: '0%', width: barW, height: '0.8%',
-        fillColor: isTop ? C.orange : C.veryMuted,
-        animations: [{ time: 0, duration: 0.6, type: 'wipe', direction: 'right', easing: 'ease-out' }] }),
+      tx({ track: 4, time: t, x: '8%', y: `${yPct}%`, x_anchor: '0%', width: '8%', height: '4%',
+           font_size: 30, font_weight: 900, fill_color: isTop ? C.orange : C.white, opacity: isTop ? 1 : 0.4,
+           text_align: 'left', text: `${i + 1}`, animations: fi(0) }),
+      tx({ track: 4, time: t, x: '17%', y: `${yPct - 0.5}%`, x_anchor: '0%', width: '55%', height: '4%',
+           font_size: isTop ? 28 : 26, font_weight: isTop ? 700 : 500,
+           fill_color: isTop ? C.white : C.white, opacity: isTop ? 1 : 0.5,
+           text_align: 'left', text: item.league, animations: fi(0) }),
+      tx({ track: 4, time: t, x: '93%', y: `${yPct - 0.5}%`, x_anchor: '100%', width: '22%', height: '4%',
+           font_size: 26, font_weight: 700,
+           fill_color: isTop ? C.orange : C.white, opacity: isTop ? 1 : 0.4,
+           text_align: 'right', text: `${item.count}`, animations: fi(0) }),
+      sh({ track: 2, time: t + 0.1, x_anchor: '0%', y_anchor: '50%',
+           x: '17%', y: `${yPct + 3}%`, width: barW, height: '0.8%',
+           fill_color: isTop ? C.orange : C.white, opacity: isTop ? 0.8 : 0.15,
+           animations: [{ time: 0, duration: 0.5, type: 'wipe', direction: 'right', easing: 'ease-out' }] }),
     ]
   })
 
   return {
-    outputFormat: 'mp4', width: 1080, height: 1920, frameRate: 30,
-    fillColor: C.bg,
+    ...baseComp(),
     elements: [
-      bg(),
+      bgEl(),
 
-      // ── Header
-      txt({ track: 3, time: 0, x: '50%', y: '8%', width: '90%', height: 'auto', fontSize: '3.5 vmin', fontWeight: '700', fillColor: C.orange, letterSpacing: 5, text: 'LEAGUE RADAR', animations: fadeIn(0, 0.5) }),
-      txt({ track: 3, time: 0.3, x: '50%', y: '12.5%', width: '88%', height: 'auto', fontSize: '2.5 vmin', fontWeight: '500', fillColor: C.muted, text: `WEEK ${week_num} · VALUE EDGES DETECTED`, letterSpacing: 2, animations: fadeIn(0, 0.5) }),
-      shape({ track: 2, time: 0.5, x: '50%', y: '16.5%', width: '92%', height: '0.15%', fillColor: C.border, animations: fadeIn(0) }),
+      // ── LEAGUE RADAR header
+      tx({ track: 3, time: 0, x: '50%', y: '8%', width: '90%', height: '6%',
+           font_size: 42, font_weight: 700, fill_color: C.orange,
+           text: 'LEAGUE RADAR', animations: fi(0) }),
+      tx({ track: 3, time: 0.2, x: '50%', y: '12.5%', width: '88%', height: '4%',
+           font_size: 24, font_weight: 500, fill_color: C.white, opacity: 0.45,
+           text: `WEEK ${week_num} · VALUE EDGES DETECTED`, animations: fi(0) }),
+      sh({ track: 2, time: 0.4, x: '50%', y: '16%', width: '88%', height: 2, fill_color: C.white, opacity: 0.08 }),
 
       // ── Column headers
-      txt({ track: 3, time: 1, x: '17%', y: '21%', xAnchor: '0%', width: '40%', height: 'auto', fontSize: '1.8 vmin', fontWeight: '600', fillColor: C.veryMuted, letterSpacing: 4, text: 'LEAGUE', animations: fadeIn(0) }),
-      txt({ track: 3, time: 1, x: '93%', y: '21%', xAnchor: '100%', width: 'auto', height: 'auto', fontSize: '1.8 vmin', fontWeight: '600', fillColor: C.veryMuted, letterSpacing: 4, text: 'EDGES', animations: fadeIn(0) }),
-      shape({ track: 2, time: 1, x: '50%', y: '23%', width: '92%', height: '0.1%', fillColor: C.border, animations: fadeIn(0) }),
+      tx({ track: 3, time: 1, x: '17%', y: '20.5%', x_anchor: '0%', width: '40%', height: '3%',
+           font_size: 20, font_weight: 600, fill_color: C.white, opacity: 0.3,
+           text_align: 'left', text: 'LEAGUE', animations: fi(0) }),
+      tx({ track: 3, time: 1, x: '93%', y: '20.5%', x_anchor: '100%', width: '20%', height: '3%',
+           font_size: 20, font_weight: 600, fill_color: C.white, opacity: 0.3,
+           text_align: 'right', text: 'EDGES', animations: fi(0) }),
+      sh({ track: 2, time: 1, x: '50%', y: '23%', width: '88%', height: 2, fill_color: C.white, opacity: 0.06 }),
 
       // ── League rows (dynamic)
       ...leagueRows,
 
-      // ── Top league highlight
+      // ── Top league highlight bar
       ...(top_league ? [
-        shape({ track: 2, time: 5, x: '50%', y: '88%', width: '92%', height: '7%', fillColor: C.orangeBg, borderColor: C.orange, borderWidth: 1, animations: fadeIn(0, 0.5) }),
-        txt({ track: 4, time: 5.1, x: '50%', y: '88%', width: '88%', height: 'auto', fontSize: '3 vmin', fontWeight: '700', fillColor: C.orange, text: `#1 · ${top_league}`, animations: fadeIn(0, 0.4) }),
+        sh({ track: 4, time: 5, x: '50%', y: '89%', width: '88%', height: '6%',
+             fill_color: C.surface, animations: fi(0) }),
+        tx({ track: 5, time: 5.1, x: '50%', y: '89%', width: '86%', height: '6%',
+             font_size: 30, font_weight: 700, fill_color: C.orange,
+             text: `#1 THIS WEEK · ${top_league}`, animations: fi(0) }),
       ] : []),
 
-      ...ctaBar(20, 10),
-      disclaimer(),
-    ]
+      ...ctaEls(0),
+    ],
   }
 }
 
@@ -575,18 +700,18 @@ function buildSource(videoType, scriptVars, ctxData) {
     v.bets_text    = v.bets_text    || `${recent.length} recent bets tracked`
   }
   if (videoType === 'league-radar' && ctxData.leagues?.length) {
-    v.leagues   = v.leagues   || ctxData.leagues
+    v.leagues    = v.leagues    || ctxData.leagues
     v.top_league = v.top_league || ctxData.leagues[0]?.league
   }
   if (videoType === 'sharp-vs-square' && ctxData.bets?.length >= 2) {
     const [top, second] = ctxData.bets
-    v.match        = v.match        || `${top.home} vs ${top.away}`
-    v.public_pick  = v.public_pick  || `${top.home} Win`
-    v.public_odds  = v.public_odds  || top.bookmaker?.home?.toFixed(2) || '1.65'
+    v.match          = v.match          || `${top.home} vs ${top.away}`
+    v.public_pick    = v.public_pick    || `${top.home} Win`
+    v.public_odds    = v.public_odds    || top.bookmaker?.home?.toFixed(2) || '1.65'
     v.public_implied = v.public_implied || `${Math.round((1/(top.bookmaker?.home||1.65))*100)}%`
-    v.ai_pick      = v.ai_pick      || second.bet
-    v.ai_odds      = v.ai_odds      || second.bookmaker?.home?.toFixed(2) || '3.40'
-    v.ai_prob      = v.ai_prob      || `${second.awayWin || second.homeWin || 35}%`
+    v.ai_pick        = v.ai_pick        || second.bet
+    v.ai_odds        = v.ai_odds        || second.bookmaker?.home?.toFixed(2) || '3.40'
+    v.ai_prob        = v.ai_prob        || `${second.awayWin || second.homeWin || 35}%`
   }
   if (videoType === 'odds-autopsy' && ctxData.bets?.[0]) {
     const b = ctxData.bets[0]
@@ -677,7 +802,6 @@ async function main() {
     console.error('Missing CREATOMATE_API_KEY in .env.local')
     console.error('  → Sign up at creatomate.com → Settings → API Key')
     console.error('  → Add: CREATOMATE_API_KEY=your_key_here')
-    console.error('  → Then re-run (no --dry-run needed)')
     process.exit(1)
   }
 
@@ -705,12 +829,10 @@ async function main() {
   console.log('  VARS:', JSON.stringify(script.vars, null, 4))
 
   if (dryRun) {
-    // Show the composition JSON for inspection
     const source = buildSource(type, script.vars || {}, ctx)
     console.log('\n  COMPOSITION PREVIEW (first 3 elements):')
     console.log(JSON.stringify(source.elements.slice(0, 3), null, 2))
     console.log(`\n  Total elements: ${source.elements.length}`)
-    console.log(`  Creatomate will auto-detect duration from last element time`)
     console.log('\nDry run complete — no render, no cost.')
     return
   }
@@ -718,13 +840,10 @@ async function main() {
   // Optional ElevenLabs voice
   console.log('\nGenerating voiceover...')
   const audioPath = await generateVoiceover(script.voiceover)
+  if (!audioPath) console.log('  Using silent render (add ELEVENLABS_API_KEY for voiceover)')
 
   // Build composition with real data
   const source = buildSource(type, script.vars || {}, ctx)
-
-  // If we have a voiceover file, we'd need to host it first (future enhancement)
-  // For now Creatomate renders silently — add background music via source property
-  if (!audioPath) console.log('  Using silent render (add ELEVENLABS_API_KEY for voiceover)')
 
   // Render
   console.log('\nRendering with Creatomate...')

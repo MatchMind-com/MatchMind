@@ -211,41 +211,48 @@ export async function GET(req: NextRequest) {
               </span>
             </div>
 
-            {/* Probability comparison bar — bookie vs AI */}
-            {impliedPct !== null && aiPct !== null && (
-              <div style={{
-                position: 'absolute', top: 850, left: PADX, width: W - PADX * 2,
-                display: 'flex', flexDirection: 'column',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 13, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em' }}>
-                    BOOKIE SAYS
-                  </span>
-                  <span style={{ fontSize: 13, color: brand, fontWeight: 700, letterSpacing: '0.15em' }}>
-                    AI SAYS
-                  </span>
-                </div>
-                <div style={{ display: 'flex', marginTop: 12, height: 32 }}>
+            {/* Probability comparison bar — bookie vs AI (absolute px widths for Satori) */}
+            {impliedPct !== null && aiPct !== null && (() => {
+              const barW = W - PADX * 2
+              const impW = Math.round((impliedPct / 100) * barW)
+              const edgeW = Math.max(0, Math.round(((aiPct - impliedPct) / 100) * barW))
+              return (
+                <>
+                  <div style={{ position: 'absolute', top: 850, left: PADX, display: 'flex' }}>
+                    <span style={{ fontSize: 13, color: fgMuted, fontWeight: 700, letterSpacing: '0.15em' }}>
+                      BOOKIE SAYS
+                    </span>
+                  </div>
+                  <div style={{ position: 'absolute', top: 850, right: PADX, display: 'flex' }}>
+                    <span style={{ fontSize: 13, color: brand, fontWeight: 700, letterSpacing: '0.15em' }}>
+                      AI SAYS
+                    </span>
+                  </div>
+                  {/* Implied bar */}
                   <div style={{
-                    width: `${impliedPct}%`, background: '#3A3D44',
+                    position: 'absolute', top: 880, left: PADX,
+                    width: impW, height: 32, background: '#3A3D44',
                     display: 'flex', alignItems: 'center', paddingLeft: 12,
                   }}>
                     <span style={{ fontSize: 18, fontWeight: 800, color: fg }}>
                       {impliedPct.toFixed(0)}%
                     </span>
                   </div>
-                  <div style={{
-                    width: `${Math.max(0, aiPct - impliedPct)}%`,
-                    background: brand,
-                    display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 12,
-                  }}>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: '#0F1115' }}>
-                      {aiPct.toFixed(0)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
+                  {/* Edge bar */}
+                  {edgeW > 0 && (
+                    <div style={{
+                      position: 'absolute', top: 880, left: PADX + impW,
+                      width: edgeW, height: 32, background: brand,
+                      display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 12,
+                    }}>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: '#0F1115' }}>
+                        {aiPct.toFixed(0)}%
+                      </span>
+                    </div>
+                  )}
+                </>
+              )
+            })()}
 
             {/* Odds + EV row at bottom */}
             <div style={{
