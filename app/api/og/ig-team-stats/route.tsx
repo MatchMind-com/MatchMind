@@ -134,7 +134,7 @@ export async function GET(req: NextRequest) {
             teams.
           </span>
           <span style={{ fontSize: 20, color: fgMuted, marginTop: 22 }}>
-            When MatchMind picks ON their matches, hit rate over last 60 days.
+            When MatchMind picks ON their matches, AI hit rate from settled value bets.
           </span>
         </div>
 
@@ -167,7 +167,7 @@ export async function GET(req: NextRequest) {
                     {r.team}
                   </span>
                   <span style={{ fontSize: 14, color: fgMuted, marginRight: 28, fontWeight: 600 }}>
-                    {r.picks} picks
+                    {r.picks} pick{r.picks === 1 ? '' : 's'}
                   </span>
                   <span style={{
                     fontSize: 48, fontWeight: 900, color: success,
