@@ -207,8 +207,18 @@ export async function POST(req: Request) {
     )
   }
   const caption = body.caption || auto!.caption
+  // New IG-format card (1080×1350) replaces the old square acca card.
+  // Auto-rotates daily image type via day-of-week so the grid varies:
+  //   Mon  → recap  (yesterday's W/L — Mon shows weekend summary)
+  //   Tue-Sat → value-card (today's #1 EV pick)
+  //   Sun  → team-stats (most predictable teams)
+  // post-bracket-carousel is a separate path (12 slides, post manually).
+  const dayOfWeek = new Date().getUTCDay()  // 0=Sun 1=Mon ...
+  const igCard = dayOfWeek === 1 ? 'ig-recap'
+                : dayOfWeek === 0 ? 'ig-team-stats'
+                : 'ig-value-card'
   const imageUrl = body.imageUrl ||
-    `${APP_URL}/api/og/acca?legs=${legCount}&windowHours=${windowHours}&_=${Date.now()}`
+    `${APP_URL}/api/og/${igCard}?_=${Date.now()}`
 
   if (dryRun) {
     return NextResponse.json({
