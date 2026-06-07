@@ -159,9 +159,12 @@ export async function GET(req: NextRequest) {
 
         {pick && label && odds ? (
           <>
-            {/* League row with flag */}
+            {/* League row — leagueFlag from /api/predictions is an emoji
+                string (e.g. "🌍"), NOT a URL. Render as text only when it
+                looks like a URL; otherwise skip (Satori can't load emoji
+                as <img src>). */}
             <div style={{ position: 'absolute', top: 195, left: PADX, display: 'flex', alignItems: 'center' }}>
-              {pick.leagueFlag && (
+              {pick.leagueFlag && pick.leagueFlag.startsWith('http') && (
                 <img
                   src={pick.leagueFlag}
                   alt=""
