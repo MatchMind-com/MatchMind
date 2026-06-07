@@ -81,10 +81,13 @@ export async function GET(req: NextRequest) {
       if (r.result === 'win') agg[t].wins++
     }
   }
-  const minPicks = allowClubs ? 3 : 2  // lower bar for intl — smaller sample
+  // Intl pool is small outside WC windows — minPicks=1 so single-pick wins
+  // still appear. Clubs side keeps minPicks=3 for statistical credibility.
+  const minPicks = allowClubs ? 3 : 1
   const rows: TeamRow[] = Object.entries(agg)
-    .filter(([, v]) => v.picks >= minPicks)
+    .filter(([, v]) => v.picks >= minPicks && v.wins > 0)  // must have ≥1 win
     .map(([team, v]) => ({ team, picks: v.picks, wins: v.wins, winRate: Math.round((v.wins / v.picks) * 100) }))
+    // Rank by win-rate, break ties by picks (more picks = more proof)
     .sort((a, b) => b.winRate - a.winRate || b.picks - a.picks)
     .slice(0, 6)
 
