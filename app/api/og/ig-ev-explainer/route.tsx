@@ -93,20 +93,67 @@ function Frame({ children, slide }: { children: React.ReactNode; slide: number }
 
 // ── Slide 1: hook ─────────────────────────────────────────────────────
 function Slide1() {
+  // Worked example: bookie 50% vs AI 55% — visualised as overlapping bars.
+  // Showing > telling.
+  const barW = W - PADX * 2  // 952
+  const bookiePct = 50
+  const aiPct = 55
+  const bookieW = Math.round((bookiePct / 100) * barW)
+  const aiW = Math.round((aiPct / 100) * barW)
+
   return (
     <Frame slide={1}>
+      {/* Headline */}
       <div style={{ position: 'absolute', top: 195, left: PADX, width: W - PADX * 2, display: 'flex', flexDirection: 'column' }}>
-        <span style={{ fontSize: 100, fontWeight: 900, letterSpacing: '-0.04em', color: COLORS.fg, lineHeight: 1 }}>
+        <span style={{ fontSize: 82, fontWeight: 900, letterSpacing: '-0.04em', color: COLORS.fg, lineHeight: 1 }}>
           What&apos;s a
         </span>
-        <span style={{ fontSize: 100, fontWeight: 900, letterSpacing: '-0.04em', color: COLORS.brand, lineHeight: 1, marginTop: 6 }}>
+        <span style={{ fontSize: 82, fontWeight: 900, letterSpacing: '-0.04em', color: COLORS.brand, lineHeight: 1, marginTop: 6 }}>
           value bet?
-        </span>
-        <span style={{ fontSize: 30, color: COLORS.fgMuted, lineHeight: 1.35, marginTop: 36, fontWeight: 500 }}>
-          A bet where the bookmaker has priced the outcome lower than its actual probability.
         </span>
       </div>
 
+      {/* Worked example label */}
+      <div style={{ position: 'absolute', top: 410, left: PADX, display: 'flex' }}>
+        <span style={{ fontSize: 14, color: COLORS.fgMuted, fontWeight: 700, letterSpacing: '0.18em' }}>
+          EXAMPLE · ODDS OF 2.00
+        </span>
+      </div>
+
+      {/* Bookie row */}
+      <div style={{ position: 'absolute', top: 450, left: PADX, width: W - PADX * 2, display: 'flex', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 22, color: COLORS.fg, fontWeight: 700 }}>Bookie says</span>
+        <span style={{ fontSize: 22, color: COLORS.fg, fontWeight: 700 }}>{bookiePct}%</span>
+      </div>
+      <div style={{
+        position: 'absolute', top: 488, left: PADX,
+        width: bookieW, height: 28, background: '#3A3D44', display: 'flex',
+      }} />
+
+      {/* AI row */}
+      <div style={{ position: 'absolute', top: 560, left: PADX, width: W - PADX * 2, display: 'flex', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 22, color: COLORS.brand, fontWeight: 700 }}>AI says</span>
+        <span style={{ fontSize: 22, color: COLORS.brand, fontWeight: 700 }}>{aiPct}%</span>
+      </div>
+      <div style={{
+        position: 'absolute', top: 598, left: PADX,
+        width: aiW, height: 28, background: COLORS.brand, display: 'flex',
+      }} />
+
+      {/* Gap callout — the visual punchline */}
+      <div style={{
+        position: 'absolute', top: 690, left: PADX, width: W - PADX * 2,
+        display: 'flex', alignItems: 'center',
+      }}>
+        <div style={{
+          width: 16, height: 16, background: COLORS.success, marginRight: 16, display: 'flex',
+        }} />
+        <span style={{ fontSize: 26, color: COLORS.success, fontWeight: 800, letterSpacing: '-0.01em' }}>
+          That 5-point gap = your EDGE
+        </span>
+      </div>
+
+      {/* Plain-English rule block */}
       <div style={{
         position: 'absolute', top: 800, left: PADX, width: W - PADX * 2,
         padding: '32px 36px', background: COLORS.panel,
@@ -116,13 +163,13 @@ function Slide1() {
         <span style={{ fontSize: 14, color: COLORS.fgMuted, fontWeight: 700, letterSpacing: '0.18em' }}>
           THE RULE
         </span>
-        <span style={{ fontSize: 36, color: COLORS.fg, fontWeight: 800, marginTop: 14, letterSpacing: '-0.02em', lineHeight: 1.25 }}>
-          If your edge {'>'} 0%,
+        <span style={{ fontSize: 32, color: COLORS.fg, fontWeight: 800, marginTop: 14, letterSpacing: '-0.02em', lineHeight: 1.3 }}>
+          When AI thinks it&apos;s more likely than the bookie does,
         </span>
-        <span style={{ fontSize: 36, color: COLORS.fg, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.25 }}>
-          you&apos;re +EV.
+        <span style={{ fontSize: 32, color: COLORS.success, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.3 }}>
+          that gap is profit over time.
         </span>
-        <span style={{ fontSize: 20, color: COLORS.fgMuted, marginTop: 16 }}>
+        <span style={{ fontSize: 18, color: COLORS.fgMuted, marginTop: 18 }}>
           Long-run profit, not guaranteed wins. (Swipe for the maths.)
         </span>
       </div>

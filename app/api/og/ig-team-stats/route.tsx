@@ -29,9 +29,35 @@ interface TeamRow {
   winRate: number
 }
 
+/**
+ * Internationals-only filter (matches the same predicate as ig-value-card
+ * and post-instagram cron). Drops club competitions.
+ */
+function isInternational(league: string): boolean {
+  const l = (league ?? '').toLowerCase()
+  if (l.includes('club world cup')) return false
+  if (l.includes('uefa champions') || l.includes('europa') || l.includes('conference league')) return false
+  return (
+    l.includes('world cup') ||
+    l.includes('friendlies (intl)') ||
+    l.includes('international friend') ||
+    l.includes('nations league') ||
+    /\bqualif/.test(l) ||
+    /afcon|africa cup of nations/.test(l) ||
+    /\beuro\b/.test(l) ||
+    l.includes('copa america') ||
+    l.includes('gold cup') ||
+    l.includes('asian cup') ||
+    l.includes('concacaf nations') ||
+    l.includes('conmebol')
+  )
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const leagueFilter = searchParams.get('league')
+  // ?clubs=1 escape hatch to allow clubs (default: internationals only)
+  const allowClubs = searchParams.get('clubs') === '1'
 
   const query = supabase
     .from('prediction_records')
@@ -42,9 +68,12 @@ export async function GET(req: NextRequest) {
   const { data } = await query.limit(2000)
 
   // Aggregate per team — count picks where the team was the SUBJECT
-  // (home or away) of an AI value bet and the bet hit
+  // (home or away) of an AI value bet and the bet hit. International-only
+  // by default per marketing direction (national teams resonate for WC).
   const agg: Record<string, { picks: number; wins: number }> = {}
-  for (const r of (data ?? []) as Array<{ home_team: string; away_team: string; result: string }>) {
+  const rowsRaw = (data ?? []) as Array<{ home_team: string; away_team: string; result: string; league: string }>
+  const filteredRaw = allowClubs ? rowsRaw : rowsRaw.filter(r => isInternational(r.league))
+  for (const r of filteredRaw) {
     for (const t of [r.home_team, r.away_team]) {
       if (!t) continue
       agg[t] = agg[t] || { picks: 0, wins: 0 }
@@ -52,10 +81,11 @@ export async function GET(req: NextRequest) {
       if (r.result === 'win') agg[t].wins++
     }
   }
+  const minPicks = allowClubs ? 3 : 2  // lower bar for intl — smaller sample
   const rows: TeamRow[] = Object.entries(agg)
-    .filter(([, v]) => v.picks >= 3)   // need enough sample
+    .filter(([, v]) => v.picks >= minPicks)
     .map(([team, v]) => ({ team, picks: v.picks, wins: v.wins, winRate: Math.round((v.wins / v.picks) * 100) }))
-    .sort((a, b) => b.winRate - a.winRate)
+    .sort((a, b) => b.winRate - a.winRate || b.picks - a.picks)
     .slice(0, 6)
 
   const bg = '#0F1115', fg = '#F5F1E8', fgMuted = '#6E6B62'
