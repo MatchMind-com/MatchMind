@@ -58,9 +58,9 @@ function isInternational(league: string): boolean {
 }
 
 export async function GET() {
-  // Last 30 days of settled value bets — query slightly wider so the
-  // intl filter has a population to draw from.
-  const sinceISO = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
+  // Internationals fixtures are sparse outside of WC / qualifier windows,
+  // so query a 90-day window to give us enough sample.
+  const sinceISO = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString()
 
   const { data } = await supabase
     .from('prediction_records')
@@ -70,14 +70,11 @@ export async function GET() {
     .gte('kick_off', sinceISO)
     .gt('ev_percent', 0)
     .lte('ev_percent', 10)
-    .limit(1000)
+    .limit(2000)
 
   const allRows = (data ?? []) as Row[]
-  // Filter to internationals — fall back to all leagues only if intl pool
-  // is too small to populate both highlight slots.
-  const intlRows = allRows.filter(r => isInternational(r.league))
-  const intlWinCount = intlRows.filter(r => r.result === 'win').length
-  const rows = intlWinCount >= 2 ? intlRows : allRows
+  // International-only — per user direction, no club fallback.
+  const rows = allRows.filter(r => isInternational(r.league))
   const wins = rows.filter(r => r.result === 'win')
   const losses = rows.filter(r => r.result === 'loss')
   const stake = 10
@@ -94,10 +91,15 @@ export async function GET() {
     .filter(r => r.odds && r.odds > 1)
     .sort((a, b) => (b.odds ?? 0) - (a.odds ?? 0))[0]
 
-  // Best AI edge that hit
-  const bestEdgeWin = [...wins]
+  // Best AI edge that hit — dedupe so the same row never fills both slots.
+  // If biggest-odds = best-edge, pick the next-best edge win instead.
+  const bestEdgeCandidates = [...wins]
     .filter(r => r.ev_percent && r.ev_percent > 0)
-    .sort((a, b) => (b.ev_percent ?? 0) - (a.ev_percent ?? 0))[0]
+    .sort((a, b) => (b.ev_percent ?? 0) - (a.ev_percent ?? 0))
+  const bestEdgeWin = bestEdgeCandidates.find(r =>
+    !biggestOddsWin || r.kick_off !== biggestOddsWin.kick_off ||
+    r.home_team !== biggestOddsWin.home_team
+  ) ?? bestEdgeCandidates[0]
 
   const bg = '#0F1115', fg = '#F5F1E8', fgMuted = '#6E6B62'
   const brand = '#F97316', success = '#10B981'
