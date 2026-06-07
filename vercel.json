@@ -14,7 +14,9 @@
     { "path": "/api/cron/check-bet-slips",             "schedule": "0 21 * * *" },
 
     { "path": "/api/admin/post-tonight-acca",          "schedule": "0 17 * * *" },
-    { "path": "/api/admin/post-instagram",             "schedule": "30 17 * * *" },
+    { "path": "/api/admin/post-instagram",                                "schedule": "30 17 * * *" },
+    { "path": "/api/admin/post-instagram?card=ev-explainer",              "schedule": "0 15 * * 2" },
+    { "path": "/api/admin/post-instagram?card=tour",                      "schedule": "0 15 * * 4" },
     { "path": "/api/admin/post-kickoff-alerts",        "schedule": "*/5 12-23 * * *" },
     { "path": "/api/admin/refresh-instagram-token",    "schedule": "0 4 * * 1" },
     { "path": "/api/admin/post-daily-recap",           "schedule": "0 22 * * *" }

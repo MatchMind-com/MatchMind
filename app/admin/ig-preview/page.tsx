@@ -2,16 +2,21 @@
  * /admin/ig-preview
  *
  * Visual gallery of every IG-format OG card. Auth-gated via the admin
- * layout. Use to preview daily/evergreen/per-fixture variants before
- * posting to Instagram.
+ * layout. Use to preview daily/evergreen/carousel/per-fixture variants
+ * before posting to Instagram.
  *
- * Each tile:
- *   - 4:5 thumbnail
- *   - Endpoint URL (click to open full-size, right-click → Save Image As)
- *   - Variant picker (group, fixture, etc.) where relevant
+ * The post-instagram cron auto-rotates:
+ *   Mon — recap (or biggest-wins if yesterday lost)
+ *   Tue — value-card (international)
+ *   Wed — fixture-deepdive (next intl) or value-card fallback
+ *   Thu — value-card (international)
+ *   Fri — biggest-wins (weekly hype)
+ *   Sat — value-card (international)
+ *   Sun — team-stats / coach-positioning (alternating)
  *
- * Cache-busts the image src on every render so you always see the
- * latest data, not a stale cached preview.
+ * Weekly carousels (auto, separate crons):
+ *   Tue 15:00 UTC — ev-explainer (4-slide pinnable)
+ *   Thu 15:00 UTC — tour (4-slide pinnable)
  */
 
 import Link from 'next/link'
@@ -27,68 +32,84 @@ interface CardSpec {
   name: string
   endpoint: string
   desc: string
-  category: 'daily' | 'weekly' | 'evergreen' | 'per-fixture' | 'per-group'
+  category: 'daily' | 'weekly' | 'evergreen' | 'per-fixture' | 'per-group' | 'carousel'
   schedule?: string
 }
 
 const CORE_CARDS: CardSpec[] = [
   {
     key: 'value-card',
-    name: "Today's #1 value bet",
+    name: "Today's #1 value bet (intl)",
     endpoint: '/api/og/ig-value-card',
-    desc: "Auto-picks today's highest-EV bet. Posts Tue-Sat by cron.",
+    desc: "Auto-picks today's highest-EV international bet. Posts Tue/Thu/Sat by cron.",
     category: 'daily',
-    schedule: 'Tue–Sat 17:30 UTC',
+    schedule: 'Tue/Thu/Sat 17:30 UTC',
   },
   {
     key: 'recap',
     name: "Yesterday's W/L recap",
     endpoint: '/api/og/ig-recap',
-    desc: "Honest day: W, L, net P&L. 'Losses go up too.' Posts Mon by cron.",
+    desc: "Only auto-posts on profitable days. Losing Mondays auto-fall back to biggest-wins.",
     category: 'daily',
-    schedule: 'Mon 17:30 UTC',
+    schedule: 'Mon 17:30 UTC (if profit)',
+  },
+  {
+    key: 'biggest-wins',
+    name: 'Biggest wins (30d)',
+    endpoint: '/api/og/ig-biggest-wins',
+    desc: "Replaces the old 'every loss' hero. Biggest odds cashed + best edge that hit.",
+    category: 'weekly',
+    schedule: 'Fri 17:30 UTC + Mon fallback',
   },
   {
     key: 'team-stats',
     name: 'Most predictable teams',
     endpoint: '/api/og/ig-team-stats',
-    desc: 'Top 6 teams by AI hit rate. Saveable. Posts Sun by cron.',
+    desc: 'Top teams by AI hit rate. Saveable. Auto-posts every other Sun.',
     category: 'weekly',
-    schedule: 'Sun 17:30 UTC',
+    schedule: 'Sun 17:30 UTC (alt)',
   },
   {
-    key: 'why-publish-losses',
-    name: 'Why we publish every loss',
-    endpoint: '/api/og/ig-why-publish-losses',
-    desc: 'Evergreen trust card. Post once a week as variety.',
+    key: 'coach-positioning',
+    name: "You're the coach",
+    endpoint: '/api/og/ig-coach-positioning',
+    desc: 'Evergreen brand statement + 4 tools. Auto-posts every other Sun.',
     category: 'evergreen',
+    schedule: 'Sun 17:30 UTC (alt)',
   },
   {
     key: 'value-bet-math',
     name: 'Value-bet maths in 30s',
     endpoint: '/api/og/ig-value-bet-math',
-    desc: 'Evergreen 3-step explainer. High save rate.',
-    category: 'evergreen',
-  },
-  {
-    key: 'coach-positioning',
-    name: 'You\'re the coach',
-    endpoint: '/api/og/ig-coach-positioning',
-    desc: 'Evergreen brand statement + 4 tools.',
+    desc: 'Evergreen single-slide explainer. Manual posting only.',
     category: 'evergreen',
   },
 ]
 
+const CAROUSELS: { name: string; key: string; slides: number; desc: string; schedule: string }[] = [
+  {
+    name: 'EV explainer (pinnable)',
+    key: 'ev-explainer',
+    slides: 4,
+    desc: 'What\'s a value bet? · The maths · Real example · Try it. Pin to profile.',
+    schedule: 'Tue 15:00 UTC (auto)',
+  },
+  {
+    name: 'Product tour (pinnable)',
+    key: 'tour',
+    slides: 4,
+    desc: 'Picks feed · Bet tracker · AI coach · Track record. Pin to profile.',
+    schedule: 'Thu 15:00 UTC (auto)',
+  },
+]
+
 export default async function IGPreviewPage() {
-  // Fetch WC data once for both the bracket carousel and the fixture deep-dive
   const [groups, fixtures] = await Promise.all([
     getWorldCupGroups().catch(() => [] as WCGroup[]),
     getAllFixtures().catch(() => [] as WCFixture[]),
   ])
-  // Cache-bust query so previews always re-render with latest data
   const bust = Date.now()
 
-  // Pick the next few upcoming fixtures for the deep-dive picker
   const upcomingFixtures = fixtures
     .filter(f => new Date(f.date).getTime() > Date.now())
     .slice(0, 8)
@@ -97,15 +118,23 @@ export default async function IGPreviewPage() {
     <div className="space-y-10">
       <header>
         <h1 className="text-2xl font-bold tracking-tight">IG card preview gallery</h1>
-        <p className="text-sm text-neutral-400 mt-2 max-w-2xl">
+        <p className="text-sm text-neutral-400 mt-2 max-w-3xl">
           Every 1080×1350 card available for Instagram. Right-click any thumbnail → <em>Save Image As</em> to download.
           Click to open the live URL in a new tab.
         </p>
+        <div className="mt-4 p-3 bg-neutral-900 border border-neutral-800 rounded text-xs text-neutral-300 max-w-3xl">
+          <div className="font-semibold text-neutral-100 mb-1">Auto-posting status</div>
+          <div className="text-neutral-400">
+            Every day 17:30 UTC the IG cron picks a card by day-of-week (see schedule chips). The EV explainer
+            and product tour carousels fire weekly (Tue/Thu 15:00 UTC). Losing Mondays automatically swap
+            recap → biggest-wins. No manual work needed for the rotating slots; manual posting is only for variety.
+          </div>
+        </div>
       </header>
 
       {/* ── CORE CARDS ── */}
       <section>
-        <h2 className="text-lg font-semibold tracking-tight mb-4">Daily / weekly / evergreen</h2>
+        <h2 className="text-lg font-semibold tracking-tight mb-4">Daily / weekly / evergreen (single-image)</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {CORE_CARDS.map(card => {
             const url = `${APP_URL}${card.endpoint}?_=${bust}`
@@ -142,9 +171,51 @@ export default async function IGPreviewPage() {
         </div>
       </section>
 
+      {/* ── PINNABLE CAROUSELS ── */}
+      <section>
+        <h2 className="text-lg font-semibold tracking-tight mb-1">Pinnable carousels (multi-slide)</h2>
+        <p className="text-xs text-neutral-400 mb-4">
+          Auto-posted weekly. Manually pin to profile after first post.
+        </p>
+        {CAROUSELS.map(c => (
+          <div key={c.key} className="mb-8">
+            <div className="flex items-baseline justify-between mb-3">
+              <h3 className="text-base font-semibold">{c.name}</h3>
+              <span className="text-xs text-orange-400 font-mono">{c.schedule}</span>
+            </div>
+            <p className="text-xs text-neutral-400 mb-3">{c.desc}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {Array.from({ length: c.slides }, (_, i) => i + 1).map(slide => {
+                const endpoint = `/api/og/ig-${c.key}?slide=${slide}`
+                const url = `${APP_URL}${endpoint}&_=${bust}`
+                const liveUrl = `${APP_URL}${endpoint}`
+                return (
+                  <article key={slide} className="bg-neutral-900 border border-neutral-800 overflow-hidden">
+                    <a href={liveUrl} target="_blank" rel="noopener noreferrer">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={`${c.name} slide ${slide}`}
+                        width={1080}
+                        height={1350}
+                        className="w-full h-auto block hover:opacity-90 transition-opacity"
+                        style={{ aspectRatio: '1080 / 1350' }}
+                      />
+                    </a>
+                    <div className="p-2.5">
+                      <p className="text-[11px] text-neutral-500 font-mono">slide {slide} / {c.slides}</p>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </section>
+
       {/* ── BRACKET CAROUSEL ── */}
       <section>
-        <h2 className="text-lg font-semibold tracking-tight mb-1">WC bracket carousel</h2>
+        <h2 className="text-lg font-semibold tracking-tight mb-1">WC bracket carousel (manual)</h2>
         <p className="text-xs text-neutral-400 mb-4">
           12 slides — post as a single IG carousel. One per group.
         </p>
@@ -186,7 +257,7 @@ export default async function IGPreviewPage() {
       <section>
         <h2 className="text-lg font-semibold tracking-tight mb-1">Match-preview deep-dive</h2>
         <p className="text-xs text-neutral-400 mb-4">
-          Statengine-style with both teams&apos; last-5 form, venue, kick-off. Best for Fri/Sun pre-match posts.
+          Statengine-style with both teams&apos; last-5 form, venue, kick-off. Auto-posts Wed for next intl fixture.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {upcomingFixtures.length === 0 ? (
@@ -231,16 +302,14 @@ export default async function IGPreviewPage() {
 
       {/* ── USAGE NOTES ── */}
       <section className="mt-12 border-t border-neutral-800 pt-8">
-        <h2 className="text-lg font-semibold tracking-tight mb-3">How to post</h2>
+        <h2 className="text-lg font-semibold tracking-tight mb-3">Manual posting (variety / off-rotation)</h2>
         <ol className="text-sm text-neutral-300 space-y-2 list-decimal list-inside max-w-2xl">
           <li>Right-click any thumbnail → <em>Save Image As</em> (or open the URL in a new tab and screenshot at 1080×1350).</li>
           <li>Upload to Instagram via the app or the web composer.</li>
-          <li>For the bracket: select all 12 group images in order (A → L), upload as a single carousel post.</li>
+          <li>For the WC bracket: select all 12 group images in order (A → L), upload as a single carousel post.</li>
+          <li>For pinnable carousels: cron already posts them — pin to profile once it's live.</li>
           <li>Caption template lives in <code>docs/instagram-growth-plan.md</code>.</li>
         </ol>
-        <p className="text-xs text-neutral-500 mt-6">
-          <code>post-instagram</code> cron auto-posts the rotating daily card (value-card / recap / team-stats by day-of-week) at 17:30 UTC. The other cards in this gallery are for manual variety.
-        </p>
       </section>
     </div>
   )

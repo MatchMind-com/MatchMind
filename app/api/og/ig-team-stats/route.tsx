@@ -67,6 +67,18 @@ export async function GET(req: NextRequest) {
         width: W, height: H, display: 'flex', background: bg, color: fg,
         position: 'relative', fontFamily: 'Inter, system-ui, sans-serif',
       }}>
+        {/* Corner gradients */}
+        <div style={{
+          position: 'absolute', top: 0, right: 0, width: 720, height: 720,
+          background: 'linear-gradient(225deg, rgba(249,115,22,0.10) 0%, rgba(15,17,21,0) 65%)',
+          display: 'flex',
+        }} />
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, width: 600, height: 600,
+          background: 'linear-gradient(45deg, rgba(16,185,129,0.06) 0%, rgba(15,17,21,0) 65%)',
+          display: 'flex',
+        }} />
+
         {/* Brand */}
         <div style={{ position: 'absolute', top: 56, left: PADX, display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontSize: 32, fontWeight: 900, letterSpacing: '-0.04em' }}>

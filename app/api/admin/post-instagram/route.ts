@@ -1,66 +1,175 @@
 /**
  * POST /api/admin/post-instagram
  *
- * Posts a tonight's-acca card to Instagram (Business / Creator account).
+ * Posts an IG-format card to Instagram (Business / Creator account).
  *
  * Auth: Authorization: Bearer ${CRON_SECRET}
  *
  * Body (all optional):
  *   {
- *     "legs":         4,
- *     "windowHours":  18,
- *     "imageUrl":     "https://www.matchmindcom.com/api/og/acca?legs=4",
- *                     // override the auto-generated card if you want
- *     "caption":      "..."   // override the auto-generated caption
+ *     "card":         "value-card" | "recap" | "biggest-wins" | "team-stats"
+ *                       | "coach-positioning" | "fixture-deepdive"
+ *                       | "ev-explainer" | "tour"
+ *                       // override the auto-selected card
+ *     "imageUrl":     "https://..."          // override URL entirely
+ *     "caption":      "..."                  // override caption
+ *     "carousel":     ["url1","url2",...]    // post as carousel of up to 10
  *     "dryRun":       false
  *   }
  *
+ * AUTO-ROTATION (when no card override):
+ *   Mon  → ig-recap (yesterday W/L). If losing day → biggest-wins.
+ *   Tue  → ig-value-card (today's #1 EV, international-only)
+ *   Wed  → ig-fixture-deepdive (next major international fixture)
+ *   Thu  → ig-value-card (international)
+ *   Fri  → ig-biggest-wins (weekly hype card)
+ *   Sat  → ig-value-card (international)
+ *   Sun  → ig-team-stats / ig-coach-positioning (alternating)
+ *
  * Required env vars (set in Vercel):
  *   INSTAGRAM_ACCESS_TOKEN  long-lived token (60d) from IG Business Login
- *   INSTAGRAM_USER_ID       app-scoped IG user id (from /me, NOT the legacy
- *                           IG Business Account id)
- *
- * To obtain those (via the new Instagram Business Login flow — Apr 2026+):
- *   1. Convert IG account → Business or Creator
- *   2. developers.facebook.com → Create App (type: Business) → add Instagram
- *      product → use case "Access the Instagram API with Instagram Login"
- *   3. App → Roles → Instagram Testers → invite @your-handle, accept invite
- *      from the IG mobile app (Settings → Apps and websites → Tester
- *      invitations)
- *   4. App → Use Cases → API Setup → Add Account → run OAuth flow → Generate
- *      access token. Confirm the user ID via:
- *      GET https://graph.instagram.com/v23.0/me?fields=id,username&access_token=...
- *      The `id` field is what goes into INSTAGRAM_USER_ID.
- *   5. Exchange short-lived (1h) → long-lived (60d):
- *      GET https://graph.instagram.com/access_token
- *        ?grant_type=ig_exchange_token
- *        &client_secret={instagram-app-secret}
- *        &access_token={short-lived}
- *      Refresh with /refresh_access_token before day 60.
- *
- * Posting is a 2-step API flow on graph.instagram.com:
- *   1. POST /{ig-user-id}/media          — creates a media container
- *   2. POST /{ig-user-id}/media_publish  — publishes that container
+ *   INSTAGRAM_USER_ID       app-scoped IG user id
  */
 
 import { NextResponse } from 'next/server'
 import { getInstagramToken } from '@/lib/instagram-token'
+import { createClient } from '@supabase/supabase-js'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://matchmindcom.com'
-// New Instagram Business Login API (replaces the legacy Facebook Login flow).
-// Endpoints live on graph.instagram.com — NOT graph.facebook.com.
-// Token + IG_USER_ID come from the IG dev portal token generator after the
-// tester role is granted to @match.mindai. See docs/social-automation.md.
 const GRAPH_BASE = 'https://graph.instagram.com/v23.0'
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+)
+
+// ── Card selection ───────────────────────────────────────────────────
+
+type CardKey =
+  | 'value-card' | 'recap' | 'biggest-wins' | 'team-stats'
+  | 'coach-positioning' | 'fixture-deepdive'
+  | 'ev-explainer' | 'tour'
+  | 'value-bet-math'
+
+/**
+ * Yesterday's net P&L on settled value bets.
+ * Returns null on error so the caller can fall through to a safe default.
+ */
+async function yesterdayPnL(): Promise<{ profit: number; settled: number } | null> {
+  try {
+    const yesterday = new Date(Date.now() - 24 * 3600 * 1000)
+    const ymd = yesterday.toLocaleDateString('en-CA', { timeZone: 'Europe/London' })
+    const [y, m, d] = ymd.split('-').map(Number)
+    const from = new Date(Date.UTC(y, m - 1, d, 0, 0, 0)).toISOString()
+    const to = new Date(Date.UTC(y, m - 1, d, 23, 59, 59)).toISOString()
+
+    const { data } = await supabase
+      .from('prediction_records')
+      .select('odds, result')
+      .eq('is_value_bet', true)
+      .not('result', 'is', null)
+      .gte('kick_off', from)
+      .lte('kick_off', to)
+      .gt('ev_percent', 0)
+      .lte('ev_percent', 10)
+
+    const rows = (data ?? []) as Array<{ odds: number | null; result: 'win'|'loss'|'void' }>
+    const stake = 10
+    const profit = rows.reduce((acc, r) => {
+      if (r.result === 'void' || !r.odds) return acc
+      return acc + (r.result === 'win' ? stake * (r.odds - 1) : -stake)
+    }, 0)
+    const settled = rows.filter(r => r.result !== 'void').length
+    return { profit, settled }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Pick the next upcoming international fixture for the fixture deep-dive card.
+ * Falls back to value-card if no upcoming intl match in the next 72h.
+ */
+async function nextIntlFixtureId(): Promise<number | null> {
+  try {
+    const res = await fetch(`${APP_URL}/api/predictions`, { cache: 'no-store' })
+    const json = await res.json()
+    const preds = Array.isArray(json?.predictions) ? json.predictions : []
+    const now = Date.now()
+    const horizon = now + 72 * 3600 * 1000
+
+    const isIntl = (league: string) => {
+      const l = (league ?? '').toLowerCase()
+      if (l.includes('club world cup')) return false
+      return l.includes('world cup') || l.includes('friendlies (intl)') ||
+             l.includes('nations league') || /\bqualif/.test(l) ||
+             /afcon|africa cup/.test(l) || /\beuro\b/.test(l) ||
+             l.includes('copa america') || l.includes('gold cup') ||
+             l.includes('asian cup') || l.includes('concacaf nations')
+    }
+
+    const candidates = preds
+      .filter((p: { date?: string; league?: string; id?: number }) => {
+        if (!p.date || !p.league || !p.id) return false
+        const t = new Date(p.date).getTime()
+        return t > now && t < horizon && isIntl(p.league)
+      })
+      .sort((a: { date: string }, b: { date: string }) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+    return candidates[0]?.id ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Resolve which card to post today.
+ * - Honours `card` body override.
+ * - Otherwise rotates by day-of-week.
+ * - On Mon, checks yesterday's P&L — if losing/zero, switches to biggest-wins.
+ */
+async function resolveCard(override?: CardKey): Promise<{ card: CardKey; reason: string; fixtureId?: number }> {
+  if (override) return { card: override, reason: 'override' }
+
+  const dayOfWeek = new Date().getUTCDay() // 0=Sun .. 6=Sat
+  const weekParity = Math.floor(Date.now() / (7 * 24 * 3600 * 1000)) % 2
+
+  if (dayOfWeek === 1) {
+    // Monday: recap if yesterday was profitable, else biggest-wins
+    const pnl = await yesterdayPnL()
+    if (!pnl || pnl.settled === 0 || pnl.profit <= 0) {
+      return { card: 'biggest-wins', reason: `mon-skip-recap (pnl=${pnl?.profit ?? 'null'}, settled=${pnl?.settled ?? 'null'})` }
+    }
+    return { card: 'recap', reason: `mon-recap (pnl=+${pnl.profit.toFixed(2)})` }
+  }
+
+  if (dayOfWeek === 3) {
+    // Wed: try fixture deep-dive for next intl game, else value-card
+    const id = await nextIntlFixtureId()
+    if (id) return { card: 'fixture-deepdive', reason: `wed-fixture id=${id}`, fixtureId: id }
+    return { card: 'value-card', reason: 'wed-fallback (no intl fixture in 72h)' }
+  }
+
+  if (dayOfWeek === 5) {
+    return { card: 'biggest-wins', reason: 'fri-hype' }
+  }
+
+  if (dayOfWeek === 0) {
+    // Sun alternates team-stats / coach-positioning
+    return weekParity === 0
+      ? { card: 'team-stats', reason: 'sun-stats' }
+      : { card: 'coach-positioning', reason: 'sun-coach' }
+  }
+
+  // Tue, Thu, Sat → value-card
+  return { card: 'value-card', reason: `day${dayOfWeek}-value` }
+}
+
+// ── Caption builder ──────────────────────────────────────────────────
+
 interface Pick {
-  id?: number
-  home_team?: string
-  away_team?: string
-  league?: string
-  date?: string
-  recommended_bet?: string
-  recommended_odds_range?: string
+  id?: number; home_team?: string; away_team?: string; league?: string
+  date?: string; recommended_bet?: string; recommended_odds_range?: string
   best_value?: { ev?: number; odds?: number; label?: string }
   value_score?: number
 }
@@ -73,106 +182,113 @@ function parseOdds(s: string | undefined): number | null {
   return Number.isFinite(n) && n > 1 ? n : null
 }
 
-function legSummary(p: Pick): { label: string; odds: number; ev: number } | null {
-  if (p.best_value?.label && p.best_value.odds && p.best_value.odds > 1) {
-    return { label: p.best_value.label, odds: p.best_value.odds, ev: p.best_value.ev ?? 0 }
-  }
-  const o = parseOdds(p.recommended_odds_range)
-  if (p.recommended_bet && o) return { label: p.recommended_bet, odds: o, ev: p.value_score ?? 0 }
-  return null
-}
-
-function isInWindow(iso: string | undefined, hours: number): boolean {
-  if (!iso) return false
-  const t = new Date(iso).getTime()
-  if (!Number.isFinite(t)) return false
-  const now = Date.now()
-  return t > now - 3 * 3_600_000 && t < now + hours * 3_600_000
-}
-
-async function buildAutoCaption(legCount: number, windowHours: number): Promise<{ caption: string; legsUsed: number; combinedOdds: number; windowUsed: number } | null> {
-  let predictions: Pick[] = []
+async function fetchPredictions(): Promise<Pick[]> {
   try {
     const r = await fetch(`${APP_URL}/api/predictions`, { cache: 'no-store' })
     const j = await r.json()
-    predictions = Array.isArray(j?.predictions) ? j.predictions : []
-  } catch {
-    return null
+    return Array.isArray(j?.predictions) ? j.predictions : []
+  } catch { return [] }
+}
+
+function isIntl(league?: string): boolean {
+  const l = (league ?? '').toLowerCase()
+  if (l.includes('club world cup')) return false
+  return l.includes('world cup') || l.includes('friendlies (intl)') ||
+         l.includes('nations league') || /\bqualif/.test(l) ||
+         /afcon|africa cup/.test(l) || /\beuro\b/.test(l) ||
+         l.includes('copa america') || l.includes('gold cup') ||
+         l.includes('asian cup') || l.includes('concacaf nations')
+}
+
+async function buildCaption(card: CardKey, fixtureId?: number): Promise<string> {
+  if (card === 'recap') {
+    return `Yesterday's settled value bets — every win and every loss, no edits.\n\nFull track record → matchmindcom.com/track-record\n\n#valuebets #footballbetting #footballtips #matchmind #ai #aibetting`
+  }
+  if (card === 'biggest-wins') {
+    return `Last 30 days of AI value bets. Biggest odds cashed + best edge that hit.\n\nEvery pick logged before kick-off. Wins AND losses public.\n\nmatchmindcom.com/track-record\n\n#valuebets #footballbetting #footballtips #matchmind #aibetting`
+  }
+  if (card === 'team-stats') {
+    return `The teams the AI gets right most often. Last 30 days, min 3 picks per team.\n\nFull stats → matchmindcom.com/track-record\n\n#footballstats #valuebets #matchmind`
+  }
+  if (card === 'coach-positioning') {
+    return `You're the coach of your own betting fund. We give you the tools to run it.\n\n→ matchmindcom.com\n\n#valuebets #footballbetting #matchmind`
+  }
+  if (card === 'fixture-deepdive') {
+    return `Match preview — form, venue, kick-off, AI value pick.\n\nFull deep-dive → matchmindcom.com/world-cup\n\n#worldcup2026 #footballtips #valuebets #matchmind`
+  }
+  if (card === 'ev-explainer' || card === 'tour' || card === 'value-bet-math') {
+    return card === 'ev-explainer'
+      ? `Value bets in 4 slides. Save and share.\n\nLive picks → matchmindcom.com\n\n#valuebets #footballbetting #matchmind #educational`
+      : card === 'tour'
+        ? `4 tools that turn you into the coach of your own betting fund.\n\nTry free → matchmindcom.com\n\n#footballbetting #matchmind #valuebets`
+        : `Value-bet maths in 30 seconds. Save it.\n\nLive picks → matchmindcom.com\n\n#valuebets #educational #footballbetting #matchmind`
   }
 
-  // Build acca legs for a given window — same dedupe/EV-sort logic as before.
-  function pickLegsForWindow(hours: number) {
-    const ranked = predictions
-      .filter((p) => isInWindow(p.date, hours))
-      .map((p) => ({ pick: p, sum: legSummary(p) }))
-      .filter((x): x is { pick: Pick; sum: NonNullable<ReturnType<typeof legSummary>> } => x.sum !== null)
-      .sort((a, b) => (b.sum.ev ?? 0) - (a.sum.ev ?? 0))
-    const seen = new Set<number>()
-    const out: typeof ranked = []
-    for (const r of ranked) {
-      const id = r.pick.id ?? -1
-      if (id !== -1 && seen.has(id)) continue
-      if (id !== -1) seen.add(id)
-      out.push(r)
-      if (out.length >= legCount) break
-    }
-    return out
-  }
+  // Default: value-card — build pick-specific caption
+  const preds = await fetchPredictions()
+  const internationals = preds.filter(p => p.id && isIntl(p.league))
+  const pool = internationals.length > 0 ? internationals : preds
+  const top = pool
+    .filter(p => (p.best_value?.ev ?? 0) > 0 && (p.best_value?.odds ?? 0) > 1)
+    .sort((a, b) => (b.best_value?.ev ?? 0) - (a.best_value?.ev ?? 0))[0]
 
-  // Auto-expand the window when the slate is thin (mid-week, off-season).
-  // Without this the IG cron silently 404s on Tuesday-style days when
-  // there aren't 2+ fixtures in the next 18h. Tries the user's window
-  // first, then bumps to 36h then 72h before giving up.
-  const windowAttempts = [windowHours, 36, 72]
-    .filter((h) => h >= windowHours)
-    .reduce<number[]>((acc, h) => (acc.includes(h) ? acc : [...acc, h]), [])
-    .sort((a, b) => a - b)
-  let legs: ReturnType<typeof pickLegsForWindow> = []
-  let windowUsed = windowAttempts[0]
-  for (const h of windowAttempts) {
-    const candidate = pickLegsForWindow(h)
-    if (candidate.length >= 2) {
-      legs = candidate
-      windowUsed = h
-      break
-    }
+  if (!top) {
+    return `Today's #1 AI value bet. Every pick logged before kick-off.\n\nLive picks → matchmindcom.com\n\n#footballbetting #valuebets #matchmind`
   }
-  if (legs.length < 2) return null
-  const combinedOdds = legs.reduce((acc, l) => acc * l.sum.odds, 1)
-  const stake = 10
-  const payout = Math.round(combinedOdds * stake * 100) / 100
-  // IG captions can be up to 2200 chars — we have headroom for hashtags.
-  const lines = legs.map((l, i) => `${i + 1}. ${l.pick.home_team} v ${l.pick.away_team} — ${l.sum.label} @ ${l.sum.odds.toFixed(2)}`)
-  const caption =
-    `🔥 Today's ${legs.length}-fold AI value acca\n\n` +
-    lines.join('\n') +
-    `\n\n💰 Combined @ ${combinedOdds.toFixed(2)}\n£${stake} → £${payout.toFixed(2)}\n\n` +
-    `No advice — just data.\n` +
-    `Live picks at matchmindcom.com\n\n` +
-    `#footballbetting #footballtips #valuebets #matchmind #ai #aibetting #acca #footballacca`
-  return { caption, legsUsed: legs.length, combinedOdds, windowUsed }
+  const odds = top.best_value?.odds ?? parseOdds(top.recommended_odds_range) ?? 0
+  const ev = top.best_value?.ev ?? top.value_score ?? 0
+  const label = top.best_value?.label ?? top.recommended_bet ?? 'AI pick'
+
+  return (
+    `🎯 Today's #1 AI value bet\n\n` +
+    `${top.home_team} v ${top.away_team}\n` +
+    `${label} @ ${odds.toFixed(2)}\n` +
+    `AI edge: +${Number(ev).toFixed(1)}%\n\n` +
+    `Logged 24h before kick-off. Every result public.\n\n` +
+    `Live picks → matchmindcom.com\n\n` +
+    `#footballbetting #valuebets #aibetting #footballtips #matchmind ${isIntl(top.league) ? '#internationalfootball' : ''}`
+  )
 }
 
 // ── Graph API helpers ────────────────────────────────────────────────
 
-async function createIgMediaContainer(igUserId: string, token: string, imageUrl: string, caption: string) {
-  const url = `${GRAPH_BASE}/${igUserId}/media`
-  const params = new URLSearchParams({
-    image_url: imageUrl,
-    caption,
-    access_token: token,
-  })
-  const res = await fetch(`${url}?${params.toString()}`, { method: 'POST' })
+async function createMediaContainer(igUserId: string, token: string, imageUrl: string, caption: string) {
+  const params = new URLSearchParams({ image_url: imageUrl, caption, access_token: token })
+  const res = await fetch(`${GRAPH_BASE}/${igUserId}/media?${params.toString()}`, { method: 'POST' })
   const data = await res.json()
   if (!res.ok) return { ok: false, error: `media create HTTP ${res.status}: ${JSON.stringify(data)}` }
   if (!data?.id) return { ok: false, error: `media create returned no id: ${JSON.stringify(data)}` }
   return { ok: true, creationId: data.id as string }
 }
 
-async function publishIgMedia(igUserId: string, token: string, creationId: string) {
-  const url = `${GRAPH_BASE}/${igUserId}/media_publish`
+async function createCarouselChild(igUserId: string, token: string, imageUrl: string) {
+  const params = new URLSearchParams({
+    image_url: imageUrl,
+    is_carousel_item: 'true',
+    access_token: token,
+  })
+  const res = await fetch(`${GRAPH_BASE}/${igUserId}/media?${params.toString()}`, { method: 'POST' })
+  const data = await res.json()
+  if (!res.ok) return { ok: false, error: `child create HTTP ${res.status}: ${JSON.stringify(data)}` }
+  return { ok: true, id: data.id as string }
+}
+
+async function createCarouselContainer(igUserId: string, token: string, childIds: string[], caption: string) {
+  const params = new URLSearchParams({
+    media_type: 'CAROUSEL',
+    children: childIds.join(','),
+    caption,
+    access_token: token,
+  })
+  const res = await fetch(`${GRAPH_BASE}/${igUserId}/media?${params.toString()}`, { method: 'POST' })
+  const data = await res.json()
+  if (!res.ok) return { ok: false, error: `carousel create HTTP ${res.status}: ${JSON.stringify(data)}` }
+  return { ok: true, creationId: data.id as string }
+}
+
+async function publish(igUserId: string, token: string, creationId: string) {
   const params = new URLSearchParams({ creation_id: creationId, access_token: token })
-  const res = await fetch(`${url}?${params.toString()}`, { method: 'POST' })
+  const res = await fetch(`${GRAPH_BASE}/${igUserId}/media_publish?${params.toString()}`, { method: 'POST' })
   const data = await res.json()
   if (!res.ok) return { ok: false, error: `publish HTTP ${res.status}: ${JSON.stringify(data)}` }
   return { ok: true, mediaId: data.id as string }
@@ -187,85 +303,113 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { legs?: number; windowHours?: number; imageUrl?: string; caption?: string; dryRun?: boolean } = {}
+  let body: { card?: CardKey; imageUrl?: string; caption?: string; carousel?: string[]; dryRun?: boolean } = {}
   try {
     const text = await req.text()
     if (text.trim()) body = JSON.parse(text)
-  } catch {
-    // empty body — defaults
-  }
-  const legCount = Math.max(2, Math.min(8, Number(body.legs) || 4))
-  const windowHours = Math.max(3, Math.min(72, Number(body.windowHours) || 18))
+  } catch {}
+
+  // Also accept overrides from query string so Vercel cron (GET, no body)
+  // can target a specific card via /api/admin/post-instagram?card=ev-explainer.
+  try {
+    const url = new URL(req.url)
+    const qsCard = url.searchParams.get('card')
+    const qsDry = url.searchParams.get('dryRun')
+    if (qsCard && !body.card) body.card = qsCard as CardKey
+    if (qsDry === '1' && body.dryRun === undefined) body.dryRun = true
+  } catch {}
+
   const dryRun = body.dryRun === true
 
-  // Auto-generate caption + image URL if not provided.
-  const auto = await buildAutoCaption(legCount, windowHours)
-  if (!auto && (!body.caption || !body.imageUrl)) {
-    return NextResponse.json(
-      { error: 'No upcoming AI picks for an acca and no caption/imageUrl provided.' },
-      { status: 404 },
-    )
+  // Resolve card + image
+  const resolution = await resolveCard(body.card)
+  const card = resolution.card
+  const fixtureId = resolution.fixtureId
+
+  // Build the image URL
+  let imageUrl: string
+  if (body.imageUrl) {
+    imageUrl = body.imageUrl
+  } else if (card === 'fixture-deepdive' && fixtureId) {
+    imageUrl = `${APP_URL}/api/og/ig-fixture-deepdive?id=${fixtureId}&_=${Date.now()}`
+  } else {
+    imageUrl = `${APP_URL}/api/og/ig-${card}?_=${Date.now()}`
   }
-  const caption = body.caption || auto!.caption
-  // New IG-format card (1080×1350) replaces the old square acca card.
-  // Auto-rotates daily image type via day-of-week so the grid varies:
-  //   Mon  → recap  (yesterday's W/L — Mon shows weekend summary)
-  //   Tue-Sat → value-card (today's #1 EV pick)
-  //   Sun  → team-stats (most predictable teams)
-  // post-bracket-carousel is a separate path (12 slides, post manually).
-  const dayOfWeek = new Date().getUTCDay()  // 0=Sun 1=Mon ...
-  const igCard = dayOfWeek === 1 ? 'ig-recap'
-                : dayOfWeek === 0 ? 'ig-team-stats'
-                : 'ig-value-card'
-  const imageUrl = body.imageUrl ||
-    `${APP_URL}/api/og/${igCard}?_=${Date.now()}`
+
+  // Build caption
+  const caption = body.caption ?? await buildCaption(card, fixtureId)
+
+  // Auto-build carousel slides when the card is a known multi-slide explainer.
+  // Body override (body.carousel) wins if provided.
+  let carouselUrls: string[] = Array.isArray(body.carousel) ? body.carousel.slice(0, 10) : []
+  if (carouselUrls.length === 0 && (card === 'ev-explainer' || card === 'tour')) {
+    const bust = Date.now()
+    carouselUrls = [1, 2, 3, 4].map(n => `${APP_URL}/api/og/ig-${card}?slide=${n}&_=${bust}`)
+  }
+  const isCarousel = carouselUrls.length >= 2
 
   if (dryRun) {
     return NextResponse.json({
       success: true,
       dry_run: true,
+      card,
+      resolution_reason: resolution.reason,
+      fixture_id: fixtureId ?? null,
+      image_url: imageUrl,
+      carousel: isCarousel ? carouselUrls : null,
       caption,
       caption_length: caption.length,
-      image_url: imageUrl,
-      legs_used: auto?.legsUsed ?? null,
-      combined_odds: auto?.combinedOdds ?? null,
     })
   }
 
-  // Token comes from Supabase app_secrets (rotated by the refresh cron),
-  // with a fallback to the env var for first-run before the cron has fired.
+  // Token + IG user
   const tokenInfo = await getInstagramToken()
   const token = tokenInfo.token
   const igUserId = process.env.INSTAGRAM_USER_ID
   if (!token || !igUserId) {
-    return NextResponse.json(
-      {
-        error:
-          'Instagram not configured. Set INSTAGRAM_ACCESS_TOKEN + INSTAGRAM_USER_ID in Vercel (or seed app_secrets via /api/admin/refresh-instagram-token). See route file for setup steps.',
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: 'Instagram not configured. INSTAGRAM_ACCESS_TOKEN / INSTAGRAM_USER_ID missing.' }, { status: 500 })
   }
 
-  // 2-step Graph API publish
-  const container = await createIgMediaContainer(igUserId, token, imageUrl, caption)
-  if (!container.ok) {
-    return NextResponse.json({ error: container.error, step: 'create_media' }, { status: 502 })
+  // Carousel path
+  if (isCarousel) {
+    const childResults = await Promise.all(carouselUrls.map(u => createCarouselChild(igUserId, token, u)))
+    const failed = childResults.findIndex(r => !r.ok)
+    if (failed !== -1) {
+      return NextResponse.json({ error: childResults[failed].error, step: 'carousel_child', failed_index: failed }, { status: 502 })
+    }
+    const childIds = childResults.map(r => (r as { ok: true; id: string }).id)
+    // Brief pause so Meta can fetch all images
+    await new Promise(r => setTimeout(r, 3000))
+    const container = await createCarouselContainer(igUserId, token, childIds, caption)
+    if (!container.ok) return NextResponse.json({ error: container.error, step: 'carousel_container' }, { status: 502 })
+    await new Promise(r => setTimeout(r, 2000))
+    const result = await publish(igUserId, token, container.creationId!)
+    if (!result.ok) return NextResponse.json({ error: result.error, step: 'publish_carousel' }, { status: 502 })
+    return NextResponse.json({
+      success: true, type: 'carousel', media_id: result.mediaId,
+      caption, slide_count: childIds.length,
+      resolution_reason: resolution.reason,
+    })
   }
-  // Brief pause — Meta sometimes needs a moment to fetch the image.
-  await new Promise((r) => setTimeout(r, 2000))
-  const publish = await publishIgMedia(igUserId, token, container.creationId!)
-  if (!publish.ok) {
-    return NextResponse.json({ error: publish.error, step: 'publish', creation_id: container.creationId }, { status: 502 })
-  }
+
+  // Single image path
+  const container = await createMediaContainer(igUserId, token, imageUrl, caption)
+  if (!container.ok) return NextResponse.json({ error: container.error, step: 'create_media' }, { status: 502 })
+  await new Promise(r => setTimeout(r, 2000))
+  const result = await publish(igUserId, token, container.creationId!)
+  if (!result.ok) return NextResponse.json({ error: result.error, step: 'publish' }, { status: 502 })
+
   return NextResponse.json({
     success: true,
-    media_id: publish.mediaId,
-    permalink: `https://www.instagram.com/p/${publish.mediaId}/`,
-    caption,
+    type: 'single',
+    media_id: result.mediaId,
+    permalink: `https://www.instagram.com/p/${result.mediaId}/`,
+    card,
+    resolution_reason: resolution.reason,
     image_url: imageUrl,
+    caption,
   })
 }
 
-// Vercel cron fires GET — reuse the POST handler.
+// Vercel cron fires GET — reuse POST.
 export const GET = POST
