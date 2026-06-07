@@ -100,13 +100,16 @@ export async function GET() {
           </span>
         </div>
 
-        {/* Big badge top-right — total wins */}
+        {/* Big badge top-right — wins count + best secondary stat.
+           Negative ROI is hidden here (full numbers on /track-record).
+           When ROI is positive we lead with it; otherwise we lead with
+           the biggest single odds cashed — both honest, neither vanity. */}
         <div style={{
           position: 'absolute', top: 56, right: PADX, display: 'flex',
           border: `1px solid ${success}55`, padding: '8px 16px',
         }}>
           <span style={{ fontSize: 13, color: success, fontWeight: 800, letterSpacing: '0.15em' }}>
-            {wins.length} WINS · {roi >= 0 ? '+' : '−'}{Math.abs(roi).toFixed(1)}% ROI
+            {wins.length} WINS{roi > 0 ? ` · +${roi.toFixed(1)}% ROI` : biggestOddsWin?.odds ? ` · ${biggestOddsWin.odds.toFixed(2)} TOP` : ''}
           </span>
         </div>
 
