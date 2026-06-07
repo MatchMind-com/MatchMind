@@ -33,23 +33,51 @@ interface Row {
   result: 'win' | 'loss' | 'void'
   ev_percent: number | null
   kick_off: string
+  league: string
+}
+
+/** International-only filter (matches value-card / team-stats predicate). */
+function isInternational(league: string): boolean {
+  const l = (league ?? '').toLowerCase()
+  if (l.includes('club world cup')) return false
+  if (l.includes('uefa champions') || l.includes('europa') || l.includes('conference league')) return false
+  return (
+    l.includes('world cup') ||
+    l.includes('friendlies (intl)') ||
+    l.includes('international friend') ||
+    l.includes('nations league') ||
+    /\bqualif/.test(l) ||
+    /afcon|africa cup of nations/.test(l) ||
+    /\beuro\b/.test(l) ||
+    l.includes('copa america') ||
+    l.includes('gold cup') ||
+    l.includes('asian cup') ||
+    l.includes('concacaf nations') ||
+    l.includes('conmebol')
+  )
 }
 
 export async function GET() {
-  // Last 30 days of settled value bets
+  // Last 30 days of settled value bets — query slightly wider so the
+  // intl filter has a population to draw from.
   const sinceISO = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
 
   const { data } = await supabase
     .from('prediction_records')
-    .select('home_team, away_team, bet_type, odds, result, ev_percent, kick_off')
+    .select('home_team, away_team, bet_type, odds, result, ev_percent, kick_off, league')
     .eq('is_value_bet', true)
     .not('result', 'is', null)
     .gte('kick_off', sinceISO)
     .gt('ev_percent', 0)
     .lte('ev_percent', 10)
-    .limit(500)
+    .limit(1000)
 
-  const rows = (data ?? []) as Row[]
+  const allRows = (data ?? []) as Row[]
+  // Filter to internationals — fall back to all leagues only if intl pool
+  // is too small to populate both highlight slots.
+  const intlRows = allRows.filter(r => isInternational(r.league))
+  const intlWinCount = intlRows.filter(r => r.result === 'win').length
+  const rows = intlWinCount >= 2 ? intlRows : allRows
   const wins = rows.filter(r => r.result === 'win')
   const losses = rows.filter(r => r.result === 'loss')
   const stake = 10
