@@ -92,14 +92,16 @@ export async function GET() {
     .sort((a, b) => (b.odds ?? 0) - (a.odds ?? 0))[0]
 
   // Best AI edge that hit — dedupe so the same row never fills both slots.
-  // If biggest-odds = best-edge, pick the next-best edge win instead.
+  // If biggest-odds = best-edge AND no other candidates, leave bestEdgeWin
+  // null so the render hides the second block (avoids duplicate rows).
   const bestEdgeCandidates = [...wins]
     .filter(r => r.ev_percent && r.ev_percent > 0)
     .sort((a, b) => (b.ev_percent ?? 0) - (a.ev_percent ?? 0))
   const bestEdgeWin = bestEdgeCandidates.find(r =>
-    !biggestOddsWin || r.kick_off !== biggestOddsWin.kick_off ||
+    !biggestOddsWin ||
+    r.kick_off !== biggestOddsWin.kick_off ||
     r.home_team !== biggestOddsWin.home_team
-  ) ?? bestEdgeCandidates[0]
+  ) ?? null  // null instead of falling back to dup row
 
   const bg = '#0F1115', fg = '#F5F1E8', fgMuted = '#6E6B62'
   const brand = '#F97316', success = '#10B981'
@@ -185,8 +187,8 @@ export async function GET() {
           </div>
         )}
 
-        {/* Best edge win block */}
-        {bestEdgeWin && (
+        {/* Best edge win block — OR aggregate stats panel if only 1 win exists */}
+        {bestEdgeWin ? (
           <div style={{
             position: 'absolute', top: 670, left: PADX, width: W - PADX * 2,
             padding: '28px 32px', background: '#1A1D24', display: 'flex',
@@ -209,6 +211,34 @@ export async function GET() {
               </span>
               <span style={{ fontSize: 14, color: fgMuted, marginTop: 4, fontWeight: 700, letterSpacing: '0.15em' }}>
                 EDGE
+              </span>
+            </div>
+          </div>
+        ) : (
+          /* Aggregate stats panel when only 1 distinct win exists.
+             Avoids rendering the same row in both highlight slots. */
+          <div style={{
+            position: 'absolute', top: 670, left: PADX, width: W - PADX * 2,
+            padding: '28px 32px', background: '#1A1D24', display: 'flex',
+            borderLeft: `4px solid ${brand}`,
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+              <span style={{ fontSize: 13, color: fgMuted, fontWeight: 700, letterSpacing: '0.18em' }}>
+                INTERNATIONAL WINDOW · 90 DAYS
+              </span>
+              <span style={{ fontSize: 32, fontWeight: 800, color: fg, marginTop: 12, letterSpacing: '-0.02em' }}>
+                {wins.length} international value bet{wins.length === 1 ? '' : 's'} cashed
+              </span>
+              <span style={{ fontSize: 20, color: fgMuted, marginTop: 6 }}>
+                {rows.length - wins.length} losses · pre-WC build-up
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+              <span style={{ fontSize: 64, fontWeight: 900, color: roi > 0 ? success : brand, letterSpacing: '-0.03em', lineHeight: 1 }}>
+                {roi > 0 ? '+' : ''}{roi.toFixed(1)}%
+              </span>
+              <span style={{ fontSize: 14, color: fgMuted, marginTop: 4, fontWeight: 700, letterSpacing: '0.15em' }}>
+                ROI
               </span>
             </div>
           </div>
