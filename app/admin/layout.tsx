@@ -37,6 +37,7 @@ export default async function AdminLayout({
             <nav className="flex gap-4 text-sm text-neutral-300">
               <Link href="/admin" className="hover:text-white">Signups</Link>
               <Link href="/admin/email-subs" className="hover:text-white">Email captures</Link>
+              <Link href="/admin/ig-preview" className="hover:text-white">IG cards</Link>
             </nav>
           </div>
           <div className="text-xs text-neutral-400">{result.user.email}</div>
