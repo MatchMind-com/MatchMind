@@ -303,6 +303,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // KILL SWITCH — disables ALL Instagram posting until manually reverted.
+  // Per user request 2026-06-07: pause IG automation until further notice.
+  // To re-enable: set IG_AUTOPOST_PAUSED to false (or remove this block)
+  // and restore the 3 cron entries in vercel.json.
+  // Belt-and-braces: vercel.json also has the IG cron entries removed.
+  // (Explicit :boolean keeps TS happy about reachability of code below.)
+  const IG_AUTOPOST_PAUSED: boolean = true
+  if (IG_AUTOPOST_PAUSED) {
+    return NextResponse.json({
+      skipped: true,
+      reason: 'IG_AUTOPOST_PAUSED — Instagram automation paused by user request 2026-06-07. Flip IG_AUTOPOST_PAUSED to false + restore vercel.json crons to re-enable.',
+    })
+  }
+
   let body: { card?: CardKey; imageUrl?: string; caption?: string; carousel?: string[]; dryRun?: boolean } = {}
   try {
     const text = await req.text()
