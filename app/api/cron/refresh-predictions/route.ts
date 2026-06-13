@@ -778,9 +778,58 @@ Return JSON with this exact structure. CALIBRATE every probability against the i
       { label: 'Home -1 Handicap',  category: 'eh',     ev: ehHomeEV,       odds: o?.eh_home_m1,   aiPct: ehHomePct },
       { label: 'Away -1 Handicap',  category: 'eh',     ev: ehAwayEV,       odds: o?.eh_away_m1,   aiPct: ehAwayPct },
     ]
+    // ── Best-value selection guards ──
+    //
+    // Two failure modes we explicitly prevent:
+    //
+    // 1) REASONING-MISMATCH (came back when we expanded markets): the engine
+    //    used to surface whichever market had the highest EV math, even if
+    //    that meant betting AGAINST the AI's headline call. e.g. AI says
+    //    "Scotland will beat Haiti" but EV math finds +8% on Haiti @ 5.70
+    //    because aiPct=19 vs implied=17.5. The UI then read "AI says Home
+    //    Win" with a reasoning paragraph about Scotland — a confidence-
+    //    destroying contradiction.
+    //
+    // 2) NOISE-AS-EDGE: a 1.5-point gap between aiPct (19%) and implied
+    //    (17.5%) on a 5.70 long-shot is well inside the model's noise band.
+    //    The math produces +8% EV but it's not a real edge.
+    //
+    // Fix: filter both before sorting. If the result is empty, leave
+    // bestValue null — we'd rather show "no clear value" than a pick we
+    // can't defend in conversation.
+    const recBet = (pred.recommended_bet ?? '').toLowerCase()
+    const recIsHome = /\bhome\b/.test(recBet) && !/away/.test(recBet)
+    const recIsAway = /\baway\b/.test(recBet) && !/home/.test(recBet)
+
+    const contradictsHeadline = (label: string): boolean => {
+      const l = label.toLowerCase()
+      const labelIsHome = /\bhome\b/.test(l) && !/away/.test(l)
+      const labelIsAway = /\baway\b/.test(l) && !/home/.test(l)
+      // Only flag direct head-to-head contradictions. Direction-neutral
+      // markets (BTTS, Over/Under, Total Corners, HT BTTS) never contradict.
+      if (recIsHome && labelIsAway) return true
+      if (recIsAway && labelIsHome) return true
+      return false
+    }
+
+    const isNoiseEdge = (x: { aiPct: number | null; odds: number | null }): boolean => {
+      if (x.odds == null || x.aiPct == null) return true
+      // Reject long-shot edges where AI confidence is too low to be reliable.
+      // A 19% pick on 5.70 odds (Haiti) is exactly this — kills it.
+      // Threshold: anything above 3.00 odds needs at least 28% AI confidence.
+      if (x.odds > 3.0 && x.aiPct < 28) return true
+      // Tiny absolute edge (<2 percentage points of probability) is noise on
+      // any odds — the model isn't precise enough to call those real.
+      const implied = 100 / x.odds
+      if (x.aiPct - implied < 2) return true
+      return false
+    }
+
     const valueBets = allCandidates
       .filter(x => x.ev !== null && x.ev > 0 && x.ev <= MAX_REAL_EV)
       .filter(x => !x.odds || x.odds <= MAX_REAL_ODDS)
+      .filter(x => !isNoiseEdge(x))
+      .filter(x => !contradictsHeadline(x.label))
       .sort((a, b) => (b.ev ?? 0) - (a.ev ?? 0))
 
     // Diversity rule: if the top EV is a Totals pick (Over/Under 2.5) AND
