@@ -56,7 +56,7 @@ function getDatePlusDays(days: number) {
   return d.toISOString().split('T')[0]
 }
 
-async function apiFetch(path: string, diag: FetchDiag[], attempt = 0): Promise<unknown> {
+async function apiFetch(path: string, diag: FetchDiag[], attempt = 0): Promise<any> {
   const MAX_RETRIES = 3
   try {
     const res = await fetch(`${BASE}${path}`, {
