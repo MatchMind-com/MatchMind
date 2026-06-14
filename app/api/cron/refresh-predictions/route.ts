@@ -56,19 +56,33 @@ function getDatePlusDays(days: number) {
   return d.toISOString().split('T')[0]
 }
 
-async function apiFetch(path: string, diag: FetchDiag[]) {
+async function apiFetch(path: string, diag: FetchDiag[], attempt = 0): Promise<unknown> {
+  const MAX_RETRIES = 3
   try {
     const res = await fetch(`${BASE}${path}`, {
       headers: { 'x-apisports-key': API_KEY },
       cache: 'no-store',
     })
     if (!res.ok) {
+      // 429 from the HTTP layer — back off and retry
+      if (res.status === 429 && attempt < MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, 2000 * (attempt + 1)))
+        return apiFetch(path, diag, attempt + 1)
+      }
       const reason = res.status === 429 ? 'rate_limited' : `http_${res.status}`
       diag.push({ path, reason, status: res.status })
       return null
     }
     const json = await res.json()
     if (json?.errors && (Array.isArray(json.errors) ? json.errors.length : Object.keys(json.errors).length)) {
+      // API-Football puts rate-limit errors inside the JSON body (status
+      // is still 200). Detect and retry the same as a true 429.
+      const errStr = JSON.stringify(json.errors).toLowerCase()
+      const isRateLimit = errStr.includes('ratelimit') || errStr.includes('too many requests')
+      if (isRateLimit && attempt < MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, 2000 * (attempt + 1)))
+        return apiFetch(path, diag, attempt + 1)
+      }
       diag.push({ path, reason: `api_error:${JSON.stringify(json.errors)}` })
     }
     return json.response || null
@@ -316,14 +330,20 @@ async function refreshLeagues(
   const in3days = getDatePlusDays(7)
 
   // Concurrency tuning: each league fires 7 parallel API calls (fixtures,
-  // injuries, standings, +4 odds). Concurrency 3 = 21 in-flight calls per
-  // batch → silently hit API-Football's per-second rate ceiling, ~40% of
-  // calls returned 429 (visible as api_failures count in cron response).
-  // Dropped to 2 leagues/batch (14 in-flight) + 1500ms delay (was 800ms)
-  // to halve the burst. Slower per cron run but no rate-limit drops.
+  // injuries, standings, +4 odds). API-Football Pro tier caps at 450/min.
+  //
+  // History:
+  //   conc 3, 800ms  → 21/0.8s burst = 1575/min → ~40% failures
+  //   conc 2, 1500ms → 14/1.5s burst = 560/min  → ~5–10% failures still
+  //   conc 1, 2000ms → 7/2s burst    = 210/min  → comfortably under cap
+  //
+  // Combined with the rate-limit retry in apiFetch (3 attempts w/ 2s/4s/6s
+  // backoff), this should drive api_failures to near zero. Tier-3 ETA:
+  // 18 leagues × 2s = 36s + per-league work ≈ 60–90s total, well under
+  // the 300s Vercel budget.
   const leagueResults = await batchedAll(
     leagues,
-    2,
+    1,
     async (league) => {
       // Per-league season: European leagues = Aug-May start year, calendar
       // leagues (Friendlies, WC, MLS, Brasileirão, etc) = current year.
@@ -432,7 +452,7 @@ async function refreshLeagues(
         _awayPosition: standingMap[f.teams?.away?.id] ?? null,
       }))
     },
-    1500
+    2000
   )
 
   function roundRobinPick<T>(perLeague: T[][], cap: number): T[] {
