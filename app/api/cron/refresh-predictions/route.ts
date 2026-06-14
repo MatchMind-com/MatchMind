@@ -541,16 +541,14 @@ async function refreshLeagues(
     // so "home" team has no actual home advantage. Flag so GPT doesn't
     // generate reasoning like "Netherlands have a solid home record" for
     // a Netherlands fixture played in Dallas during WC 2026.
-    //   1   World Cup
-    //   9   Copa America
-    //   6   Africa Cup of Nations (AFCON)
-    //   7   Asian Cup
-    //   16  CONCACAF Gold Cup
-    //   25  CONCACAF Gold Cup (legacy id)
-    //   4   UEFA Euro Championship (final tournament, not qualifiers)
     const NEUTRAL_TOURNAMENT_LEAGUE_IDS = new Set([1, 4, 6, 7, 9, 16, 25])
     const isNeutralVenue = NEUTRAL_TOURNAMENT_LEAGUE_IDS.has(f._leagueId)
-    const venueTag = isNeutralVenue ? ' | NEUTRAL VENUE (no home advantage)' : ''
+    // Use ⚠️ to make the marker visually impossible for GPT to skim past.
+    // Earlier subtle " | NEUTRAL VENUE" wording was getting ignored in 3/4
+    // of WC picks — output still said "home advantage" / "home record".
+    const venueTag = isNeutralVenue
+      ? ` | ⚠️ NEUTRAL VENUE — ${home} has NO home advantage, this is a tournament played in a third country`
+      : ''
     return `${i + 1}. ${home} vs ${away} | ${f._leagueName} | ${date}${venueTag}${oddsStr}${homeInj}${awayInj}${homeFormStr}${awayFormStr}${h2hStr}${homeStatsStr}${awayStatsStr}`
   }).join('\n\n')
 
@@ -578,6 +576,9 @@ Return valid JSON only.`
 
 Matches:
 ${fixtureList}
+
+⚠️ NEUTRAL-VENUE CONSTRAINT (hard rule, no exceptions):
+For any fixture line that contains "⚠️ NEUTRAL VENUE", your edge_explanation and key_factors MUST NOT contain ANY of these phrases or their variants: "home advantage", "home record", "home crowd", "home soil", "home form", "playing at home", "host nation", "home turf", "home support". The home/away labels in a neutral tournament are administrative seedings only — neither side benefits from venue. If you generate a forbidden phrase, the prediction is invalid. Use squad quality, form, tactics, injuries, H2H, fitness instead.
 
 Return JSON with this exact structure. CALIBRATE every probability against the implied market probability. Use lineup quality, recent form, ref tendencies for HT/corners markets:
 {
