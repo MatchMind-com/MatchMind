@@ -1101,12 +1101,27 @@ export async function GET(req: Request) {
     const leaguesWithFixtures = Object.keys(predictionsByLeague).length
     console.log(`[refresh-predictions] Tier ${tier} done: ${allPredictions.length} predictions across ${leaguesWithFixtures} leagues, ${diag.length} failures, ${Date.now() - start}ms`)
 
+    // Group failures by reason + by league/path prefix so we can see at a
+    // glance whether the cron is hitting rate limits, off-season 404s,
+    // or genuine API errors. Sample 12 raw failures too.
+    const failuresByReason: Record<string, number> = {}
+    const failuresByLeague: Record<string, number> = {}
+    for (const d of diag) {
+      failuresByReason[d.reason] = (failuresByReason[d.reason] ?? 0) + 1
+      const leagueMatch = d.path.match(/league=(\d+)/)
+      const lid = leagueMatch ? leagueMatch[1] : 'other'
+      failuresByLeague[lid] = (failuresByLeague[lid] ?? 0) + 1
+    }
+
     return NextResponse.json({
       success: true,
       tier,
       predictions_count: allPredictions.length,
       leagues_with_fixtures: leaguesWithFixtures,
       api_failures: diag.length,
+      failures_by_reason: failuresByReason,
+      failures_by_league: failuresByLeague,
+      failure_sample: diag.slice(0, 12),
       duration_ms: Date.now() - start,
     })
   } catch (err: any) {
