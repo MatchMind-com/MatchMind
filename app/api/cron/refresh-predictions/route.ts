@@ -537,7 +537,21 @@ async function refreshLeagues(
     const as_ = fd?.awayStats
     const homeStatsStr = hs ? `\n   ${home} season: ${hs.league_position ? `#${hs.league_position} ` : ''}${hs.wins}W/${hs.draws}D/${hs.losses}L | ${hs.goals_per_game} g/game | ${hs.conceded_per_game} conceded/game | ${hs.clean_sheet_pct}% clean sheets` : ''
     const awayStatsStr = as_ ? `\n   ${away} season: ${as_.league_position ? `#${as_.league_position} ` : ''}${as_.wins}W/${as_.draws}D/${as_.losses}L | ${as_.goals_per_game} g/game | ${as_.conceded_per_game} conceded/game | ${as_.clean_sheet_pct}% clean sheets` : ''
-    return `${i + 1}. ${home} vs ${away} | ${f._leagueName} | ${date}${oddsStr}${homeInj}${awayInj}${homeFormStr}${awayFormStr}${h2hStr}${homeStatsStr}${awayStatsStr}`
+    // Neutral-venue tournaments — all matches played on neutral ground,
+    // so "home" team has no actual home advantage. Flag so GPT doesn't
+    // generate reasoning like "Netherlands have a solid home record" for
+    // a Netherlands fixture played in Dallas during WC 2026.
+    //   1   World Cup
+    //   9   Copa America
+    //   6   Africa Cup of Nations (AFCON)
+    //   7   Asian Cup
+    //   16  CONCACAF Gold Cup
+    //   25  CONCACAF Gold Cup (legacy id)
+    //   4   UEFA Euro Championship (final tournament, not qualifiers)
+    const NEUTRAL_TOURNAMENT_LEAGUE_IDS = new Set([1, 4, 6, 7, 9, 16, 25])
+    const isNeutralVenue = NEUTRAL_TOURNAMENT_LEAGUE_IDS.has(f._leagueId)
+    const venueTag = isNeutralVenue ? ' | NEUTRAL VENUE (no home advantage)' : ''
+    return `${i + 1}. ${home} vs ${away} | ${f._leagueName} | ${date}${venueTag}${oddsStr}${homeInj}${awayInj}${homeFormStr}${awayFormStr}${h2hStr}${homeStatsStr}${awayStatsStr}`
   }).join('\n\n')
 
   const completion = await openai.chat.completions.create({
@@ -555,6 +569,7 @@ CALIBRATION RULES — these are absolute:
 3. Your probabilities MUST be within ±8 percentage points of the implied market probabilities UNLESS you have a specific, concrete reason (e.g., a key striker injured, a manager just fired, team playing in a dead rubber). State that reason explicitly in key_factors.
 4. Do NOT inflate underdog probabilities. If the market prices away win at 6.40 (≈16% implied), your away_win_pct should be 14-22% at most, not 35%+.
 5. A real value bet edge is typically 2-8%. EV above +20% is almost always a calibration error, not a real opportunity.
+6. NEUTRAL VENUE rule: when a fixture line includes "NEUTRAL VENUE (no home advantage)" you MUST NOT use phrases like "home record", "home advantage", "playing at home", "home crowd" in edge_explanation or key_factors. The labels "home" and "away" are administrative only — neither team has a venue benefit. World Cup, Copa America, AFCON, Euros, Asian Cup, Gold Cup are all neutral.
 
 Return valid JSON only.`
     }, {
